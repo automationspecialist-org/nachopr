@@ -1,0 +1,8 @@
+Django==5.1.2
+django-allauth
+django-crispy-forms
+django-extensions
+django-debug-toolbar
+spider_rs
+asyncio
+
