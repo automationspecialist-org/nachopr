@@ -5,4 +5,4 @@ django-extensions
 django-debug-toolbar
 spider_rs
 asyncio
-
+slugify

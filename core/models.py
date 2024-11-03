@@ -4,7 +4,8 @@ import slugify
 class NewsSource(models.Model):
     url = models.URLField(unique=True)
     name = models.CharField(max_length=255)
-    slug = models.SlugField(unique=True)    
+    slug = models.SlugField(unique=True)
+    last_crawled = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return self.name

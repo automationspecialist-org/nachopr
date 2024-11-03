@@ -3,6 +3,7 @@ from django.core.management.base import BaseCommand
 from core.tasks import fetch_website
 
 
+
 class Command(BaseCommand):
     help = 'Crawls a website and extracts links'
 
