@@ -2,7 +2,7 @@ import asyncio
 from django.utils import timezone
 from core.models import NewsPage, NewsSource
 from spider_rs import Website
-from django.db import close_old_connections
+from django.db import close_old_connections, IntegrityError
 from asgiref.sync import sync_to_async
 
 
@@ -37,12 +37,9 @@ async def fetch_website(url: str) -> Website:
                 source=news_source
             )
             await sync_to_async(news_page.save)()
-        except Exception as e:
-            # Skip if the URL already exists (unique constraint violation)
-            if 'UNIQUE constraint failed' in str(e):
-                continue
-            # Re-raise other exceptions
-            raise
+        except IntegrityError:
+            # Skip duplicate URLs
+            continue
         finally:
             close_old_connections()
 
