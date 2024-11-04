@@ -73,7 +73,7 @@ WSGI_APPLICATION = 'nachopr.wsgi.application'
 
 ASGI_APPLICATION = 'nachopr.asgi.application'
 
-ALLOWED_HOSTS = ['0.0.0.0', '127.0.0.1']
+ALLOWED_HOSTS = ['0.0.0.0', '127.0.0.1', 'nachopr.apps.innermaps.org']
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
