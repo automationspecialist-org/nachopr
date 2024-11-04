@@ -4,6 +4,7 @@ from core.models import NewsPage, NewsSource
 from spider_rs import Website
 from django.db import close_old_connections, IntegrityError
 from asgiref.sync import sync_to_async
+from django.utils.text import slugify
 
 
 async def crawl_news_sources():
@@ -30,15 +31,25 @@ async def fetch_website(url: str) -> Website:
     news_source = await sync_to_async(NewsSource.objects.get)(url=url)
     
     for page in pages:
-        # Use get_or_create to avoid duplicates
-        _, created = await sync_to_async(NewsPage.objects.get_or_create)(
-            url=page.url,  # This is our unique field
-            defaults={     # These values are only used if the object is created
-                'title': page.title,
-                'content': page.content,
-                'source': news_source
-            }
-        )
+        # Generate a slug from the title
+        slug = slugify(page.title)
+        
+        try:
+            # Use get_or_create to avoid duplicates
+            _, created = await sync_to_async(NewsPage.objects.get_or_create)(
+                url=page.url,
+                slug=slug,
+                defaults={
+                    'title': page.title,
+                    'content': page.content,
+                    'source': news_source,
+                    'slug': slug
+                }
+            )
+        except IntegrityError as e:
+            print(f"Skipping duplicate page: {page.url} - {str(e)}")
+            continue
+        
         close_old_connections()
 
 
