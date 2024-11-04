@@ -21,13 +21,20 @@ RUN apt-get update \
 # Add cargo to PATH
 ENV PATH="/root/.cargo/bin:${PATH}"
 
+
+
 RUN pip install uv
+
+# Create a virtual environment using uv
+RUN uv venv /usr/src/app/venv
+ENV PATH="/usr/src/app/venv/bin:$PATH"
 
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
 
 COPY ./requirements.txt /requirements.txt
-RUN uv pip install --system --no-cache-dir -r /requirements.txt \
+# Install requirements using uv within the virtual environment
+RUN uv pip install --no-cache-dir -r /requirements.txt \
     && rm -rf /requirements.txt
 
 COPY . /usr/src/app
