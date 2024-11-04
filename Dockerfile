@@ -14,11 +14,13 @@ RUN apt-get update \
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
     && rm -rf /var/lib/apt/lists/*
 
+RUN pip install uv
+
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
 
 COPY ./requirements.txt /requirements.txt
-RUN pip install --no-cache-dir -r /requirements.txt \
+RUN uv pip install --no-cache-dir -r /requirements.txt \
     && rm -rf /requirements.txt
 
 COPY . /usr/src/app
