@@ -1,5 +1,5 @@
 from django.db import models
-import slugify
+from django.utils.text import slugify
 
 class NewsSource(models.Model):
     url = models.URLField(unique=True)

@@ -1,15 +1,12 @@
 import asyncio
 from django.core.management.base import BaseCommand
-from core.tasks import fetch_website
-
-
+from core.tasks import crawl_news_sources, crawl_news_sources_sync
+from asgiref.sync import sync_to_async
 
 class Command(BaseCommand):
-    help = 'Crawls a website and extracts links'
-
-    def add_arguments(self, parser):
-        parser.add_argument('url', type=str, help='URL to crawl')
+    help = 'Crawl all news sources'
 
     def handle(self, *args, **options):
-        url = options['url']
-        asyncio.run(fetch_website(url))
+        self.stdout.write('Starting news source crawl...')
+        crawl_news_sources_sync()
+        self.stdout.write(self.style.SUCCESS('Successfully crawled all news sources'))
