@@ -10,4 +10,5 @@ if [ -n "$SLACK_WEBHOOK_URL" ]; then
 else
     echo "SLACK_WEBHOOK_URL is not set. Skipping Slack notification."
 fi
-gunicorn --bind=0.0.0.0:80 --timeout 600 --workers=4 --chdir nachopr nachopr.wsgi --access-logfile '-' --error-logfile '-'
+
+granian --interface asgi --host 0.0.0.0 --port 80 --workers 4 nachopr.asgi:application
