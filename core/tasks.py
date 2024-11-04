@@ -9,6 +9,7 @@ from asgiref.sync import sync_to_async
 async def crawl_news_sources():
     news_sources = await sync_to_async(list)(NewsSource.objects.all())
     for news_source in news_sources:
+        print(f"Crawling {news_source.url}")
         await fetch_website(news_source.url)
         news_source.last_crawled = timezone.now()
         await sync_to_async(news_source.save)()
@@ -29,19 +30,16 @@ async def fetch_website(url: str) -> Website:
     news_source = await sync_to_async(NewsSource.objects.get)(url=url)
     
     for page in pages:
-        try:
-            news_page = NewsPage(
-                url=page.url,
-                title=page.title,
-                content=page.content,
-                source=news_source
-            )
-            await sync_to_async(news_page.save)()
-        except IntegrityError:
-            # Skip duplicate URLs
-            continue
-        finally:
-            close_old_connections()
+        # Use get_or_create to avoid duplicates
+        _, created = await sync_to_async(NewsPage.objects.get_or_create)(
+            url=page.url,  # This is our unique field
+            defaults={     # These values are only used if the object is created
+                'title': page.title,
+                'content': page.content,
+                'source': news_source
+            }
+        )
+        close_old_connections()
 
 
 
