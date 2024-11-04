@@ -13,15 +13,24 @@ RUN apt-get update \
     # Add Rust and Cargo for maturin
     && apt-get install -y libssl-dev pkg-config \
     && apt-get install -y curl \
-    && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
+    && apt-get install -y wget \
+    && wget https://www.sqlite.org/2024/sqlite-autoconf-3450000.tar.gz \
+    && tar xvfz sqlite-autoconf-3450000.tar.gz \
+    && cd sqlite-autoconf-3450000 \
+    && ./configure --prefix=/usr/local \
+    && make \
+    && make install \
+    && cd .. \
+    && rm -rf sqlite-autoconf-3450000* \
     # cleaning up unused files
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
     && rm -rf /var/lib/apt/lists/*
 
+# Configure SQLite
+ENV LD_LIBRARY_PATH=/usr/local/lib
+
 # Add cargo to PATH
 ENV PATH="/root/.cargo/bin:${PATH}"
-
-
 
 RUN pip install uv
 
