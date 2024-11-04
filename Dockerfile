@@ -14,6 +14,9 @@ RUN apt-get update \
     && apt-get install -y libssl-dev pkg-config \
     && apt-get install -y curl \
     && apt-get install -y wget \
+    # Install Rust and Cargo
+    && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
+    # SQLite installation
     && wget https://www.sqlite.org/2024/sqlite-autoconf-3450000.tar.gz \
     && tar xvfz sqlite-autoconf-3450000.tar.gz \
     && cd sqlite-autoconf-3450000 \
@@ -21,7 +24,7 @@ RUN apt-get update \
     && make \
     && make install \
     && cd .. \
-    && rm -rf sqlite-autoconf-3450000* \
+    && rm -rf sqlite-autoconf-3470000* \
     # cleaning up unused files
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
     && rm -rf /var/lib/apt/lists/*
