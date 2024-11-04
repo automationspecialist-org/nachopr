@@ -1,7 +1,5 @@
-import asyncio
 from django.core.management.base import BaseCommand
-from core.tasks import crawl_news_sources, crawl_news_sources_sync
-from asgiref.sync import sync_to_async
+from core.tasks import crawl_news_sources_sync
 
 class Command(BaseCommand):
     help = 'Crawl all news sources'
