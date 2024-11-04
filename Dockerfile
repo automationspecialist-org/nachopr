@@ -51,6 +51,10 @@ RUN uv pip install --no-cache-dir -r /requirements.txt \
 
 COPY . /usr/src/app
 
+# Make startup script executable and use absolute path
+RUN chmod +x /usr/src/app/startup.sh
+
 EXPOSE 80
 
-CMD ["sh", "./startup.sh"]
+# Use absolute path to startup.sh
+CMD ["/usr/src/app/startup.sh"]
