@@ -6,6 +6,8 @@ asgiref==3.8.1
     #   django-allauth
 asyncio==3.4.3
     # via -r requirements.in
+click==8.1.7
+    # via granian
 django==5.1.2
     # via
     #   -r requirements.in
@@ -21,6 +23,8 @@ django-debug-toolbar==4.4.6
     # via -r requirements.in
 django-extensions==3.2.3
     # via -r requirements.in
+granian==1.6.3
+    # via -r requirements.in
 slugify==0.0.1
     # via -r requirements.in
 spider-rs==0.0.53
@@ -29,3 +33,5 @@ sqlparse==0.5.1
     # via
     #   django
     #   django-debug-toolbar
+uvloop==0.21.0
+    # via granian
