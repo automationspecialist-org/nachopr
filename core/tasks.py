@@ -29,15 +29,22 @@ async def fetch_website(url: str) -> Website:
     news_source = await sync_to_async(NewsSource.objects.get)(url=url)
     
     for page in pages:
-        # Create NewsPage instance asynchronously
-        news_page = NewsPage(
-            url=page.url,
-            title=page.title,
-            content=page.content,
-            source=news_source
-        )
-        await sync_to_async(news_page.save)()
-        close_old_connections()
+        try:
+            news_page = NewsPage(
+                url=page.url,
+                title=page.title,
+                content=page.content,
+                source=news_source
+            )
+            await sync_to_async(news_page.save)()
+        except Exception as e:
+            # Skip if the URL already exists (unique constraint violation)
+            if 'UNIQUE constraint failed' in str(e):
+                continue
+            # Re-raise other exceptions
+            raise
+        finally:
+            close_old_connections()
 
 
 
