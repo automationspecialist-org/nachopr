@@ -51,9 +51,10 @@ RUN uv pip install --no-cache-dir -r /requirements.txt \
 
 COPY . /usr/src/app
 
-# Make startup script executable and use absolute path
-RUN chmod +x /usr/src/app/startup.sh \
-    && chmod 755 /usr/src/app/startup.sh
+# Set proper permissions for the entire app directory and make startup script executable
+RUN chown -R root:root /usr/src/app \
+    && chmod -R 755 /usr/src/app \
+    && chmod +x /usr/src/app/startup.sh
 
 EXPOSE 80
 
