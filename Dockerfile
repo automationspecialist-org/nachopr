@@ -51,10 +51,15 @@ RUN uv pip install --no-cache-dir -r /requirements.txt \
 
 COPY . /usr/src/app
 
-# Set proper permissions for the entire app directory and make startup script executable
-RUN chown -R root:root /usr/src/app \
+# Set proper permissions and ensure correct line endings for startup script
+RUN apt-get update && apt-get install -y dos2unix \
+    && dos2unix /usr/src/app/startup.sh \
+    && chown -R root:root /usr/src/app \
     && chmod -R 755 /usr/src/app \
-    && chmod +x /usr/src/app/startup.sh
+    && chmod +x /usr/src/app/startup.sh \
+    && apt-get remove -y dos2unix \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
 
 EXPOSE 80
 
