@@ -7,10 +7,11 @@ RUN apt-get update \
     && apt-get install -y libpq-dev \
     # Translations dependencies
     && apt-get install -y gettext \
-    && apt-get install -y libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libffi-dev shared-mime-info pkg-config \
+    && apt-get install -y libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libffi-dev shared-mime-info  \
     # Add memcached and its dependencies
     && apt-get install -y memcached libmemcached-dev \
     # Add Rust and Cargo for maturin
+    && apt-get install -y libssl-dev pkg-config \
     && apt-get install -y curl \
     && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
     # cleaning up unused files
