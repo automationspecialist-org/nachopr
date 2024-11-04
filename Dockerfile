@@ -18,8 +18,8 @@ RUN apt-get update \
     && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
     # SQLite installation
     && wget https://www.sqlite.org/2024/sqlite-autoconf-3470000.tar.gz \
-    && tar xvfz sqlite-autoconf-3450000.tar.gz \
-    && cd sqlite-autoconf-3450000 \
+    && tar xvfz sqlite-autoconf-3470000.tar.gz \
+    && cd sqlite-autoconf-3470000 \
     && ./configure --prefix=/usr/local \
     && make \
     && make install \
