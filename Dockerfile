@@ -53,17 +53,20 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     uv pip install --no-deps -r requirements.txt && \
     uv pip install -r requirements.txt
 
-# Start and enable SSH
+# Update SSH configuration for Azure compatibility
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends dialog \
-    && apt-get install -y --no-install-recommends openssh-server \
-    && echo "root:Docker!" | chpasswd 
+    && apt-get install -y --no-install-recommends dialog openssh-server \
+    && echo "root:Docker!" | chpasswd \
+    && mkdir -p /run/sshd
 COPY sshd_config /etc/ssh/
+RUN chmod 755 /etc/ssh/sshd_config
 
-# Copy the rest of the application
-COPY . /usr/src/app
+# Modify startup script to ensure SSH starts properly
+COPY startup.sh /usr/src/app/
+RUN chmod +x /usr/src/app/startup.sh
 
 EXPOSE 80 2222
 
-CMD ["sh", "./startup.sh"]
+# Ensure proper initialization
+ENTRYPOINT ["/usr/src/app/startup.sh"]
  
