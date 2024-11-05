@@ -12,17 +12,19 @@ async def crawl_news_sources():
     
     tasks = [fetch_website(source.url) for source in news_sources]
     
-    await asyncio.gather(*tasks)
+    await asyncio.gather(*tasks, return_exceptions=True)
     
-    for news_source in news_sources:
-        news_source.last_crawled = timezone.now()
-        await sync_to_async(news_source.save)()
+    await sync_to_async(NewsSource.objects.filter(
+        url__in=[source.url for source in news_sources]
+    ).update)(last_crawled=timezone.now())
     
     close_old_connections()
 
 
 def crawl_news_sources_sync():
-    loop = asyncio.new_event_loop()
+    print("Crawling news sources...")
+    policy = asyncio.get_event_loop_policy()
+    loop = policy.new_event_loop()
     asyncio.set_event_loop(loop)
     
     try:
@@ -32,35 +34,40 @@ def crawl_news_sources_sync():
         close_old_connections()
 
 
-async def fetch_website(url: str) -> Website:
-    website = Website(url)
-    website.scrape()
-    pages = website.get_pages()
-    
-    # Get the news source asynchronously
-    news_source = await sync_to_async(NewsSource.objects.get)(url=url)
-    
-    for page in pages:
-        # Generate a slug from the title
-        slug = slugify(page.title)
+async def fetch_website(url: str) -> None:
+    try:
+        website = Website(url)
+        website.scrape()
+        pages = website.get_pages()
         
-        try:
-            # Use get_or_create to avoid duplicates
-            _, created = await sync_to_async(NewsPage.objects.get_or_create)(
-                url=page.url,
-                slug=slug,
-                defaults={
-                    'title': page.title,
-                    'content': page.content,
-                    'source': news_source,
-                    'slug': slug
-                }
-            )
-        except IntegrityError as e:
-            print(f"Skipping duplicate page: {page.url} - {str(e)}")
-            continue
+        # Get the news source asynchronously
+        news_source = await sync_to_async(NewsSource.objects.get)(url=url)
         
-        close_old_connections()
+        for page in pages:
+            # Generate a slug from the title
+            slug = slugify(page.title)
+            
+            try:
+                # Use get_or_create to avoid duplicates
+                await sync_to_async(NewsPage.objects.get_or_create)(
+                    url=page.url,
+                    slug=slug,
+                    defaults={
+                        'title': page.title,
+                        'content': page.content,
+                        'source': news_source,
+                        'slug': slug
+                    }
+                )
+            except IntegrityError as e:
+                print(f"Skipping duplicate page: {page.url} - {str(e)}")
+                continue
+            
+            close_old_connections()
+    except Exception as e:
+        print(f"Error processing {url}: {str(e)}")
+        # Let the error propagate up to be handled by gather()
+        raise
 
 
 
