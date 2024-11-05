@@ -22,16 +22,11 @@ async def crawl_news_sources():
 
 
 def crawl_news_sources_sync():
-    print("Crawling news sources...")
-    policy = asyncio.get_event_loop_policy()
-    loop = policy.new_event_loop()
-    asyncio.set_event_loop(loop)
+    """Synchronous wrapper for the async crawl function"""
+    async def run_async():
+        await crawl_news_sources()
     
-    try:
-        loop.run_until_complete(crawl_news_sources())
-    finally:
-        loop.close()
-        close_old_connections()
+    asyncio.run(run_async())
 
 
 async def fetch_website(url: str) -> None:
