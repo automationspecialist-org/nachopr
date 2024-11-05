@@ -1,3 +1,8 @@
+#!/bin/sh
+set -e
+if [ -n "$AZURE" ]; then
+    service ssh start
+fi
 service memcached start
 python manage.py migrate
 python manage.py create_admin_user

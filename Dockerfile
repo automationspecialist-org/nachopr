@@ -53,10 +53,18 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     uv pip install --no-deps -r requirements.txt && \
     uv pip install -r requirements.txt
 
+# Start and enable SSH
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends dialog \
+    && apt-get install -y --no-install-recommends openssh-server \
+    && echo "root:Docker!" | chpasswd \
+    && chmod u+x ./entrypoint.sh
+COPY sshd_config /etc/ssh/
+
 # Copy the rest of the application
 COPY . /usr/src/app
 
-EXPOSE 80
+EXPOSE 80 2222
 
 CMD ["sh", "./startup.sh"]
  
