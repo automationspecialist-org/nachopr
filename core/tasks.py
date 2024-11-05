@@ -18,8 +18,17 @@ async def crawl_news_sources():
 
 
 def crawl_news_sources_sync():
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(crawl_news_sources())
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        # If there's no event loop in the current thread, create a new one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    
+    try:
+        loop.run_until_complete(crawl_news_sources())
+    finally:
+        loop.close()
 
 
 async def fetch_website(url: str) -> Website:
