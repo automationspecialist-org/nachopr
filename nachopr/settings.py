@@ -75,13 +75,13 @@ ASGI_APPLICATION = 'nachopr.asgi.application'
 
 ALLOWED_HOSTS = [
     '0.0.0.0', '127.0.0.1', 'nachopr.apps.innermaps.org',
-    'nachox-ffapf9hefbhmc5de.eastus2-01.azurewebsites.net'
+    'nachoapp-ekewd4f3gdbwcxcu.eastus-01.azurewebsites.net'
 ]
 
 # Add CSRF trusted origins for your domains
 CSRF_TRUSTED_ORIGINS = [
     'https://nachopr.apps.innermaps.org',
-    'https://nachox-ffapf9hefbhmc5de.eastus2-01.azurewebsites.net'
+    'https://nachoapp-ekewd4f3gdbwcxcu.eastus-01.azurewebsites.net'
 ]
 
 # Database
