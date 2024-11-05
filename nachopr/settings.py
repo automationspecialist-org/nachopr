@@ -42,6 +42,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -75,6 +76,12 @@ ASGI_APPLICATION = 'nachopr.asgi.application'
 ALLOWED_HOSTS = [
     '0.0.0.0', '127.0.0.1', 'nachopr.apps.innermaps.org',
     'nachopr-bebfduhpc0hfckdj.centralus-01.azurewebsites.net'
+]
+
+# Add CSRF trusted origins for your domains
+CSRF_TRUSTED_ORIGINS = [
+    'https://nachopr.apps.innermaps.org',
+    'https://nachopr-bebfduhpc0hfckdj.centralus-01.azurewebsites.net'
 ]
 
 # Database
@@ -132,3 +139,6 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Add these settings for whitenoise
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
