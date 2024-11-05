@@ -1,7 +1,9 @@
 from django.contrib import admin
-from .models import NewsSource, NewsPage
+from .models import NewsSource, NewsPage, Journalist
 from .tasks import crawl_news_sources_sync
 from django.contrib import messages
+
+admin.site.register(Journalist)
 
 @admin.register(NewsSource)
 class NewsSourceAdmin(admin.ModelAdmin):

@@ -90,7 +90,9 @@ CSRF_TRUSTED_ORIGINS = [
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': Path('/persistent/db.sqlite3') if os.environ.get('CAPROVER') else BASE_DIR / 'db.sqlite3',
+        'NAME': Path('/persistent/db.sqlite3') if os.environ.get('AZURE') else (
+            Path('/persistent/db.sqlite3') if os.environ.get('CAPROVER') else BASE_DIR / 'db.sqlite3'
+        ),
     }
 }
 

@@ -9,6 +9,7 @@ python manage.py create_admin_user
 python manage.py add_news_sources
 python manage.py collectstatic --no-input
 
+
 # Send a message to Slack when restarting
 if [ -n "$SLACK_WEBHOOK_URL" ]; then
     curl -X POST -H 'Content-type: application/json' --data '{"text":"The nachopr application is restarting."}' "$SLACK_WEBHOOK_URL"

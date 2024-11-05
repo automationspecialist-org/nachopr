@@ -13,8 +13,15 @@ async def crawl_news_sources():
     news_sources = await sync_to_async(list)(NewsSource.objects.all())
     for news_source in news_sources:
         print(f"Crawling {news_source.url}")
+        start_time = timezone.now()
+        
         await fetch_website(news_source.url)
-        news_source.last_crawled = timezone.now()
+        
+        end_time = timezone.now()
+        duration = end_time - start_time
+        print(f"Finished crawling {news_source.url} in {duration}")
+        
+        news_source.last_crawled = end_time
         await sync_to_async(news_source.save)()
         close_old_connections()
 
