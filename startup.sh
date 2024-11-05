@@ -19,4 +19,4 @@ else
     echo "SLACK_WEBHOOK_URL is not set. Skipping Slack notification."
 fi
 
-granian --interface asgi --host 0.0.0.0 --port 80 --workers 4 nachopr.asgi:application
+granian --interface asgi --host 0.0.0.0 --port 80 --workers 4 nachopr.asgi:application & python manage.py crawl
