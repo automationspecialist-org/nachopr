@@ -5,11 +5,14 @@ from spider_rs import Website
 from django.db import close_old_connections, IntegrityError
 from asgiref.sync import sync_to_async
 from django.utils.text import slugify
+import threading
 
 
 async def crawl_news_sources():
-    news_sources = await sync_to_async(list)(NewsSource.objects.all())
+    # Close any existing connections before starting new thread
+    close_old_connections()
     
+    news_sources = await sync_to_async(list)(NewsSource.objects.all())
     tasks = [fetch_website(source.url) for source in news_sources]
     
     await asyncio.gather(*tasks, return_exceptions=True)
@@ -18,15 +21,27 @@ async def crawl_news_sources():
         url__in=[source.url for source in news_sources]
     ).update)(last_crawled=timezone.now())
     
+    # Close connections after we're done
     close_old_connections()
 
 
 def crawl_news_sources_sync():
-    """Synchronous wrapper for the async crawl function"""
-    async def run_async():
-        await crawl_news_sources()
+    """Non-blocking wrapper for the async crawl function"""
+    def run_in_thread():
+        try:
+            # Create new event loop for this thread
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(crawl_news_sources())
+            loop.close()
+        except Exception as e:
+            print(f"Error in crawl thread: {str(e)}")
+        finally:
+            close_old_connections()
     
-    asyncio.run(run_async())
+    thread = threading.Thread(target=run_in_thread)
+    thread.daemon = True
+    thread.start()
 
 
 async def fetch_website(url: str) -> None:

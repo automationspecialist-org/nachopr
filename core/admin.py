@@ -9,11 +9,10 @@ class NewsSourceAdmin(admin.ModelAdmin):
     
     def crawl_selected_sources(self, request, queryset):
         try:
-            messages.info(request, "Starting news source crawl...")
             crawl_news_sources_sync()
-            messages.success(request, "Crawling completed successfully!")
+            messages.success(request, "Crawl started in background!")
         except Exception as e:
-            messages.error(request, f"Error during crawling: {str(e)}")
+            messages.error(request, f"Error starting crawl: {str(e)}")
     
     crawl_selected_sources.short_description = "Crawl selected news sources"
 
