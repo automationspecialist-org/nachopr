@@ -9,26 +9,27 @@ from django.utils.text import slugify
 
 async def crawl_news_sources():
     news_sources = await sync_to_async(list)(NewsSource.objects.all())
+    
+    tasks = [fetch_website(source.url) for source in news_sources]
+    
+    await asyncio.gather(*tasks)
+    
     for news_source in news_sources:
-        print(f"Crawling {news_source.url}")
-        await fetch_website(news_source.url)
         news_source.last_crawled = timezone.now()
         await sync_to_async(news_source.save)()
-        close_old_connections()
+    
+    close_old_connections()
 
 
 def crawl_news_sources_sync():
-    try:
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        # If there's no event loop in the current thread, create a new one
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     
     try:
         loop.run_until_complete(crawl_news_sources())
     finally:
         loop.close()
+        close_old_connections()
 
 
 async def fetch_website(url: str) -> Website:
