@@ -53,6 +53,9 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     uv pip install --no-deps -r requirements.txt && \
     uv pip install -r requirements.txt
 
+# Copy application code
+COPY . /usr/src/app/
+
 # Update SSH configuration for Azure compatibility
 RUN apt-get update \
     && apt-get install -y --no-install-recommends dialog openssh-server \
