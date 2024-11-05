@@ -8,3 +8,5 @@ asyncio
 slugify
 granian
 whitenoise
+beautifulsoup4
+requests

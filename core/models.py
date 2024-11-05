@@ -19,6 +19,9 @@ class Journalist(models.Model):
     name = models.CharField(max_length=255)
     sources = models.ManyToManyField(NewsSource)
     slug = models.SlugField(unique=True)
+    profile_url = models.URLField(null=True, blank=True, unique=True)
+    image_url = models.URLField(null=True, blank=True, unique=True)
+    
     def __str__(self):
         return self.name
 

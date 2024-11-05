@@ -6,6 +6,12 @@ asgiref==3.8.1
     #   django-allauth
 asyncio==3.4.3
     # via -r requirements.in
+beautifulsoup4==4.12.3
+    # via -r requirements.in
+certifi==2024.8.30
+    # via requests
+charset-normalizer==3.4.0
+    # via requests
 click==8.1.7
     # via granian
 django==5.1.2
@@ -25,14 +31,22 @@ django-extensions==3.2.3
     # via -r requirements.in
 granian==1.6.3
     # via -r requirements.in
+idna==3.10
+    # via requests
+requests==2.32.3
+    # via -r requirements.in
 slugify==0.0.1
     # via -r requirements.in
+soupsieve==2.6
+    # via beautifulsoup4
 spider-rs==0.0.53
     # via -r requirements.in
 sqlparse==0.5.1
     # via
     #   django
     #   django-debug-toolbar
+urllib3==2.2.3
+    # via requests
 uvloop==0.21.0
     # via granian
 whitenoise==6.8.2
