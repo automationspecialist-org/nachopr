@@ -3,6 +3,8 @@ set -e
 if [ -n "$AZURE" ]; then
     service ssh start
 fi
+mkdir -p /home/persistent
+chmod 777 /home/persistent
 service memcached start
 python manage.py migrate
 python manage.py create_admin_user

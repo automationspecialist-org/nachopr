@@ -32,6 +32,18 @@ jobs:
         push: true
         tags: nachopr.azurecr.io/${{ secrets.AzureAppService_ContainerUsername_5a623b389bda4085ae494c33122a6644 }}/webimage:${{ github.sha }}
         file: ./Dockerfile
+        cache-from: |
+          type=registry,ref=nachopr.azurecr.io/${{ secrets.AzureAppService_ContainerUsername_5a623b389bda4085ae494c33122a6644 }}/webimage:cache
+          type=gha,scope=${{ github.ref_name }}-${{ github.workflow }}
+        cache-to: |
+          type=registry,ref=nachopr.azurecr.io/${{ secrets.AzureAppService_ContainerUsername_5a623b389bda4085ae494c33122a6644 }}/webimage:cache,mode=max
+          type=gha,scope=${{ github.ref_name }}-${{ github.workflow }},mode=max
+        platforms: linux/amd64
+        provenance: false
+        build-args: |
+          BUILDKIT_INLINE_CACHE=1
+          DOCKER_BUILDKIT=1
+        outputs: type=docker,compression-level=3
 
   deploy:
     runs-on: ubuntu-latest
@@ -49,3 +61,7 @@ jobs:
         slot-name: 'production'
         publish-profile: ${{ secrets.AzureAppService_PublishProfile_f04be9825d8b4adf9f51de8ef234f430 }}
         images: 'nachopr.azurecr.io/${{ secrets.AzureAppService_ContainerUsername_5a623b389bda4085ae494c33122a6644 }}/webimage:${{ github.sha }}'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true

@@ -75,13 +75,13 @@ ASGI_APPLICATION = 'nachopr.asgi.application'
 
 ALLOWED_HOSTS = [
     '0.0.0.0', '127.0.0.1', 'nachopr.apps.innermaps.org',
-    'nachopr-bebfduhpc0hfckdj.centralus-01.azurewebsites.net'
+    'nachox-ffapf9hefbhmc5de.eastus2-01.azurewebsites.net'
 ]
 
 # Add CSRF trusted origins for your domains
 CSRF_TRUSTED_ORIGINS = [
     'https://nachopr.apps.innermaps.org',
-    'https://nachopr-bebfduhpc0hfckdj.centralus-01.azurewebsites.net'
+    'https://nachox-ffapf9hefbhmc5de.eastus2-01.azurewebsites.net'
 ]
 
 # Database
@@ -90,7 +90,7 @@ CSRF_TRUSTED_ORIGINS = [
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': Path('/mnt/persistent/db.sqlite3') if os.environ.get('AZURE') else (
+        'NAME': Path('/home/persistent/db.sqlite3') if os.environ.get('AZURE') else (
             Path('/persistent/db.sqlite3') if os.environ.get('CAPROVER') else BASE_DIR / 'db.sqlite3'
         ),
     }
