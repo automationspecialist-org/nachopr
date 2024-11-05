@@ -57,8 +57,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 RUN apt-get update \
     && apt-get install -y --no-install-recommends dialog \
     && apt-get install -y --no-install-recommends openssh-server \
-    && echo "root:Docker!" | chpasswd \
-    && chmod u+x ./entrypoint.sh
+    && echo "root:Docker!" | chpasswd 
 COPY sshd_config /etc/ssh/
 
 # Copy the rest of the application
