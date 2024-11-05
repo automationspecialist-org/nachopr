@@ -35,3 +35,5 @@ sqlparse==0.5.1
     #   django-debug-toolbar
 uvloop==0.21.0
     # via granian
+whitenoise==6.8.2
+    # via -r requirements.in
