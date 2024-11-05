@@ -59,3 +59,4 @@ COPY . /usr/src/app
 EXPOSE 80
 
 CMD ["sh", "./startup.sh"]
+ 
