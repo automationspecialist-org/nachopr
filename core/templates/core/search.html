@@ -6,12 +6,15 @@
       {% for journalist in results %}
         <li>
           <a href="{{ journalist.profile_url }}">{{ journalist.name }}</a>
-          {% if journalist.image_url %}
-            <img src="{{ journalist.image_url }}" alt="{{ journalist.name }}">
-          {% endif %}
         </li>
       {% endfor %}
     </ul>
+    {% if not user.is_authenticated %}
+      <p>Start your free trial to access the full database.</p>
+      <a href="{% url 'signup' %}" class="font-space border border-gray-300 text-gray-700 px-8 py-4 rounded-lg text-lg font-medium hover:bg-gray-50 transition-colors">
+        Sign Up
+      </a>
+    {% endif %}
   {% else %}
     <p>No results found.</p>
   {% endif %}

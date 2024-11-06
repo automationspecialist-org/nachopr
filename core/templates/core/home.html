@@ -1,5 +1,5 @@
 {% extends "marketing_base.html" %}
-
+{% load humanize %}
 
 {% block main %}
     <!-- Hero Section -->
@@ -7,8 +7,8 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center">
                 <h1 class="text-5xl md:text-6xl font-bold text-gray-900 mb-6 font-space">
-                    Connect with {{ journalist_count }} Journalists <br class="hidden md:block">
-                    <span class="text-green-600">in Real-Time</span>
+                    Connect with <span class="text-green-600">{{ journalist_count|intcomma }} Journalists</span> <br class="hidden md:block">
+                    from {{ news_sources_count|intcomma }} Media Outlets
                 </h1>
                 <p class="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
                     Use NachoPR to connect with journalists and secure media coverage, high authority backlinks, and more, for your digital PR strategy.
@@ -17,8 +17,8 @@
                     <a href="/signup" class="font-space bg-green-600 text-white px-8 py-4 rounded-lg text-lg font-medium hover:bg-green-700 transition-colors">
                         Start Free Trial
                     </a>
-                    <a href="#demo" class="font-space border border-gray-300 text-gray-700 px-8 py-4 rounded-lg text-lg font-medium hover:bg-gray-50 transition-colors">
-                        Watch Demo
+                    <a href="{% url 'free-media-list' %}" class="font-space border border-gray-300 text-gray-700 px-8 py-4 rounded-lg text-lg font-medium hover:bg-gray-50 transition-colors">
+                        Search the Database
                     </a>
                 </div>
             </div>
@@ -48,7 +48,7 @@
                         </svg>
                     </div>
                     <h3 class="text-xl font-semibold mb-3 font-space">Media Database</h3>
-                    <p class="text-gray-600">Access comprehensive profiles of {{ journalist_count }} journalists and {{ news_sources_count }} media outlets worldwide.</p>
+                    <p class="text-gray-600">Access comprehensive profiles of {{ journalist_count|intcomma }} journalists and {{ news_sources_count|intcomma }} media outlets worldwide.</p>
                 </div>
 
                 <!-- Feature 3 -->

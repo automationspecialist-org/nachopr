@@ -27,7 +27,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-tawj(49n0_32tx5l%&bufs^)!n1^-(%_$9bm^%*p4maxiwa#%y'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+if 'AZURE' in os.environ or 'CAPROVER' in os.environ:
+    DEBUG = False
+else:
+    DEBUG = True
 
 
 # Application definition
@@ -40,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'whitenoise',
+    'django.contrib.humanize',
     'tailwind',
     'theme',
     'core',
