@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from core.tasks import crawl_news_sources_sync, run_journalist_processing
+from core.tasks import crawl_news_sources_sync, process_all_pages_journalists
 
 class Command(BaseCommand):
     help = 'Crawl all news sources'
@@ -17,5 +17,5 @@ class Command(BaseCommand):
         crawl_news_sources_sync(limit=limit)
         self.stdout.write(self.style.SUCCESS('Successfully crawled all news sources'))
         self.stdout.write('Starting journalist processing...')
-        run_journalist_processing()
+        process_all_pages_journalists()
         self.stdout.write(self.style.SUCCESS('Successfully processed all journalists'))

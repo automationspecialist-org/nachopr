@@ -1,12 +1,16 @@
 import asyncio
+import json
+import os
 from django.utils import timezone
 from core.models import NewsPage, NewsSource, Journalist
 from spider_rs import Website 
-from django.db import close_old_connections, IntegrityError, transaction
+from django.db import close_old_connections, IntegrityError
 from asgiref.sync import sync_to_async
 from django.utils.text import slugify
-from bs4 import BeautifulSoup
+from openai import AzureOpenAI
+from dotenv import load_dotenv
 
+load_dotenv()
 
 async def crawl_news_sources(limit: int = None):
     # Add debug print
@@ -64,8 +68,8 @@ async def fetch_website(url: str, limit: int = 1000_000, depth: int = 3) -> Webs
         slug = slugify(page.title)
         
         try:
-            # Use get_or_create to avoid duplicates
-            _, created = await sync_to_async(NewsPage.objects.get_or_create)(
+            # Create or get the NewsPage instance
+            news_page, created = await sync_to_async(NewsPage.objects.get_or_create)(
                 url=page.url,
                 slug=slug,
                 defaults={
@@ -75,158 +79,122 @@ async def fetch_website(url: str, limit: int = 1000_000, depth: int = 3) -> Webs
                     'slug': slug
                 }
             )
-            # Extract journalists from the page content
-            journalists_data = extract_journalists(page.content)
-            
-            for name, meta in journalists_data.items():
-                # Generate a slug from the journalist's name
-                journalist_slug = slugify(name)
-                
-                # Use get_or_create to avoid duplicates
-                journalist, created = await sync_to_async(Journalist.objects.get_or_create)(
-                    name=name,
-                    slug=journalist_slug,
-                    defaults={
-                        'profile_url': meta.get('profile_url'),
-                        'image_url': meta.get('image_url')
-                    }
-                )
-                
-                # Associate the journalist with the news page
-                await sync_to_async(page.journalists.add)(journalist)
-            
-                # Mark the page as processed
-                page.processed = True
-                await sync_to_async(page.save)()
+            # Pass the Django NewsPage instance instead of the spider_rs NPage
+            await process_single_page_journalists(news_page)
         except IntegrityError as e:
             print(f"Skipping duplicate page: {page.url} - {str(e)}")
             continue
         
         close_old_connections()
 
-
-def extract_journalists(html: str):
-    """
-    Extract journalist information from article HTML.
-    Returns dict with journalist name and metadata.
-    """
-    # Create BeautifulSoup object to parse HTML
-    soup = BeautifulSoup(html, 'html.parser')
     
-    # Look for journalist info in byline/contributor tags
-    journalists = {}
-    
-    # Try to find byline elements
-    bylines = soup.find_all(attrs={"data-component": "meta-byline"})
-    
-    for byline in bylines:
-        # Extract name from byline
-        name = byline.get_text().strip()
-        
-        # Look for associated metadata
-        meta = {}
-        
-        # Try to find profile URL
-        profile_link = byline.find('a')
-        if profile_link:
-            meta['profile_url'] = profile_link['href']
-            
-        # Try to find image URL    
-        img = byline.find('img')
-        if img:
-            meta['image_url'] = img['src']
-            
-        # Add to journalists dict
-        journalists[name] = meta
-        
-    return journalists
 
-
-async def process_journalists():
+def extract_journalists_with_gpt(content: str) -> dict:
     """
-    Process all NewsPages to extract and update journalist information
+    Extract journalist information from the HTML content using GPT-4 on Azure.
     """
-    # Get all NewsPages that need processing
-    news_pages = await sync_to_async(list)(NewsPage.objects.filter(processed=False))
+    client = AzureOpenAI(
+        azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+        azure_deployment="gpt-4o-mini",
+        api_version="2024-08-01-preview",
+        api_key=os.getenv("AZURE_OPENAI_API_KEY")
+    )
+    journalist_json = { "journalists": [
+            {
+                "name": "John Doe",
+                "description": "An experienced journalist covering international news.",
+                "profile_url": "https://example.com/john-doe",
+                "image_url": "https://example.com/john-doe.jpg"
+            },
+            {
+                "name": "Jane Smith",
+                "description": "A journalist specializing in technology and science.",
+                "profile_url": "https://example.com/jane-smith",
+                "image_url": "https://example.com/jane-smith.jpg"
+            }
+        ]
+    }
+    # Define the prompt for GPT-4
+    prompt = f"""
+    Extract journalist information from the following HTML content and return it as a JSON object with the journalist's name as the key and their metadata (profile_url and image_url) as the value:
     
-    for page in news_pages:
-        # Extract journalists from page content
-        journalists_data = extract_journalists(page.content)
-        
-        # Process each journalist
-        for name, metadata in journalists_data.items():
-            await update_journalist(name, metadata, page)
+    HTML content:
+    ```
+    {content[:10000]}
+    ```
 
-
-@sync_to_async
-@transaction.atomic
-def update_journalist(name: str, metadata: dict, page: NewsPage):
+    Use the following JSON schema:
+    ```
+    {journalist_json}
+    ```
+    If you cannot find any journalists, return an empty JSON object. Never output the example JSON objects such as 'John Doe' and 'Jane Smith'.
     """
-    Create or update journalist record and link to page
-    """
-    journalist = None
-    created = False
+
+    # Call the GPT-4 API on Azure
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are a html to json extractor."},
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=2000,
+        n=1,
+        stop=None,
+        temperature=0.3,
+        response_format={"type": "json_object"}
+    )
+
+    # Parse the response
+    result = response.choices[0].message.content
+    try:
+        journalists_data = json.loads(result)
+    except json.JSONDecodeError:
+        print('error:', result)
+        journalists_data = {}
+
+    return journalists_data
+
+
+async def process_single_page_journalists(page: NewsPage):
+    """Process journalists for a single news page using GPT"""
+    journalists_data = extract_journalists_with_gpt(page.content)
     
-    # Generate base slug
-    base_slug = slugify(name)
-
-    # First try to find journalist by profile_url if it exists
-    profile_url = metadata.get('profile_url')
-    if profile_url:
-        try:
-            journalist = Journalist.objects.get(profile_url=profile_url)
-            # Update name if different
-            if journalist.name != name:
-                journalist.name = name
-                journalist.save(update_fields=['name'])
-        except Journalist.DoesNotExist:
-            pass
-
-    # If we didn't find by profile_url, try to get or create by name with unique slug
-    if journalist is None:
-        counter = 0
-        while True:
-            slug = base_slug if counter == 0 else f"{base_slug}-{counter}"
-            try:
-                journalist, created = Journalist.objects.get_or_create(
-                    slug=slug,
-                    defaults={
-                        'name': name,
-                        'profile_url': profile_url,
-                        'image_url': metadata.get('image_url')
-                    }
-                )
-                break
-            except IntegrityError:
-                counter += 1
-
-    # Update metadata if needed
-    if not created:
-        update_fields = []
-        if profile_url and not journalist.profile_url:
-            journalist.profile_url = profile_url
-            update_fields.append('profile_url')
-        if metadata.get('image_url') and not journalist.image_url:
-            journalist.image_url = metadata['image_url']
-            update_fields.append('image_url')
-        if update_fields:
-            journalist.save(update_fields=update_fields)
+    if journalists_data and 'journalists' in journalists_data:
+        for journalist_dict in journalists_data['journalists']:
+            if 'name' in journalist_dict:
+                name = journalist_dict['name']
+                profile_url = journalist_dict.get('profile_url')
+                image_url = journalist_dict.get('image_url')
+                
+                # Generate a slug from the journalist's name
+                journalist_slug = slugify(name)
+                
+                try:
+                    journalist, created = await sync_to_async(Journalist.objects.get_or_create)(
+                        name=name,
+                        slug=journalist_slug,
+                        defaults={
+                            'profile_url': profile_url,
+                            'image_url': image_url
+                        }
+                    )
+                    print('created:' if created else 'existing:', journalist_dict)
+                    
+                    # Associate the journalist with the news page
+                    await sync_to_async(page.journalists.add)(journalist)
+                except IntegrityError:
+                    print('skipping (integrity error):', journalist_dict)
     
-    # Link journalist to page and source
-    page.journalists.add(journalist)
-    journalist.sources.add(page.source)
+    page.processed = True
+    await sync_to_async(page.save)()
 
+async def process_all_pages_journalists(limit: int = 10):
+    """Process journalists for multiple pages using GPT"""
+    pages = await sync_to_async(list)(NewsPage.objects.filter(processed=False)[:limit])
+    for page in pages:
+        await process_single_page_journalists(page)
 
-# Sync runner
-def run_journalist_processing():
-    """
-    Sync wrapper to run the async journalist processing
-    """
-    import asyncio
-    
-    async def run():
-        await process_journalists()
-    
-    asyncio.run(run())
-
+def extract_all_journalists_with_gpt(limit: int = 1000_000):
+    """Sync wrapper for processing multiple pages"""
+    asyncio.run(process_all_pages_journalists(limit))
 
