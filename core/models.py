@@ -6,6 +6,10 @@ class NewsSource(models.Model):
     name = models.CharField(max_length=255)
     slug = models.SlugField(unique=True)
     last_crawled = models.DateTimeField(null=True, blank=True)
+    location = models.CharField(max_length=255, null=True, blank=True)
+    timezone = models.CharField(max_length=255, null=True, blank=True)
+    country = models.CharField(max_length=255, null=True, blank=True)
+    language = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):
         return self.name
