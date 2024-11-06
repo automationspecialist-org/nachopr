@@ -9,11 +9,20 @@ from bs4 import BeautifulSoup
 
 
 async def crawl_news_sources(limit : int = None):
+    # Add debug print
+    print("Running on", timezone.now())
+    
     news_sources = await sync_to_async(list)(
-        NewsSource.objects.filter(
-            last_crawled__lt=timezone.now() - timezone.timedelta(days=1)
-        )
+        # Modify or temporarily remove the time filter
+        NewsSource.objects.all()  # Remove filter temporarily for testing
+        # Original: NewsSource.objects.filter(
+        #     last_crawled__lt=timezone.now() - timezone.timedelta(days=1)
+        # )
     )
+    
+    # Add debug print
+    print(f"Found {len(news_sources)} news sources to crawl")
+    
     for news_source in news_sources:
         print(f"Crawling {news_source.url}")
         start_time = timezone.now()
