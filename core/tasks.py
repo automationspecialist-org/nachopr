@@ -149,6 +149,9 @@ def update_journalist(name: str, metadata: dict, page: NewsPage):
     """
     journalist = None
     created = False
+    
+    # Generate base slug
+    base_slug = slugify(name)
 
     # First try to find journalist by profile_url if it exists
     profile_url = metadata.get('profile_url')
@@ -162,15 +165,23 @@ def update_journalist(name: str, metadata: dict, page: NewsPage):
         except Journalist.DoesNotExist:
             pass
 
-    # If we didn't find by profile_url, try to get or create by name
+    # If we didn't find by profile_url, try to get or create by name with unique slug
     if journalist is None:
-        journalist, created = Journalist.objects.get_or_create(
-            name=name,
-            defaults={
-                'profile_url': profile_url,
-                'image_url': metadata.get('image_url')
-            }
-        )
+        counter = 0
+        while True:
+            slug = base_slug if counter == 0 else f"{base_slug}-{counter}"
+            try:
+                journalist, created = Journalist.objects.get_or_create(
+                    slug=slug,
+                    defaults={
+                        'name': name,
+                        'profile_url': profile_url,
+                        'image_url': metadata.get('image_url')
+                    }
+                )
+                break
+            except IntegrityError:
+                counter += 1
 
     # Update metadata if needed
     if not created:

@@ -2,10 +2,81 @@
 
 
 {% block main %}
-    <h1>NachoPR</h1>
-    <p>News sources: {{ news_sources_count }}</p>
-    <p>News pages: {{ news_pages_count }}</p>
-    <p>Journalists: {{ journalist_count }}</p>
+    <!-- Hero Section -->
+    <section class="pt-32 pb-24 bg-gradient-to-b from-green-50 to-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center">
+                <h1 class="text-5xl md:text-6xl font-bold text-gray-900 mb-6 font-space">
+                    Connect with {{ journalist_count }} Journalists <br class="hidden md:block">
+                    <span class="text-green-600">in Real-Time</span>
+                </h1>
+                <p class="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+                    Use NachoPR to connect with journalists and secure media coverage, high authority backlinks, and more, for your digital PR strategy.
+                </p>
+                <div class="flex flex-col sm:flex-row justify-center gap-4">
+                    <a href="/signup" class="font-space bg-green-600 text-white px-8 py-4 rounded-lg text-lg font-medium hover:bg-green-700 transition-colors">
+                        Start Free Trial
+                    </a>
+                    <a href="#demo" class="font-space border border-gray-300 text-gray-700 px-8 py-4 rounded-lg text-lg font-medium hover:bg-gray-50 transition-colors">
+                        Watch Demo
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
 
-    <a href="{% url 'free-media-list' %}">Free Media Database</a>
+    <!-- Features Grid -->
+    <section class="py-24 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid md:grid-cols-3 gap-12">
+                <!-- Feature 1 -->
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3 font-space">Real-Time Alerts</h3>
+                    <p class="text-gray-600">Get notified instantly when journalists mention your brand.</p>
+                </div>
+
+                <!-- Feature 2 -->
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3 font-space">Media Database</h3>
+                    <p class="text-gray-600">Access comprehensive profiles of {{ journalist_count }} journalists and {{ news_sources_count }} media outlets worldwide.</p>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3 font-space">Smart Matching</h3>
+                    <p class="text-gray-600">AI-powered technology matches you with the most relevant opportunities.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="bg-green-600 py-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 class="font-space text-3xl md:text-4xl font-bold text-white mb-6">
+                Ready to boost your PR efforts?
+            </h2>
+            <p class="text-green-100 text-xl mb-8 max-w-2xl mx-auto">
+                Join thousands of businesses using NachoPR to connect with journalists and secure media coverage.
+            </p>
+            <a href="/signup" class="font-space bg-white text-green-600 px-8 py-4 rounded-lg text-lg font-medium hover:bg-green-50 transition-colors inline-block">
+                Start Free Trial
+            </a>
+        </div>
+    </section>
 {% endblock %}
