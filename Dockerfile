@@ -48,9 +48,7 @@ WORKDIR /usr/src/app
 COPY requirements.txt pyproject.toml* poetry.lock* /usr/src/app/
 
 # Pre-download and cache dependencies
-RUN --mount=type=cache,target=/root/.cache/pip \
-    --mount=type=cache,target=/root/.cache/uv \
-    uv pip install --no-deps -r requirements.txt && \
+RUN uv pip install --no-deps -r requirements.txt && \
     uv pip install -r requirements.txt
 
 # Copy application code
