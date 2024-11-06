@@ -1,0 +1,22 @@
+{% extends "marketing_base.html" %}
+
+{% block title %}Free Media Database | NachoPR{% endblock %}
+{% block main %}
+    <h1>Free Media Database | NachoPR</h1>
+    <p>News sources: {{ news_sources_count }}</p>
+    <p>News pages: {{ news_pages_count }}</p>
+    <p>Journalists: {{ journalist_count }}</p>
+
+    <div>
+        <h2>Search for a journalist</h2>
+        <form action="{% url 'search' %}" method="get" id="search-form">
+            <input type="text" name="q" placeholder="Search">
+            <div class="cf-turnstile" data-sitekey="YOUR_SITE_KEY"></div>
+            <button type="submit">Search</button>
+        </form>
+
+        <div id="search-results">
+
+        </div>
+    </div>
+{% endblock %}

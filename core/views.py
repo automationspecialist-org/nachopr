@@ -19,3 +19,7 @@ def search(request):
        return render(request, 'core/search.html') 
     results = Journalist.objects.filter(name__icontains=query)
     return render(request, 'core/search.html', {'results': results})
+
+
+def free_media_list(request):
+    return render(request, 'core/free_media_list.html')

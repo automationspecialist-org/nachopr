@@ -1,19 +1,11 @@
 {% extends "marketing_base.html" %}
 
+
 {% block main %}
     <h1>NachoPR</h1>
     <p>News sources: {{ news_sources_count }}</p>
     <p>News pages: {{ news_pages_count }}</p>
     <p>Journalists: {{ journalist_count }}</p>
 
-    <div>
-        <h2>Search for a journalist</h2>
-        <form action="{% url 'search' %}" method="get">
-            <input type="text" name="q" placeholder="Search" hx-get="{% url 'search' %}" hx-trigger="keyup changed delay:500ms" hx-target="#search-results">
-        </form>
-
-        <div id="search-results">
-
-        </div>
-    </div>
+    <a href="{% url 'free-media-list' %}">Free Media Database</a>
 {% endblock %}

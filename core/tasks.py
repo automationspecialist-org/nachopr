@@ -147,6 +147,9 @@ def update_journalist(name: str, metadata: dict, page: NewsPage):
     """
     Create or update journalist record and link to page
     """
+    journalist = None
+    created = False
+
     # First try to find journalist by profile_url if it exists
     profile_url = metadata.get('profile_url')
     if profile_url:
@@ -157,10 +160,7 @@ def update_journalist(name: str, metadata: dict, page: NewsPage):
                 journalist.name = name
                 journalist.save(update_fields=['name'])
         except Journalist.DoesNotExist:
-            # If not found by profile_url, proceed with name-based lookup
-            journalist = None
-    else:
-        journalist = None
+            pass
 
     # If we didn't find by profile_url, try to get or create by name
     if journalist is None:
