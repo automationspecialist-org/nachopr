@@ -10,8 +10,6 @@ python manage.py migrate
 python manage.py create_admin_user
 python manage.py add_news_sources
 python manage.py collectstatic --no-input
-python manage.py process_journalists
-
 
 # Send a message to Slack when restarting
 if [ -n "$SLACK_WEBHOOK_URL" ]; then
