@@ -1,5 +1,6 @@
 import asyncio
 from django.utils import timezone
+from regex import F
 from core.models import NewsPage, NewsSource, Journalist
 from spider_rs import Website 
 from django.db import close_old_connections, IntegrityError, transaction
@@ -43,8 +44,9 @@ def crawl_news_sources_sync(limit : int = None):
     loop.run_until_complete(crawl_news_sources(limit))
 
 
-async def fetch_website(url: str, limit: int = None) -> Website:
-    website = Website(url).with_budget(budget=limit)
+async def fetch_website(url: str, limit: int = None, depth: int = 3) -> Website:
+    user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+    website = Website(url).with_budget({"*": limit}).with_user_agent(user_agent).with_request_timeout(30000).with_respect_robots_txt(False).with_depth(depth)
     website.scrape()
     pages = website.get_pages()
     
