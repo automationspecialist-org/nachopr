@@ -22,10 +22,12 @@ class NewsSource(models.Model):
 class Journalist(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True)
-    sources = models.ManyToManyField(NewsSource)
+    sources = models.ManyToManyField(NewsSource, related_name='journalists')
     slug = models.SlugField(unique=True)
     profile_url = models.URLField(null=True, blank=True, unique=True)
     image_url = models.URLField(null=True, blank=True, unique=True)
+    country = models.CharField(max_length=255, null=True, blank=True)
+    x_profile_url = models.URLField(null=True, blank=True, unique=True)
     
     def __str__(self):
         return self.name
@@ -39,8 +41,8 @@ class NewsPage(models.Model):
     url = models.URLField(unique=True)
     title = models.CharField(max_length=255)
     content = models.TextField()
-    source = models.ForeignKey(NewsSource, on_delete=models.CASCADE)
-    journalists = models.ManyToManyField(Journalist)
+    source = models.ForeignKey(NewsSource, on_delete=models.CASCADE, related_name='pages')
+    journalists = models.ManyToManyField(Journalist, related_name='articles')
     slug = models.SlugField(unique=True)
     processed = models.BooleanField(default=False)
 

@@ -65,6 +65,55 @@
         </div>
     </section>
 
+    {% if example_journalists %}
+        <!-- Example Journalists -->
+        <section class="py-24 bg-white">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 class="text-3xl font-bold mb-6 font-space">Example Journalists</h2>
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {% for journalist in example_journalists %}
+                        <div class="bg-gradient-to-br from-gray-50 to-white p-6 rounded-lg border border-gray-200">
+                            <div class="flex items-center space-x-4 mb-4">
+                                {% if journalist.image_url %}
+                                    <img src="{{ journalist.image_url }}" alt="{{ journalist.name }}" 
+                                         class="w-16 h-16 rounded-full object-cover border-2 border-gray-200">
+                                {% else %}
+                                    <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
+                                        <span class="text-2xl text-green-600 font-semibold">
+                                            {{ journalist.name|slice:":1" }}
+                                        </span>
+                                    </div>
+                                {% endif %}
+                                <div>
+                                    <h3 class="text-xl font-semibold font-space">{{ journalist.name }}</h3>
+                                    {% if journalist.country %}
+                                        <p class="text-gray-600 text-sm">{{ journalist.country }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                {% for source in journalist.sources.all|slice:":3" %}
+                                    <span class="inline-block text-xs text-gray-500 mr-2">{{ source.name }}</span>
+                                {% endfor %}
+                            </div>
+                            {% if journalist.description %}
+                                <p class="text-gray-700 text-sm mb-4">{{ journalist.description }}</p>
+                            {% endif %}
+                            <div class="flex space-x-3">
+                                {% if journalist.x_profile_url %}
+                                    <a href="{{ journalist.x_profile_url }}" target="_blank" 
+                                       class="text-gray-600 hover:text-gray-700 text-sm">
+                                        Twitter/X →
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+    {% endif %}
+
     <!-- CTA Section -->
     <section class="bg-green-600 py-20">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
