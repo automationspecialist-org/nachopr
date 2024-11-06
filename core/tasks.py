@@ -8,7 +8,7 @@ from django.utils.text import slugify
 from bs4 import BeautifulSoup
 
 
-async def crawl_news_sources(limit : int = None):
+async def crawl_news_sources(limit: int = None):
     # Add debug print
     print("Running on", timezone.now())
     
@@ -27,7 +27,7 @@ async def crawl_news_sources(limit : int = None):
         print(f"Crawling {news_source.url}")
         start_time = timezone.now()
         
-        await fetch_website(news_source.url)
+        await fetch_website(news_source.url, limit=limit)
         
         end_time = timezone.now()
         duration = end_time - start_time
@@ -43,7 +43,7 @@ def crawl_news_sources_sync(limit : int = None):
     loop.run_until_complete(crawl_news_sources(limit))
 
 
-async def fetch_website(url: str, limit: int = None, depth: int = 3) -> Website:
+async def fetch_website(url: str, limit: int = 1000_000, depth: int = 3) -> Website:
     user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
     website = (
         Website(url)
