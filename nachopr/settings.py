@@ -40,6 +40,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'whitenoise',
+    'tailwind',
+    'theme',
     'core',
 ]
 
@@ -90,12 +92,14 @@ CSRF_TRUSTED_ORIGINS = [
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+DB_PATH = Path('/home/persistent/db.sqlite3') if os.environ.get('AZURE') else (
+    Path('/persistent/db.sqlite3') if os.environ.get('CAPROVER') else BASE_DIR / 'db.sqlite3'
+)
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': Path('/home/persistent/db.sqlite3') if os.environ.get('AZURE') else (
-            Path('/persistent/db.sqlite3') if os.environ.get('CAPROVER') else BASE_DIR / 'db.sqlite3'
-        ),
+        'NAME': DB_PATH,
     }
 }
 
@@ -147,3 +151,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Add these settings for whitenoise
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+TAILWIND_APP_NAME = 'theme'
+
+INTERNAL_IPS = [
+    "127.0.0.1",
+]

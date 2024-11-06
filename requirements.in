@@ -11,3 +11,4 @@ whitenoise
 beautifulsoup4
 requests
 requests-cache
+django-tailwind
