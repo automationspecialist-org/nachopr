@@ -10,6 +10,7 @@ python manage.py migrate
 python manage.py create_admin_user
 python manage.py add_news_sources
 python manage.py collectstatic --no-input
+python manage.py process_journalists
 
 
 # Send a message to Slack when restarting
@@ -19,4 +20,4 @@ else
     echo "SLACK_WEBHOOK_URL is not set. Skipping Slack notification."
 fi
 
-granian --interface asgi --host 0.0.0.0 --port 80 --workers 4 nachopr.asgi:application & python manage.py crawl
+granian --interface asgi --host 0.0.0.0 --port 80 --workers 4 nachopr.asgi:application

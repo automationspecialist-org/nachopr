@@ -104,7 +104,7 @@ async def process_journalists():
     Process all NewsPages to extract and update journalist information
     """
     # Get all NewsPages that need processing
-    news_pages = await sync_to_async(list)(NewsPage.objects.all())
+    news_pages = await sync_to_async(list)(NewsPage.objects.filter(processed=False))
     
     for page in news_pages:
         # Extract journalists from page content

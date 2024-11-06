@@ -37,6 +37,7 @@ class NewsPage(models.Model):
     source = models.ForeignKey(NewsSource, on_delete=models.CASCADE)
     journalists = models.ManyToManyField(Journalist)
     slug = models.SlugField(unique=True)
+    processed = models.BooleanField(default=False)
 
     def __str__(self):
         return self.title
