@@ -17,6 +17,7 @@ class NewsSource(models.Model):
 
 class Journalist(models.Model):
     name = models.CharField(max_length=255)
+    description = models.TextField(null=True, blank=True)
     sources = models.ManyToManyField(NewsSource)
     slug = models.SlugField(unique=True)
     profile_url = models.URLField(null=True, blank=True, unique=True)

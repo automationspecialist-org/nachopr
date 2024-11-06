@@ -6,8 +6,14 @@ asgiref==3.8.1
     #   django-allauth
 asyncio==3.4.3
     # via -r requirements.in
+attrs==24.2.0
+    # via
+    #   cattrs
+    #   requests-cache
 beautifulsoup4==4.12.3
     # via -r requirements.in
+cattrs==24.1.2
+    # via requests-cache
 certifi==2024.8.30
     # via requests
 charset-normalizer==3.4.0
@@ -33,8 +39,16 @@ granian==1.6.3
     # via -r requirements.in
 idna==3.10
     # via requests
+platformdirs==4.3.6
+    # via requests-cache
 requests==2.32.3
+    # via
+    #   -r requirements.in
+    #   requests-cache
+requests-cache==1.2.1
     # via -r requirements.in
+six==1.16.0
+    # via url-normalize
 slugify==0.0.1
     # via -r requirements.in
 soupsieve==2.6
@@ -45,8 +59,12 @@ sqlparse==0.5.1
     # via
     #   django
     #   django-debug-toolbar
+url-normalize==1.4.3
+    # via requests-cache
 urllib3==2.2.3
-    # via requests
+    # via
+    #   requests
+    #   requests-cache
 uvloop==0.21.0
     # via granian
 whitenoise==6.8.2

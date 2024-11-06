@@ -1,16 +1,19 @@
 import asyncio
 from django.utils import timezone
 from core.models import NewsPage, NewsSource, Journalist
-from spider_rs import Website
+from spider_rs import Website 
 from django.db import close_old_connections, IntegrityError, transaction
 from asgiref.sync import sync_to_async
 from django.utils.text import slugify
 from bs4 import BeautifulSoup
-import re
 
 
-async def crawl_news_sources():
-    news_sources = await sync_to_async(list)(NewsSource.objects.all())
+async def crawl_news_sources(limit : int = None):
+    news_sources = await sync_to_async(list)(
+        NewsSource.objects.filter(
+            last_crawled__lt=timezone.now() - timezone.timedelta(days=1)
+        )
+    )
     for news_source in news_sources:
         print(f"Crawling {news_source.url}")
         start_time = timezone.now()
@@ -26,13 +29,13 @@ async def crawl_news_sources():
         close_old_connections()
 
 
-def crawl_news_sources_sync():
+def crawl_news_sources_sync(limit : int = None):
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(crawl_news_sources())
+    loop.run_until_complete(crawl_news_sources(limit))
 
 
-async def fetch_website(url: str) -> Website:
-    website = Website(url)
+async def fetch_website(url: str, limit: int = None) -> Website:
+    website = Website(url).with_budget(budget=limit)
     website.scrape()
     pages = website.get_pages()
     
@@ -55,6 +58,29 @@ async def fetch_website(url: str) -> Website:
                     'slug': slug
                 }
             )
+            # Extract journalists from the page content
+            journalists_data = extract_journalists(page.content)
+            
+            for name, meta in journalists_data.items():
+                # Generate a slug from the journalist's name
+                journalist_slug = slugify(name)
+                
+                # Use get_or_create to avoid duplicates
+                journalist, created = await sync_to_async(Journalist.objects.get_or_create)(
+                    name=name,
+                    slug=journalist_slug,
+                    defaults={
+                        'profile_url': meta.get('profile_url'),
+                        'image_url': meta.get('image_url')
+                    }
+                )
+                
+                # Associate the journalist with the news page
+                await sync_to_async(page.journalists.add)(journalist)
+            
+                # Mark the page as processed
+                page.processed = True
+                await sync_to_async(page.save)()
         except IntegrityError as e:
             print(f"Skipping duplicate page: {page.url} - {str(e)}")
             continue
@@ -121,20 +147,36 @@ def update_journalist(name: str, metadata: dict, page: NewsPage):
     """
     Create or update journalist record and link to page
     """
-    # Get or create journalist
-    journalist, created = Journalist.objects.get_or_create(
-        name=name,
-        defaults={
-            'profile_url': metadata.get('profile_url'),
-            'image_url': metadata.get('image_url')
-        }
-    )
-    
-    # Update metadata if journalist exists
+    # First try to find journalist by profile_url if it exists
+    profile_url = metadata.get('profile_url')
+    if profile_url:
+        try:
+            journalist = Journalist.objects.get(profile_url=profile_url)
+            # Update name if different
+            if journalist.name != name:
+                journalist.name = name
+                journalist.save(update_fields=['name'])
+        except Journalist.DoesNotExist:
+            # If not found by profile_url, proceed with name-based lookup
+            journalist = None
+    else:
+        journalist = None
+
+    # If we didn't find by profile_url, try to get or create by name
+    if journalist is None:
+        journalist, created = Journalist.objects.get_or_create(
+            name=name,
+            defaults={
+                'profile_url': profile_url,
+                'image_url': metadata.get('image_url')
+            }
+        )
+
+    # Update metadata if needed
     if not created:
         update_fields = []
-        if metadata.get('profile_url') and not journalist.profile_url:
-            journalist.profile_url = metadata['profile_url']
+        if profile_url and not journalist.profile_url:
+            journalist.profile_url = profile_url
             update_fields.append('profile_url')
         if metadata.get('image_url') and not journalist.image_url:
             journalist.image_url = metadata['image_url']

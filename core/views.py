@@ -11,3 +11,11 @@ def home(request):
         'journalist_count': journalist_count
     }
     return render(request, 'core/home.html', context=context)
+
+
+def search(request):
+    query = request.GET.get('q')
+    if not query:
+       return render(request, 'core/search.html') 
+    results = Journalist.objects.filter(name__icontains=query)
+    return render(request, 'core/search.html', {'results': results})

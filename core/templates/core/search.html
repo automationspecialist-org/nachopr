@@ -1,0 +1,18 @@
+
+{% block content %}
+  <h1>Search Results</h1>
+  {% if results %}
+    <ul>
+      {% for journalist in results %}
+        <li>
+          <a href="{{ journalist.profile_url }}">{{ journalist.name }}</a>
+          {% if journalist.image_url %}
+            <img src="{{ journalist.image_url }}" alt="{{ journalist.name }}">
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No results found.</p>
+  {% endif %}
+{% endblock %}

@@ -10,3 +10,4 @@ granian
 whitenoise
 beautifulsoup4
 requests
+requests-cache
