@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-async def crawl_news_sources(limit: int = None):
+async def crawl_news_sources(limit: int = None, max_concurrent_tasks: int = 10):
     try:
         logger.info(f"Starting crawl at {timezone.now()}")
         
@@ -32,27 +32,35 @@ async def crawl_news_sources(limit: int = None):
         
         logger.info(f"Found {len(news_sources)} news sources to crawl")
         
+        semaphore = asyncio.Semaphore(max_concurrent_tasks)
+        
+        tasks = []
         for news_source in news_sources:
-            try:
-                logger.info(f"Starting crawl for {news_source.url}")
-                start_time = timezone.now()
-                
-                await fetch_website(news_source.url, limit=limit)
-                
-                end_time = timezone.now()
-                duration = end_time - start_time
-                logger.info(f"Finished crawling {news_source.url} in {duration}")
-                
-                news_source.last_crawled = end_time
-                await sync_to_async(news_source.save)()
-                close_old_connections()
-            except Exception as e:
-                logger.error(f"Error crawling {news_source.url}: {str(e)}")
-                continue
+            tasks.append(crawl_single_news_source(news_source, limit, semaphore))
+        
+        await asyncio.gather(*tasks)
                 
     except Exception as e:
         logger.error(f"Critical error in crawl_news_sources: {str(e)}")
         raise
+
+async def crawl_single_news_source(news_source, limit, semaphore):
+    async with semaphore:
+        try:
+            logger.info(f"Starting crawl for {news_source.url}")
+            start_time = timezone.now()
+            
+            await fetch_website(news_source.url, limit=limit)
+            
+            end_time = timezone.now()
+            duration = end_time - start_time
+            logger.info(f"Finished crawling {news_source.url} in {duration}")
+            
+            news_source.last_crawled = end_time
+            await sync_to_async(news_source.save)()
+            close_old_connections()
+        except Exception as e:
+            logger.error(f"Error crawling {news_source.url}: {str(e)}")
 
 
 def crawl_news_sources_sync(limit : int = None):
