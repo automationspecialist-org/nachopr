@@ -9,36 +9,50 @@ from asgiref.sync import sync_to_async
 from django.utils.text import slugify
 from openai import AzureOpenAI
 from dotenv import load_dotenv
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
 async def crawl_news_sources(limit: int = None):
-    # Add debug print
-    print("Running on", timezone.now())
-    
-    news_sources = await sync_to_async(list)(
-        NewsSource.objects.filter(
-             last_crawled__lt=timezone.now() - timezone.timedelta(days=1)
+    try:
+        logger.info(f"Starting crawl at {timezone.now()}")
+        
+        news_sources = await sync_to_async(list)(
+            NewsSource.objects.filter(
+                last_crawled__lt=timezone.now() - timezone.timedelta(days=1)
+            )
         )
-    )
-    
-    
-    # Add debug print
-    print(f"Found {len(news_sources)} news sources to crawl")
-    
-    for news_source in news_sources:
-        print(f"Crawling {news_source.url}")
-        start_time = timezone.now()
         
-        await fetch_website(news_source.url, limit=limit)
+        logger.info(f"Found {len(news_sources)} news sources to crawl")
         
-        end_time = timezone.now()
-        duration = end_time - start_time
-        print(f"Finished crawling {news_source.url} in {duration}")
-        
-        news_source.last_crawled = end_time
-        await sync_to_async(news_source.save)()
-        close_old_connections()
+        for news_source in news_sources:
+            try:
+                logger.info(f"Starting crawl for {news_source.url}")
+                start_time = timezone.now()
+                
+                await fetch_website(news_source.url, limit=limit)
+                
+                end_time = timezone.now()
+                duration = end_time - start_time
+                logger.info(f"Finished crawling {news_source.url} in {duration}")
+                
+                news_source.last_crawled = end_time
+                await sync_to_async(news_source.save)()
+                close_old_connections()
+            except Exception as e:
+                logger.error(f"Error crawling {news_source.url}: {str(e)}")
+                continue
+                
+    except Exception as e:
+        logger.error(f"Critical error in crawl_news_sources: {str(e)}")
+        raise
 
 
 def crawl_news_sources_sync(limit : int = None):
@@ -47,46 +61,50 @@ def crawl_news_sources_sync(limit : int = None):
 
 
 async def fetch_website(url: str, limit: int = 1000_000, depth: int = 3) -> Website:
-    user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
-    website = (
-        Website(url)
-        .with_budget({"*": limit})
-        .with_user_agent(user_agent)
-        .with_request_timeout(30000)
-        .with_respect_robots_txt(False)
-        .with_depth(depth)
-    )
-    website.scrape()
-    pages = website.get_pages()
-    
-    # Get the news source asynchronously
-    news_source = await sync_to_async(NewsSource.objects.get)(url=url)
-    
-    for page in pages:
-        # Generate a slug from the title
-        slug = slugify(page.title)
+    try:
+        user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+        website = (
+            Website(url)
+            .with_budget({"*": limit})
+            .with_user_agent(user_agent)
+            .with_request_timeout(30000)
+            .with_respect_robots_txt(False)
+            .with_depth(depth)
+        )
+        website.scrape()
+        pages = website.get_pages()
+        logger.info(f"Fetched {len(pages)} pages from {url}")
         
-        try:
-            # Create or get the NewsPage instance
-            news_page, created = await sync_to_async(NewsPage.objects.get_or_create)(
-                url=page.url,
-                slug=slug,
-                defaults={
-                    'title': page.title,
-                    'content': page.content,
-                    'source': news_source,
-                    'slug': slug
-                }
-            )
-            # Pass the Django NewsPage instance instead of the spider_rs NPage
-            await process_single_page_journalists(news_page)
-        except IntegrityError as e:
-            print(f"Skipping duplicate page: {page.url} - {str(e)}")
-            continue
+        news_source = await sync_to_async(NewsSource.objects.get)(url=url)
         
-        close_old_connections()
+        for page in pages:
+            try:
+                slug = slugify(page.title)
+                
+                news_page, created = await sync_to_async(NewsPage.objects.get_or_create)(
+                    url=page.url,
+                    slug=slug,
+                    defaults={
+                        'title': page.title,
+                        'content': page.content,
+                        'source': news_source,
+                        'slug': slug
+                    }
+                )
+                await process_single_page_journalists(news_page)
+                logger.info(f"Successfully processed page: {page.url}")
+            except IntegrityError as e:
+                logger.warning(f"Skipping duplicate page: {page.url} - {str(e)}")
+                continue
+            except Exception as e:
+                logger.error(f"Error processing page {page.url}: {str(e)}")
+                continue
+            
+            close_old_connections()
+    except Exception as e:
+        logger.error(f"Error in fetch_website for {url}: {str(e)}")
+        raise
 
-    
 
 def extract_journalists_with_gpt(content: str) -> dict:
     """
