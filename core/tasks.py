@@ -2,7 +2,8 @@ import asyncio
 import json
 import os
 from django.utils import timezone
-from core.models import NewsPage, NewsSource, Journalist
+from tqdm import tqdm
+from core.models import NewsPage, NewsPageCategory, NewsSource, Journalist
 from spider_rs import Website 
 from django.db import close_old_connections, IntegrityError
 from asgiref.sync import sync_to_async
@@ -223,3 +224,63 @@ def extract_all_journalists_with_gpt(limit: int = 1000_000):
     """Sync wrapper for processing multiple pages"""
     asyncio.run(process_all_pages_journalists(limit))
 
+
+def categorize_news_page_with_gpt(page: NewsPage):
+    available_categories = NewsPageCategory.objects.all()
+    client = AzureOpenAI(
+        azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+        azure_deployment="gpt-4o-mini",
+        api_version="2024-08-01-preview",
+        api_key=os.getenv("AZURE_OPENAI_API_KEY")
+    )
+    available_categories_str = ', '.join([f"{category.name}" for category in available_categories])
+    json_schema = {
+        "categories": [
+            "category_name"
+        ]
+    }
+    prompt = f"""
+    Categorize the following news page into one or more of the following categories, 
+    and return a json object with one or more category names. 
+    If no category is relevant, return one or more new categories to be created.
+    Available categories: {available_categories_str}
+
+    News page title: {page.title}
+    News page content: {page.content[:1000]}
+
+    Use the following JSON schema:
+    ```
+    {json_schema}
+    ```
+    The categories should be specific types of news, not 'news'. 
+    For example 'software', 'hardware', 'space' are categories, but 'news' is not.
+    """
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are a news page categorizer."},
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=2000,
+        n=1,
+        stop=None,
+        temperature=0.3,
+        response_format={"type": "json_object"}
+    )
+    result = response.choices[0].message.content
+    try:
+        categories_data = json.loads(result)
+        print('categories:', categories_data)
+        for category_name in categories_data['categories']:
+            category, created = NewsPageCategory.objects.get_or_create(name=category_name)
+            page.categories.add(category)
+    except json.JSONDecodeError:
+        print('error:', result)
+        categories_data = {}
+
+
+def categorize_news_pages_with_gpt(limit: int = 1000_000):
+    print(f"Categorizing news pages with GPT")
+    pages = NewsPage.objects.filter(categories__isnull=True)[:limit]
+    for page in tqdm(pages):
+        categorize_news_page_with_gpt(page)

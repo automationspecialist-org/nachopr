@@ -37,6 +37,18 @@ class Journalist(models.Model):
         super().save(*args, **kwargs)
 
 
+class NewsPageCategory(models.Model):
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(unique=True)
+
+    def __str__(self):
+        return self.name
+    
+    def save(self, *args, **kwargs):
+        self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+
 class NewsPage(models.Model):
     url = models.URLField(unique=True)
     title = models.CharField(max_length=255)
@@ -45,6 +57,7 @@ class NewsPage(models.Model):
     journalists = models.ManyToManyField(Journalist, related_name='articles')
     slug = models.SlugField(unique=True)
     processed = models.BooleanField(default=False)
+    categories = models.ManyToManyField(NewsPageCategory, related_name='pages')
 
     def __str__(self):
         return self.title
