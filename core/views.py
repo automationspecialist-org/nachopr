@@ -23,18 +23,42 @@ def home(request):
 
 
 def search(request):
-    is_subscriber = request.user.is_authenticated
-    query = request.GET.get('q')
+    # Get unique countries and sources for filters
+    countries = Journalist.objects.exclude(country__isnull=True).values_list('country', flat=True).distinct()
+    sources = NewsSource.objects.all()
     
-    if not query:
-        return render(request, 'core/search.html')
-        
-    # Add Turnstile validation for non-authenticated users
+    context = {
+        'countries': countries,
+        'sources': sources,
+        'turnstile_site_key': os.getenv('CLOUDFLARE_TURNSTILE_SITE_KEY'),
+    }
+    return render(request, 'core/search.html', context=context)
+
+
+def search_results(request):
+    is_subscriber = request.user.is_authenticated
+    query = request.GET.get('q', '')
+    country = request.GET.get('country', '')
+    source_id = request.GET.get('source', '')
+    
+    # Start with all journalists
+    results = Journalist.objects.all()
+    
+    # Apply filters
+    if query:
+        results = results.filter(name__icontains=query)
+    if country:
+        results = results.filter(country=country)
+    if source_id:
+        results = results.filter(sources__id=source_id)
+    
+    # Handle non-subscribers
     if not is_subscriber:
         token = request.GET.get('cf-turnstile-response')
         if not token:
-            return render(request, 'core/search.html', {'error': 'Please complete the security check'})
-            
+            return render(request, 'core/search_results.html', 
+                        {'error': 'Please complete the security check'})
+        
         # Verify token with Cloudflare
         data = {
             'secret': os.getenv('CLOUDFLARE_TURNSTILE_SECRET_KEY'),
@@ -44,13 +68,12 @@ def search(request):
         response = requests.post('https://challenges.cloudflare.com/turnstile/v0/siteverify', data=data)
         
         if not response.json().get('success', False):
-            return render(request, 'core/search.html', {'error': 'Security check failed'})
-            
-        results = Journalist.objects.filter(name__icontains=query)[:3]
-    else:
-        results = Journalist.objects.filter(name__icontains=query)
+            return render(request, 'core/search_results.html', 
+                        {'error': 'Security check failed'})
         
-    return render(request, 'core/search.html', {'results': results})
+        results = results[:3]  # Limit results for non-subscribers
+    
+    return render(request, 'core/search_results.html', {'results': results})
 
 
 def free_media_list(request):

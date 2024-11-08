@@ -1,0 +1,50 @@
+{% block content %}
+  <h1 class="text-2xl font-bold mb-6">Search Results</h1>
+  {% if error %}
+    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+      {{ error }}
+    </div>
+  {% else %}
+    {% if results %}
+      <div class="space-y-6">
+        {% for journalist in results %}
+          <div class="flex gap-6 border rounded-lg p-4 hover:shadow-lg transition-shadow">
+            {% if journalist.image_url %}
+              <img src="{{ journalist.image_url }}" alt="{{ journalist.name }}" 
+                   class="w-32 h-32 object-cover rounded-lg flex-shrink-0">
+            {% endif %}
+            <div class="flex-1">
+              <h3 class="font-bold text-lg mb-2">{{ journalist.name }}</h3>
+              {% if journalist.country %}
+                <p class="text-gray-600 text-sm mb-2">{{ journalist.country }}</p>
+              {% endif %}
+              {% if journalist.description %}
+                <p class="text-gray-700 text-sm mb-4">{{ journalist.description|truncatewords:30 }}</p>
+              {% endif %}
+              <div class="flex space-x-2">
+                {% if journalist.profile_url %}
+                  <a href="{{ journalist.profile_url }}" class="text-blue-600 hover:underline text-sm">Profile</a>
+                {% endif %}
+                {% if journalist.x_profile_url %}
+                  <a href="{{ journalist.x_profile_url }}" class="text-blue-600 hover:underline text-sm">Twitter/X</a>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+      
+      {% if not user.is_authenticated %}
+        <div class="mt-8 text-center">
+          <p class="mb-4">Start your free trial to access the full database.</p>
+          <a href="{% url 'signup' %}" 
+             class="font-space border border-gray-300 text-gray-700 px-8 py-4 rounded-lg text-lg font-medium hover:bg-gray-50 transition-colors">
+            Sign Up
+          </a>
+        </div>
+      {% endif %}
+    {% else %}
+      <p class="text-gray-500">No results found.</p>
+    {% endif %}
+  {% endif %}
+{% endblock %}
