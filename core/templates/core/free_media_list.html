@@ -33,15 +33,30 @@
                                name="q" 
                                placeholder="Enter journalist name or keyword" 
                                class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-600 focus:border-green-600">
-                        <div class="cf-turnstile mx-auto" data-sitekey="YOUR_SITE_KEY"></div>
-                        <button type="submit" 
-                                class="bg-green-600 text-white px-8 py-4 rounded-lg text-lg font-medium hover:bg-green-700 transition-colors">
-                            Search Database
-                        </button>
+                        {% if not request.user.is_authenticated %}
+                            <div class="cf-turnstile mx-auto" data-sitekey="0x4AAAAAAAzjbgyD1SHSrL-i" data-callback="enableSubmit"></div>
+                            <button type="submit" 
+                                    id="submit-button"
+                                    disabled
+                                    class="bg-green-600 text-white px-8 py-4 rounded-lg text-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                Search Database
+                            </button>
+                        {% else %}
+                            <button type="submit" 
+                                    class="bg-green-600 text-white px-8 py-4 rounded-lg text-lg font-medium hover:bg-green-700 transition-colors">
+                                Search Database
+                            </button>
+                        {% endif %}
                     </form>
                     <div id="search-results" class="mt-8"></div>
                 </div>
             </div>
         </div>
     </section>
+
+    <script>
+    function enableSubmit(token) {
+        document.getElementById('submit-button').disabled = false;
+    }
+    </script>
 {% endblock %}

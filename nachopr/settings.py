@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'whitenoise',
     'django.contrib.humanize',
+    'django_cotton',
     'tailwind',
     'theme',
     'core',
