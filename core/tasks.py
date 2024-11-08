@@ -99,7 +99,7 @@ async def fetch_website(url: str, limit: int = 1000_000, depth: int = 3) -> Webs
                         'slug': slug
                     }
                 )
-                await process_single_page_journalists(news_page)
+                #await process_single_page_journalists(news_page)
                 logger.info(f"Successfully processed page: {page.url}")
             except IntegrityError as e:
                 logger.warning(f"Skipping duplicate page: {page.url} - {str(e)}")
