@@ -92,7 +92,8 @@ ALLOWED_HOSTS = [
 # Add CSRF trusted origins for your domains
 CSRF_TRUSTED_ORIGINS = [
     'https://nachopr.apps.innermaps.org',
-    'https://nachoapp-ekewd4f3gdbwcxcu.eastus-01.azurewebsites.net'
+    'https://nachoapp-ekewd4f3gdbwcxcu.eastus-01.azurewebsites.net',
+    'https://nachopr.com'
 ]
 
 # Database
