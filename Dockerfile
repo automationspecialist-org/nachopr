@@ -30,7 +30,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Update SSH configuration for Azure compatibility
-RUN apt-get install -y --no-install-recommends dialog openssh-server \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends dialog openssh-server \
     && echo "root:Docker!" | chpasswd \
     && mkdir -p /run/sshd \
     && cp sshd_config /etc/ssh/ \
