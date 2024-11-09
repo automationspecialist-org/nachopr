@@ -1,73 +1,68 @@
-{% extends 'base.html' %}
-
-{% block extra_head %}
-  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-{% endblock %}
-
-{% block content %}
 <div class="container mx-auto px-4 py-8">
     {% if not user.is_authenticated %}
           <div class="cf-turnstile" 
                data-sitekey="0x4AAAAAAAzjbgyD1SHSrL-i"
                data-callback="enableSubmit"></div>
-        {% endif %}
-  <div class="flex gap-6">
-    <!-- Filters Sidebar - Fixed width -->
-    <div class="w-64 flex-shrink-0 bg-white p-4 rounded-lg shadow">
-      <h2 class="text-xl font-bold mb-4">Filters</h2>
-      
-      <form id="search-form" class="space-y-4" hx-get="{% url 'search_results' %}" 
-            hx-trigger="change, submit" hx-target="#results-container">
-        
-        <!-- Search Input -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Search</label>
-          <input type="text" name="q" class="mt-1 w-full rounded-md border-gray-300"
-                 hx-trigger="keyup changed delay:500ms">
+    {% endif %}
+    <div class="flex gap-6">
+        <!-- Filters Sidebar - Fixed width -->
+        <div class="w-64 flex-shrink-0 bg-white p-4 rounded-lg shadow">
+            <h2 class="text-xl font-bold mb-4">Filters</h2>
+            
+            <form id="search-form" class="space-y-4" hx-get="{% url 'search_results' %}" 
+                  hx-trigger="change, submit" hx-target="#results-container">
+                
+                <!-- Search Input -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Search</label>
+                    <input type="text" name="q" class="mt-1 w-full rounded-md border-gray-300"
+                           hx-trigger="keyup changed delay:500ms">
+                </div>
+
+                <!-- Add Search Button -->
+                <div>
+                    <button type="submit" 
+                            class="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md">
+                        Search
+                    </button>
+                </div>
+
+                <!-- Country Filter -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Country</label>
+                    <select name="country" class="mt-1 w-full rounded-md border-gray-300">
+                        <option value="">All Countries</option>
+                        {% for country in countries %}
+                            <option value="{{ country }}">{{ country }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Source Filter -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">News Source</label>
+                    <select name="source" class="mt-1 w-full rounded-md border-gray-300">
+                        <option value="">All Sources</option>
+                        {% for source in sources %}
+                            <option value="{{ source.id }}">{{ source.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
         </div>
 
-        <!-- Country Filter -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Country</label>
-          <select name="country" class="mt-1 w-full rounded-md border-gray-300">
-            <option value="">All Countries</option>
-            {% for country in countries %}
-              <option value="{{ country }}">{{ country }}</option>
-            {% endfor %}
-          </select>
+        <!-- Results Area - Fill remaining space -->
+        <div class="flex-1">
+            <div id="results-container" class="bg-white p-4 rounded-lg shadow">
+                <!-- Initial state or loading message -->
+                <p class="text-gray-500">Enter your search criteria...</p>
+            </div>
         </div>
-
-        <!-- Source Filter -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700">News Source</label>
-          <select name="source" class="mt-1 w-full rounded-md border-gray-300">
-            <option value="">All Sources</option>
-            {% for source in sources %}
-              <option value="{{ source.id }}">{{ source.name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-
-        
-      </form>
     </div>
-
-    <!-- Results Area - Fill remaining space -->
-    <div class="flex-1">
-      <div id="results-container" class="bg-white p-4 rounded-lg shadow">
-        <!-- Initial state or loading message -->
-        <p class="text-gray-500">Enter your search criteria...</p>
-      </div>
-    </div>
-  </div>
 </div>
-{% endblock %}
 
-{% block extra_js %}
 <script>
-  function enableSubmit(token) {
-    // Optional: You can use this callback if you want to enable/disable the form based on Turnstile completion
-    console.log('Turnstile token:', token);
-  }
+    function enableSubmit(token) {
+        console.log('Turnstile token:', token);
+    }
 </script>
-{% endblock %}
