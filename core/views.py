@@ -4,7 +4,7 @@ from django.shortcuts import render
 import requests
 
 load_dotenv()
-from core.models import NewsSource, NewsPage, Journalist
+from core.models import NewsSource, NewsPage, Journalist, NewsPageCategory
 
 def home(request):
     news_sources_count = NewsSource.objects.count()
@@ -26,10 +26,12 @@ def search(request):
     # Get unique countries and sources for filters
     countries = Journalist.objects.exclude(country__isnull=True).values_list('country', flat=True).distinct()
     sources = NewsSource.objects.all()
+    categories = NewsPageCategory.objects.all()
     
     context = {
         'countries': countries,
         'sources': sources,
+        'categories': categories,
         'turnstile_site_key': os.getenv('CLOUDFLARE_TURNSTILE_SITE_KEY'),
     }
     return render(request, 'core/search.html', context=context)
@@ -40,6 +42,7 @@ def search_results(request):
     query = request.GET.get('q', '')
     country = request.GET.get('country', '')
     source_id = request.GET.get('source', '')
+    category_id = request.GET.get('category', '')
     
     # Start with all journalists
     results = Journalist.objects.all()
@@ -51,6 +54,8 @@ def search_results(request):
         results = results.filter(country=country)
     if source_id:
         results = results.filter(sources__id=source_id)
+    if category_id:
+        results = results.filter(articles__categories__id=category_id).distinct()
     
     # Handle non-subscribers
     if not is_subscriber:
