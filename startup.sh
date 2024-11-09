@@ -6,10 +6,10 @@ if [ -n "$AZURE" ]; then
     chmod 755 /home/persistent
 fi
 service memcached start
-python manage.py migrate
-python manage.py create_admin_user
-python manage.py add_news_sources
-python manage.py collectstatic --no-input
+uv run manage.py migrate
+uv run manage.py create_admin_user
+uv run manage.py add_news_sources
+uv run manage.py collectstatic --no-input
 
 
 # Send a message to Slack when restarting
@@ -19,4 +19,4 @@ else
     echo "SLACK_WEBHOOK_URL is not set. Skipping Slack notification."
 fi
 
-granian --interface asgi --host 0.0.0.0 --port 80 --workers 4 nachopr.asgi:application
+uv run granian --interface asgi --host 0.0.0.0 --port 80 --workers 4 nachopr.asgi:application

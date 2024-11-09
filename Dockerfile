@@ -29,6 +29,13 @@ RUN apt-get update \
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
     && rm -rf /var/lib/apt/lists/*
 
+# Update SSH configuration for Azure compatibility
+RUN apt-get install -y --no-install-recommends dialog openssh-server \
+    && echo "root:Docker!" | chpasswd \
+    && mkdir -p /run/sshd \
+    && cp sshd_config /etc/ssh/ \
+    && chmod 755 /etc/ssh/sshd_config
+
 # Configure SQLite
 ENV LD_LIBRARY_PATH=/usr/local/lib
 
@@ -52,14 +59,6 @@ RUN uv sync --frozen
 
 # Copy application code
 COPY . /usr/src/app/
-
-# Update SSH configuration for Azure compatibility
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends dialog openssh-server \
-    && echo "root:Docker!" | chpasswd \
-    && mkdir -p /run/sshd
-COPY sshd_config /etc/ssh/
-RUN chmod 755 /etc/ssh/sshd_config
 
 # Modify startup script to ensure SSH starts properly
 COPY startup.sh /usr/src/app/
