@@ -45,11 +45,10 @@ RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
 
 # Copy just requirements files first for better layer caching
-COPY requirements.txt pyproject.toml* poetry.lock* /usr/src/app/
+COPY pyproject.toml* uv.lock* /usr/src/app/
 
 # Pre-download and cache dependencies
-RUN uv pip install --no-deps -r requirements.txt && \
-    uv pip install -r requirements.txt
+RUN uv sync --frozen
 
 # Copy application code
 COPY . /usr/src/app/

@@ -1,0 +1,23 @@
+[project]
+name = "nacho_pr"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "Django>=5.1.2",
+    "django-allauth",
+    "django-crispy-forms",
+    "django-extensions",
+    "django-debug-toolbar",
+    "spider_rs",
+    "asyncio",
+    "slugify",
+    "granian",
+    "whitenoise",
+    "beautifulsoup4",
+    "requests",
+    "requests-cache",
+    "django-tailwind",
+    "openai",
+    "python-dotenv",
+    "django-cotton",
+]
