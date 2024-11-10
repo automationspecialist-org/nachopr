@@ -19,5 +19,5 @@ dependencies = [
     "django-tailwind",
     "openai",
     "python-dotenv",
-    "django-cotton",
+    "django-browser-reload>=1.17.0",
 ]

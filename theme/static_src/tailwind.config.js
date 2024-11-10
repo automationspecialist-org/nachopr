@@ -44,7 +44,9 @@ module.exports = {
     theme: {
         extend: {
             fontFamily: {
-                'space': ['"Space Mono"', 'monospace'],
+                'space': ['Space Mono', 'monospace'],
+                'chivo': ['Chivo Mono', 'monospace'],
+                'sans': ['system-ui', 'sans-serif'],
             },
         },
     },

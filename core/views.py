@@ -26,7 +26,10 @@ def search(request):
     # Get unique countries and sources for filters
     countries = Journalist.objects.exclude(country__isnull=True).values_list('country', flat=True).distinct()
     sources = NewsSource.objects.all()
-    categories = NewsPageCategory.objects.all()
+    categories = NewsPageCategory.objects.all().order_by('name')
+    
+    # Add debug logging
+    print(f"Categories count: {categories.count()}")
     
     context = {
         'countries': countries,
@@ -85,11 +88,13 @@ def free_media_list(request):
     news_sources_count = NewsSource.objects.count()
     news_pages_count = NewsPage.objects.count()
     journalist_count = Journalist.objects.count()
+    categories = NewsPageCategory.objects.all().order_by('name')
     
     context = {
         'news_sources_count': news_sources_count,
         'news_pages_count': news_pages_count,
         'journalist_count': journalist_count,
+        'categories': categories,
     }
     return render(request, 'core/free_media_list.html', context=context)
 

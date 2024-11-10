@@ -22,7 +22,7 @@
                 <!-- Add Search Button -->
                 <div>
                     <button type="submit" 
-                            class="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md">
+                            class="w-full bg-blue-500 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md">
                         Search
                     </button>
                 </div>
@@ -49,16 +49,18 @@
                     </select>
                 </div>
 
-                <!-- Category Filter -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Category</label>
-                    <select name="category" class="mt-1 w-full rounded-md border-gray-300">
+                {% if categories %}
+                    <!-- Category Filter -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Category</label>
+                        <select name="category" class="mt-1 w-full rounded-md border-gray-300">
                         <option value="">All Categories</option>
                         {% for category in categories %}
                             <option value="{{ category.id }}">{{ category.name }}</option>
                         {% endfor %}
-                    </select>
-                </div>
+                        </select>
+                    </div>
+                {% endif %}
             </form>
         </div>
 
