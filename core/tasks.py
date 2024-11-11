@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 lunary.config(app_id=os.getenv('LUNARY_PUBLIC_KEY'))
 
 
-async def crawl_news_sources(domain_limit: int = None, page_limit: int = None, max_concurrent_tasks: int = 20):
+async def crawl_news_sources(domain_limit: int = None, page_limit: int = None, max_concurrent_tasks: int = 80):
     try:
         logger.info(f"Starting crawl at {timezone.now()}")
         
