@@ -185,3 +185,4 @@ INTERNAL_IPS = [
 CRONJOBS = [
     ('* * * * *', 'core.cron.test_job')
 ]
+ALLOW_PARALLEL_RUNS = False

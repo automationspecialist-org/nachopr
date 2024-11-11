@@ -29,7 +29,7 @@ async def crawl_news_sources(limit: int = None, max_concurrent_tasks: int = 10):
         
         news_sources = await sync_to_async(list)(
             NewsSource.objects.filter(
-                last_crawled__lt=timezone.now() - timezone.timedelta(days=1)
+                last_crawled__lt=timezone.now() - timezone.timedelta(days=7)
             )
         )
         
