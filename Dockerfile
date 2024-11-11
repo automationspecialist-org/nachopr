@@ -28,10 +28,7 @@ RUN apt-get update \
     && rm -rf sqlite-autoconf-3470000* \
     # cleaning up unused files
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install and configure SSH first, before copying custom config
-RUN apt-get update \
+    && rm -rf /var/lib/apt/lists/* \
     && apt-get install -y --no-install-recommends dialog openssh-server \
     && echo "root:Docker!" | chpasswd \
     && mkdir -p /run/sshd
@@ -66,7 +63,7 @@ COPY . /usr/src/app/
 
 # Modify startup script to ensure SSH starts properly
 COPY startup.sh /usr/src/app/
-RUN chmod +x /usr/src/app/startup.sh
+RUN chmod +x /usr/src/app/startup.sh && rm -rf /var/lib/apt/lists/* /tmp/*
 
 EXPOSE 80 2222
 

@@ -19,6 +19,8 @@ from django.db.models import Q
 import lunary
 from readabilipy import simple_json_from_html_string
 from dotenv import load_dotenv
+import uuid
+
 
 load_dotenv()
 
@@ -144,7 +146,6 @@ def extract_journalists_with_gpt(content: str) -> dict:
     """
     Extract journalist information from the HTML content using GPT-4 on Azure.
     """
-    import uuid
     run_id = str(uuid.uuid4())
 
     clean_content = clean_html(content)
@@ -285,16 +286,19 @@ async def process_single_page_journalists(page: NewsPage):
     page.processed = True
     await sync_to_async(page.save)()
 
-async def process_all_pages_journalists(limit: int = 10):
+async def process_all_pages_journalists(limit: int = 10, re_process: bool = False):
     """Process journalists for multiple pages using GPT"""
-    pages = await sync_to_async(list)(NewsPage.objects.filter(processed=False)[:limit])
+    if re_process:
+        pages = await sync_to_async(list)(NewsPage.objects.all()[:limit])
+    else:
+        pages = await sync_to_async(list)(NewsPage.objects.filter(processed=False)[:limit])
     for page in pages:
         await process_single_page_journalists(page)
 
-def process_all_journalists_sync(limit: int = 10):
+def process_all_journalists_sync(limit: int = 10, re_process: bool = False):
     """Sync wrapper for processing multiple pages"""
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(process_all_pages_journalists(limit))
+    loop.run_until_complete(process_all_pages_journalists(limit, re_process))
 
 
 def categorize_news_page_with_gpt(page: NewsPage):
