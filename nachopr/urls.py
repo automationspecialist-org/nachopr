@@ -19,6 +19,7 @@ from django.urls import path, include
 from core import views
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('accounts/', include('allauth.urls')),
     path('', include('core.urls')),
     path('static/', include('django.contrib.staticfiles.urls')),
     path("__reload__/", include("django_browser_reload.urls")),
