@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 import logging
 from PIL import Image, ImageDraw, ImageFont
 from django.conf import settings
-
+from django.db.models import Q
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -29,8 +29,9 @@ async def crawl_news_sources(domain_limit: int = None, page_limit: int = None, m
         
         news_sources = await sync_to_async(list)(
             NewsSource.objects.filter(
-                last_crawled__lt=timezone.now() - timezone.timedelta(days=7)
-            )[:domain_limit]
+                Q(last_crawled__lt=timezone.now() - timezone.timedelta(days=7)) |
+                Q(last_crawled__isnull=True)
+            ).order_by('last_crawled')[:domain_limit]
         )
         
         logger.info(f"Found {len(news_sources)} news sources to crawl")
@@ -292,7 +293,6 @@ def categorize_news_pages_with_gpt(limit: int = 1000_000):
 def create_social_sharing_image():
     media_outlets_count = NewsSource.objects.count()
     journalists_count = Journalist.objects.count()
-    articles_count = NewsPage.objects.count()
     
     # Create gradient background
     width = 1200

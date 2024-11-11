@@ -32,6 +32,6 @@ def crawl_job():
 
     newspage_count_after = NewsPage.objects.count()
     journalist_count_after = Journalist.objects.count()
-    message = f"[{timezone.now()}] NachoPR crawl completed. {newspage_count_after - newspage_count_before} pages, {journalist_count_after - journalist_count_before} journalists"
+    message = f"[{timezone.now()}] NachoPR crawl completed. {newspage_count_after - newspage_count_before} pages, {journalist_count_after - journalist_count_before} journalists added."
     logger.info(message)
     requests.post(slack_webhook_url, json={"text": message})
