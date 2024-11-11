@@ -185,5 +185,5 @@ INTERNAL_IPS = [
 #CRON_LOG_FILE = '/persistent/cron.log'
 
 CRONJOBS = [
-    ('*/30 * * * *', 'core.cron.crawl_job', '>> /tmp/cron.log 2>&1')
+    ('*/15 * * * *', 'core.cron.crawl_job', '>> /tmp/cron.log 2>&1')
 ]
