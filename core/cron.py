@@ -10,7 +10,7 @@ if 'AZURE' not in os.environ:
 logger = logging.getLogger(__name__)
 
 def test_job():
-    slack_webhook_url = "https://hooks.slack.com/services/T07M0BTS3A8/B07MLUL3QKS/eE3D3EK7BshbSS1feJ345hK"
+    slack_webhook_url = "https://hooks.slack.com/services/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"
     message = f"[{timezone.now()}] NachoPR Test job executed!"
     logger.info(message)
     response = requests.post(slack_webhook_url, json={"text": message})
