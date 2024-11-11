@@ -14,6 +14,7 @@ RUN apt-get update \
     && apt-get install -y libssl-dev pkg-config \
     && apt-get install -y curl \
     && apt-get install -y wget \
+    && apt-get install -y cron \
     # Install Rust and Cargo
     && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
     # SQLite installation
