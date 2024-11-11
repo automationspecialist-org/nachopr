@@ -1,8 +1,25 @@
 FROM library/python:3.11-slim-buster
 
 # Install dependencies for building Python packages
-RUN apt-get update \
-    && apt-get install -y build-essential \
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    gettext \
+    libcairo2 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libgdk-pixbuf2.0-0 \
+    libffi-dev \
+    shared-mime-info \
+    memcached \
+    libmemcached-dev \
+    libssl-dev \
+    pkg-config \
+    curl \
+    wget \
+    cron \
+    dialog \
+    openssh-server \
     # psycopg2 dependencies
     && apt-get install -y libpq-dev \
     # Translations dependencies
@@ -17,8 +34,13 @@ RUN apt-get update \
     && apt-get install -y cron \
     # Install Rust and Cargo
     && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
-    # SQLite installation
-    && wget https://www.sqlite.org/2024/sqlite-autoconf-3470000.tar.gz \
+    # Install Node.js
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && npm install -g npm@latest
+
+# Move SQLite installation into its own layer for better caching
+RUN wget https://www.sqlite.org/2024/sqlite-autoconf-3470000.tar.gz \
     && tar xvfz sqlite-autoconf-3470000.tar.gz \
     && cd sqlite-autoconf-3470000 \
     && ./configure --prefix=/usr/local \
@@ -52,11 +74,11 @@ ENV PATH="/usr/src/app/venv/bin:$PATH"
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
 
-# Copy just requirements files first for better layer caching
+# Combine Python dependency installation steps
 COPY pyproject.toml* uv.lock* /usr/src/app/
-
-# Pre-download and cache dependencies
-RUN uv sync --frozen
+RUN uv venv /usr/src/app/venv \
+    && . /usr/src/app/venv/bin/activate \
+    && uv sync --frozen
 
 # Copy application code
 COPY . /usr/src/app/
