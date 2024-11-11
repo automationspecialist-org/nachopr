@@ -6,6 +6,10 @@ if [ -n "$AZURE" ]; then
     chmod 755 /home/persistent
 fi
 service memcached start
+touch /var/log/cron.log
+printenv | grep -Ev 'BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID|LANG|PWD|GPG_KEY|_=' >> /etc/environment
+uv run manage.py crontab remove
+uv run manage.py crontab add
 service cron start
 uv run manage.py migrate
 uv run manage.py crontab add
