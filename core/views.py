@@ -2,9 +2,10 @@ import os
 from dotenv import load_dotenv
 from django.shortcuts import render
 import requests
+from core.models import NewsSource, NewsPage, Journalist, NewsPageCategory
 
 load_dotenv()
-from core.models import NewsSource, NewsPage, Journalist, NewsPageCategory
+
 
 def home(request):
     news_sources_count = NewsSource.objects.count()

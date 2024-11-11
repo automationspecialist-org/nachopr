@@ -20,4 +20,5 @@ dependencies = [
     "openai",
     "python-dotenv",
     "django-browser-reload>=1.17.0",
+    "pillow>=11.0.0",
 ]
