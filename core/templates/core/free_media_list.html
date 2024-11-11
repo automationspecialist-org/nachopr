@@ -2,6 +2,7 @@
 {% load humanize %}
 
 {% block title %}Free Media Database | NachoPR{% endblock %}
+{% block meta_description %}Offering a free, comprehensive media database, NachoPR connects users with top journalists!{% endblock %}
 
 {% block main %}
     <!-- Hero Section -->
@@ -11,27 +12,33 @@
                 <h1 class="text-5xl md:text-6xl font-bold text-gray-900 mb-6 font-space">
                     Free Media Database
                 </h1>
-                <div class="grid md:grid-cols-3 gap-8 max-w-3xl mx-auto mb-12">
-                    <div class="bg-white p-6 rounded-lg shadow-sm">
-                        <h3 class="text-2xl font-semibold text-green-600 mb-2">{{ news_sources_count|intcomma }}</h3>
-                        <p class="text-gray-600">News Sources</p>
-                    </div>
-                    <div class="bg-white p-6 rounded-lg shadow-sm">
-                        <h3 class="text-2xl font-semibold text-green-600 mb-2">{{ news_pages_count|intcomma }}</h3>
-                        <p class="text-gray-600">Articles Tracked</p>
-                    </div>
-                    <div class="bg-white p-6 rounded-lg shadow-sm">
-                        <h3 class="text-2xl font-semibold text-green-600 mb-2">{{ journalist_count|intcomma }}</h3>
-                        <p class="text-gray-600">Journalists</p>
-                    </div>
-                </div>
+                <p class="text-gray-600 mb-12">Try the free version of NachoPR's powerful pr database. Find contact data for your outreach campaigns and digital PR strategy</p>
+                
 
                 <!-- Search Section -->
                 <div class="max-w-2xl mx-auto">
-                    <h2 class="text-2xl font-semibold mb-6 font-space">Search for a journalist</h2>
+                    <h2 class="text-2xl font-semibold mb-6 font-space">Search the free media contact list for relevant journalists:</h2>
                     
                 </div>
                 {% include 'core/search.html' %}
+            </div>
+        </div>
+    </section>
+
+    <section class="py-24 bg-white">
+        <h2>The world's most cost effective journalist database</h2>
+        <div class="grid md:grid-cols-3 gap-8 max-w-3xl mx-auto mb-12">
+            <div class="bg-white p-6 rounded-lg shadow-sm">
+                <h3 class="text-2xl font-semibold text-green-600 mb-2">{{ news_sources_count|intcomma }}</h3>
+                <p class="text-gray-600">News Sources</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-sm">
+                <h3 class="text-2xl font-semibold text-green-600 mb-2">{{ news_pages_count|intcomma }}</h3>
+                <p class="text-gray-600">Articles Tracked</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-sm">
+                <h3 class="text-2xl font-semibold text-green-600 mb-2">{{ journalist_count|intcomma }}</h3>
+                <p class="text-gray-600">Journalists</p>
             </div>
         </div>
     </section>
