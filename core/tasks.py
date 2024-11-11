@@ -1,6 +1,8 @@
 import asyncio
 import json
 import os
+import re
+from bs4 import BeautifulSoup
 from django.utils import timezone
 from tqdm import tqdm
 from core.models import NewsPage, NewsPageCategory, NewsSource, Journalist
@@ -14,6 +16,12 @@ import logging
 from PIL import Image, ImageDraw, ImageFont
 from django.conf import settings
 from django.db.models import Q
+import lunary
+from readabilipy import simple_json_from_html_string
+from dotenv import load_dotenv
+
+load_dotenv()
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -21,9 +29,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-load_dotenv()
+lunary.config(app_id=os.getenv('LUNARY_PUBLIC_KEY'))
 
-async def crawl_news_sources(domain_limit: int = None, page_limit: int = None, max_concurrent_tasks: int = 10):
+
+async def crawl_news_sources(domain_limit: int = None, page_limit: int = None, max_concurrent_tasks: int = 20):
     try:
         logger.info(f"Starting crawl at {timezone.now()}")
         
@@ -118,17 +127,38 @@ async def fetch_website(url: str, limit: int = 1000_000, depth: int = 3) -> Webs
         raise
 
 
+def clean_html(html: str) -> str:
+    cleaned_dict = simple_json_from_html_string(html, use_readability=True)
+
+    cleaned_html = {
+        "title": cleaned_dict.get("title"),
+        "journalist_names": cleaned_dict.get("byline"),
+        "content": cleaned_dict.get("plain_content")
+    }
+
+    
+    return cleaned_html
+
+
 def extract_journalists_with_gpt(content: str) -> dict:
     """
     Extract journalist information from the HTML content using GPT-4 on Azure.
     """
+    import uuid
+    run_id = str(uuid.uuid4())
+
+    clean_content = clean_html(content)
+    
     client = AzureOpenAI(
         azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
         azure_deployment="gpt-4o-mini",
         api_version="2024-08-01-preview",
         api_key=os.getenv("AZURE_OPENAI_API_KEY")
     )
-    journalist_json = { "journalists": [
+
+    journalist_json = { 
+        "content_is_full_news_article": True,
+        "journalists": [
             {
                 "name": "John Doe",
                 "description": "An experienced journalist covering international news.",
@@ -147,9 +177,9 @@ def extract_journalists_with_gpt(content: str) -> dict:
     prompt = f"""
     Extract journalist information from the following HTML content and return it as a JSON object with the journalist's name as the key and their metadata (profile_url and image_url) as the value:
     
-    HTML content:
+    HTML content parsed to JSON:
     ```
-    {content[:10000]}
+    {clean_content}
     ```
 
     Use the following JSON schema:
@@ -159,26 +189,64 @@ def extract_journalists_with_gpt(content: str) -> dict:
     If you cannot find any journalists, return an empty JSON object. Never output the example JSON objects such as 'John Doe' and 'Jane Smith'.
     """
 
-    # Call the GPT-4 API on Azure
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "You are a html to json extractor."},
-            {"role": "user", "content": prompt}
-        ],
-        max_tokens=2000,
-        n=1,
-        stop=None,
-        temperature=0.3,
-        response_format={"type": "json_object"}
+    # Track the start of the LLM call
+    lunary.track_event(
+        run_type="llm",
+        event_name="start",
+        run_id=run_id,
+        name="gpt-4o-mini",
+        input=prompt,
+        params={
+            "max_tokens": 2000,
+            "temperature": 0.3,
+            "response_format": {"type": "json_object"}
+        }
     )
 
-    # Parse the response
-    result = response.choices[0].message.content
     try:
+        # Call the GPT-4 API on Azure
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a html to json extractor."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=2000,
+            n=1,
+            stop=None,
+            temperature=0.3,
+            response_format={"type": "json_object"}
+        )
+
+        result = response.choices[0].message.content
         journalists_data = json.loads(result)
-    except json.JSONDecodeError:
-        print('error:', result)
+
+        # Track successful completion with both raw and parsed output
+        lunary.track_event(
+            run_type="llm",
+            event_name="end",
+            run_id=run_id,
+            output={
+                "raw_response": result,
+                "parsed_data": journalists_data
+            },
+            token_usage=response.usage.total_tokens if hasattr(response, 'usage') else None
+        )
+
+    except (Exception, json.JSONDecodeError) as e:
+        # Track error with the raw response if available
+        error_data = {
+            "error_type": type(e).__name__,
+            "error_message": str(e),
+            "raw_response": result if 'result' in locals() else None
+        }
+        lunary.track_event(
+            run_type="llm",
+            event_name="error",
+            run_id=run_id,
+            error=error_data
+        )
+        print('error:', result if 'result' in locals() else str(e))
         journalists_data = {}
 
     return journalists_data
