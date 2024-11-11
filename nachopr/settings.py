@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'whitenoise',
     'allauth',
     'allauth.account',
+    'django_crontab',
     'django.contrib.humanize',
     'tailwind',
     'theme',
@@ -179,4 +180,8 @@ TAILWIND_APP_NAME = 'theme'
 
 INTERNAL_IPS = [
     "127.0.0.1",
+]
+
+CRONJOBS = [
+    ('* * * * *', 'core.cron.test_job')
 ]

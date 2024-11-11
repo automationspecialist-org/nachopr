@@ -6,6 +6,8 @@ if [ -n "$AZURE" ]; then
     chmod 755 /home/persistent
 fi
 service memcached start
+uv run manage.py crontab add
+uv run manage.py crontab show
 uv run manage.py migrate
 uv run manage.py create_admin_user
 uv run manage.py add_news_sources

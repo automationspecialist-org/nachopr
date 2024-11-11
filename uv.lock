@@ -302,6 +302,15 @@ wheels = [
 ]
 
 [[package]]
+name = "django-crontab"
+version = "0.7.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/37/bd/a122ba96167f5dfab70a58ca22fa046b7ef1ebad9ff026f7831bd6c2a49c/django-crontab-0.7.1.tar.gz", hash = "sha256:1201810a212460aaaa48eb6a766738740daf42c1a4f6aafecfb1525036929236", size = 7089 }
+
+[[package]]
 name = "django-debug-toolbar"
 version = "4.4.6"
 source = { registry = "https://pypi.org/simple" }
@@ -473,6 +482,7 @@ dependencies = [
     { name = "django-allauth", extra = ["socialaccount"] },
     { name = "django-browser-reload" },
     { name = "django-crispy-forms" },
+    { name = "django-crontab" },
     { name = "django-debug-toolbar" },
     { name = "django-extensions" },
     { name = "django-tailwind" },
@@ -495,6 +505,7 @@ requires-dist = [
     { name = "django-allauth", extras = ["socialaccount"] },
     { name = "django-browser-reload", specifier = ">=1.17.0" },
     { name = "django-crispy-forms" },
+    { name = "django-crontab", specifier = ">=0.7.1" },
     { name = "django-debug-toolbar" },
     { name = "django-extensions" },
     { name = "django-tailwind" },
