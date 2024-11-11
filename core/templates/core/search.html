@@ -38,6 +38,17 @@
                     </select>
                 </div>
 
+                <!-- Language Filter -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Language</label>
+                    <select name="language" class="mt-1 w-full rounded-md border-gray-300">
+                        <option value="">All Languages</option>
+                        {% for language in languages %}
+                            <option value="{{ language }}">{{ language }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
                 <!-- Source Filter -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700">News Source</label>

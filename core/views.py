@@ -27,14 +27,14 @@ def search(request):
     countries = Journalist.objects.exclude(country__isnull=True).values_list('country', flat=True).distinct()
     sources = NewsSource.objects.all()
     categories = NewsPageCategory.objects.all().order_by('name')
-    
-    # Add debug logging
-    print(f"Categories count: {categories.count()}")
+    # Get languages through the sources relationship
+    languages = NewsSource.objects.exclude(language__isnull=True).values_list('language', flat=True).distinct()
     
     context = {
         'countries': countries,
         'sources': sources,
         'categories': categories,
+        'languages': languages,
         'turnstile_site_key': os.getenv('CLOUDFLARE_TURNSTILE_SITE_KEY'),
     }
     return render(request, 'core/search.html', context=context)
