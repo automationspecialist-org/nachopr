@@ -23,14 +23,14 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-async def crawl_news_sources(limit: int = None, max_concurrent_tasks: int = 10):
+async def crawl_news_sources(domain_limit: int = None, page_limit: int = None, max_concurrent_tasks: int = 10):
     try:
         logger.info(f"Starting crawl at {timezone.now()}")
         
         news_sources = await sync_to_async(list)(
             NewsSource.objects.filter(
                 last_crawled__lt=timezone.now() - timezone.timedelta(days=7)
-            )
+            )[:domain_limit]
         )
         
         logger.info(f"Found {len(news_sources)} news sources to crawl")
@@ -39,7 +39,7 @@ async def crawl_news_sources(limit: int = None, max_concurrent_tasks: int = 10):
         
         tasks = []
         for news_source in news_sources:
-            tasks.append(crawl_single_news_source(news_source, limit, semaphore))
+            tasks.append(crawl_single_news_source(news_source, limit=page_limit, semaphore=semaphore))
         
         await asyncio.gather(*tasks)
                 
@@ -66,9 +66,9 @@ async def crawl_single_news_source(news_source, limit, semaphore):
             logger.error(f"Error crawling {news_source.url}: {str(e)}")
 
 
-def crawl_news_sources_sync(limit : int = None):
+def crawl_news_sources_sync(domain_limit: int = None, page_limit: int = None):
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(crawl_news_sources(limit))
+    loop.run_until_complete(crawl_news_sources(domain_limit=domain_limit, page_limit=page_limit))
 
 
 async def fetch_website(url: str, limit: int = 1000_000, depth: int = 3) -> Website:
@@ -222,9 +222,10 @@ async def process_all_pages_journalists(limit: int = 10):
     for page in pages:
         await process_single_page_journalists(page)
 
-def extract_all_journalists_with_gpt(limit: int = 1000_000):
+def process_all_journalists_sync(limit: int = 10):
     """Sync wrapper for processing multiple pages"""
-    asyncio.run(process_all_pages_journalists(limit))
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(process_all_pages_journalists(limit))
 
 
 def categorize_news_page_with_gpt(page: NewsPage):
