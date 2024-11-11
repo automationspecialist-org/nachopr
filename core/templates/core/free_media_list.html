@@ -5,6 +5,39 @@
 {% block meta_description %}Offering a free, comprehensive media database, NachoPR connects users with top journalists!{% endblock %}
 
 {% block main %}
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Free Media Database | NachoPR",
+        "description": "Offering a free, comprehensive media database, NachoPR connects users with top journalists!",
+        "sameAs": "https://en.wikipedia.org/wiki/Media_contacts_database",
+        "publisher": {
+            "@type": "Organization",
+            "name": "NachoPR",
+            "url": "https://www.nachopr.com",
+            "logo": {
+                "@type": "ImageObject",
+                "url": "https://www.nachopr.com/static/images/logo.png"
+            }
+        },
+        "mainEntity": {
+            "@type": "SoftwareApplication",
+            "name": "NachoPR",
+            "applicationCategory": "BusinessApplication",
+            "operatingSystem": "All",
+            "offers": {
+                "@type": "Offer",
+                "price": "0",
+                "priceCurrency": "USD",
+                "url": "https://www.nachopr.com/free-media-database"
+            }
+        }
+    }
+    </script>
+
+
     <!-- Hero Section -->
     <section class="pt-32 pb-24 bg-gradient-to-b from-green-50 to-white">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -25,9 +58,14 @@
         </div>
     </section>
 
-    <section class="py-24 bg-white">
-        <h2>The world's most cost effective journalist database</h2>
-        <div class="grid md:grid-cols-3 gap-8 max-w-3xl mx-auto mb-12">
+    <section class="py-24 bg-white border-t border-gray-400">
+        <div class="grid md:grid-cols-2 gap-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 class="text-3xl font-semibold mb-6 font-space">The best value journalist database</h2>
+                <p class="text-gray-600 mb-12">NachoPR's free media database is the most comprehensive and cost effective way to find contact data for journalists for your outreach campaigns. </p>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-8">
             <div class="bg-white p-6 rounded-lg shadow-sm">
                 <h3 class="text-2xl font-semibold text-green-600 mb-2">{{ news_sources_count|intcomma }}</h3>
                 <p class="text-gray-600">News Sources</p>
@@ -39,6 +77,7 @@
             <div class="bg-white p-6 rounded-lg shadow-sm">
                 <h3 class="text-2xl font-semibold text-green-600 mb-2">{{ journalist_count|intcomma }}</h3>
                 <p class="text-gray-600">Journalists</p>
+                </div>
             </div>
         </div>
     </section>
