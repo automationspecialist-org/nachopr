@@ -856,6 +856,14 @@ h2.font-space {
   margin-left: 1rem;
 }
 
+.mt-6 {
+  margin-top: 1.5rem;
+}
+
+.mt-10 {
+  margin-top: 2.5rem;
+}
+
 .block {
   display: block;
 }
@@ -892,6 +900,10 @@ h2.font-space {
   height: 3rem;
 }
 
+.h-5 {
+  height: 1.25rem;
+}
+
 .w-16 {
   width: 4rem;
 }
@@ -914,6 +926,10 @@ h2.font-space {
 
 .w-full {
   width: 100%;
+}
+
+.w-5 {
+  width: 1.25rem;
 }
 
 .max-w-2xl {
@@ -1116,6 +1132,10 @@ h2.font-space {
   padding: 1.5rem;
 }
 
+.p-12 {
+  padding: 3rem;
+}
+
 .px-4 {
   padding-left: 1rem;
   padding-right: 1rem;
@@ -1172,6 +1192,10 @@ h2.font-space {
 
 .pt-32 {
   padding-top: 8rem;
+}
+
+.pb-12 {
+  padding-bottom: 3rem;
 }
 
 .text-center {
@@ -1402,6 +1426,10 @@ h2.font-space {
 
   .md\:grid-cols-3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .md\:flex-row {
+    flex-direction: row;
   }
 
   .md\:text-4xl {

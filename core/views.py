@@ -101,3 +101,12 @@ def free_media_list(request):
 
 def signup(request):
     return render(request, 'core/signup.html')
+
+def terms_of_service(request):
+    return render(request, 'core/terms_of_service.html')
+
+def privacy_policy(request):
+    return render(request, 'core/privacy_policy.html')
+
+def refund_policy(request):
+    return render(request, 'core/refund_policy.html')

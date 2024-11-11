@@ -16,10 +16,13 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-
+from core import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('core.urls')),
     path('static/', include('django.contrib.staticfiles.urls')),
     path("__reload__/", include("django_browser_reload.urls")),
+    path('terms-of-service/', views.terms_of_service, name='terms_of_service'),
+    path('privacy-policy/', views.privacy_policy, name='privacy_policy'),
+    path('refund-policy/', views.refund_policy, name='refund_policy'),
 ]
