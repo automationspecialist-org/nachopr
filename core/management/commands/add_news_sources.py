@@ -10,6 +10,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         csv_path = os.path.join(settings.BASE_DIR, 'core', 'initial_data', 'sites.csv')
+        num_created = 0
+        num_skipped = 0
         
         with open(csv_path, 'r') as file:
             reader = csv.reader(file, delimiter=',')
@@ -35,8 +37,13 @@ class Command(BaseCommand):
                 )
                 
                     if created:
-                        self.stdout.write(self.style.SUCCESS(f'Created news source: {instance.name}'))
+                        num_created += 1
+                        #self.stdout.write(self.style.SUCCESS(f'Created news source: {instance.name}'))
                     else:
-                        self.stdout.write(self.style.WARNING(f'News source already exists: {instance.name}'))
+                        num_skipped += 1
+                        #self.stdout.write(self.style.WARNING(f'News source already exists: {instance.name}'))
                 except IntegrityError:
-                    self.stdout.write(self.style.WARNING(f'News source already exists: {instance.name}'))
+                    #self.stdout.write(self.style.WARNING(f'News source already exists: {instance.name}'))
+                    pass
+                    
+        self.stdout.write(self.style.SUCCESS(f'Created {num_created} news sources and skipped {num_skipped} news sources.'))
