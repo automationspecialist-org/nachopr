@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     #'django_cotton',
     'django_browser_reload',
     'core',
+    'djstripe',
 ]
 
 MIDDLEWARE = [

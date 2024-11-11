@@ -35,9 +35,9 @@ RUN apt-get update && apt-get install -y \
     # Install Rust and Cargo
     && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
     # Install Node.js
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
-    && npm install -g npm@latest
+    #&& curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    #&& apt-get install -y nodejs \
+    #&& npm install -g npm@latest
 
 # Move SQLite installation into its own layer for better caching
 RUN wget https://www.sqlite.org/2024/sqlite-autoconf-3470000.tar.gz \
@@ -67,9 +67,6 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 
 RUN pip install uv
 
-# Create a virtual environment using uv
-RUN uv venv /usr/src/app/venv
-ENV PATH="/usr/src/app/venv/bin:$PATH"
 
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
@@ -79,6 +76,8 @@ COPY pyproject.toml* uv.lock* /usr/src/app/
 RUN uv venv /usr/src/app/venv \
     && . /usr/src/app/venv/bin/activate \
     && uv sync --frozen
+ENV PATH="/usr/src/app/venv/bin:$PATH"
+
 
 # Copy application code
 COPY . /usr/src/app/

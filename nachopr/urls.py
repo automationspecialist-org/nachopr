@@ -20,6 +20,7 @@ from core import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('allauth.urls')),
+    path("stripe/", include("djstripe.urls", namespace="djstripe")),
     path('', include('core.urls')),
     path('static/', include('django.contrib.staticfiles.urls')),
     path("__reload__/", include("django_browser_reload.urls")),

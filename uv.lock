@@ -337,6 +337,19 @@ wheels = [
 ]
 
 [[package]]
+name = "dj-stripe"
+version = "2.8.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+    { name = "stripe" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/bd/c7/4703a8b451e9f93d7184e8a683c7dfead01bfec8eb72fc274fd630f3146d/dj_stripe-2.8.4.tar.gz", hash = "sha256:2abfc4f690af4dd65d57dfbb5d36ffaf63b9225f0a5ac95ea21783c80a95982b", size = 151454 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e2/2a/0593c5bb89e7b65457ef14f09444309c1f7c29a14fced92ee0f198ad26f1/dj_stripe-2.8.4-py3-none-any.whl", hash = "sha256:e4665ffc9b54b558310b157b4f67aa92ec6936c0c4e21e13ddeaac90c25b90b1", size = 182913 },
+]
+
+[[package]]
 name = "django"
 version = "5.1.3"
 source = { registry = "https://pypi.org/simple" }
@@ -777,6 +790,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "asyncio" },
     { name = "beautifulsoup4" },
+    { name = "dj-stripe" },
     { name = "django" },
     { name = "django-allauth", extra = ["socialaccount"] },
     { name = "django-browser-reload" },
@@ -803,6 +817,7 @@ dependencies = [
 requires-dist = [
     { name = "asyncio" },
     { name = "beautifulsoup4" },
+    { name = "dj-stripe", specifier = ">=2.8.4" },
     { name = "django", specifier = ">=5.1.2" },
     { name = "django-allauth", extras = ["socialaccount"] },
     { name = "django-browser-reload", specifier = ">=1.17.0" },
@@ -1265,6 +1280,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/73/82/dfa23ec2cbed08a801deab02fe7c904bfb00765256b155941d789a338c68/sqlparse-0.5.1.tar.gz", hash = "sha256:bb6b4df465655ef332548e24f08e205afc81b9ab86cb1c45657a7ff173a3a00e", size = 84502 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5d/a5/b2860373aa8de1e626b2bdfdd6df4355f0565b47e51f7d0c54fe70faf8fe/sqlparse-0.5.1-py3-none-any.whl", hash = "sha256:773dcbf9a5ab44a090f3441e2180efe2560220203dc2f8c0b0fa141e18b505e4", size = 44156 },
+]
+
+[[package]]
+name = "stripe"
+version = "4.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a1/06/7b69b9fb7148732f7c5eed4e0062c04214bca40c176419373d53e3e19dfd/stripe-4.2.0.tar.gz", hash = "sha256:f0134704bd4e9410fae25034836dc6f5849d92c0f9083d58d43e01b3e631ac4c", size = 267578 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/64/9f/863f6b804cb80c8baf8f7d6e0c776e4e4da6238f530ef8c6648ffac07a82/stripe-4.2.0-py2.py3-none-any.whl", hash = "sha256:8ce03bfc099465740e33890000c454e79316c8730e45ad1efbaec3d52a019d05", size = 252200 },
 ]
 
 [[package]]
