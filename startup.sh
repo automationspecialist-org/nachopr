@@ -12,6 +12,7 @@ uv run manage.py crontab remove
 uv run manage.py crontab add
 service cron start
 uv run manage.py migrate
+uv run manage.py crontab remove
 uv run manage.py crontab add
 uv run manage.py crontab show
 uv run manage.py create_admin_user

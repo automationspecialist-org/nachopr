@@ -41,7 +41,10 @@ async def crawl_news_sources(domain_limit: int = None, page_limit: int = None, m
         for news_source in news_sources:
             tasks.append(crawl_single_news_source(news_source, limit=page_limit, semaphore=semaphore))
         
-        await asyncio.gather(*tasks)
+        results = await asyncio.gather(*tasks)
+        total_pages = sum(r[0] for r in results)  # Sum up all pages added
+        total_journalists = sum(r[1] for r in results)  # Sum up all journalists added
+        return total_pages, total_journalists
                 
     except Exception as e:
         logger.error(f"Critical error in crawl_news_sources: {str(e)}")
@@ -53,7 +56,7 @@ async def crawl_single_news_source(news_source, limit, semaphore):
             logger.info(f"Starting crawl for {news_source.url}")
             start_time = timezone.now()
             
-            await fetch_website(news_source.url, limit=limit)
+            pages_added, journalists_added = await fetch_website(news_source.url, limit=limit)
             
             end_time = timezone.now()
             duration = end_time - start_time
@@ -62,16 +65,21 @@ async def crawl_single_news_source(news_source, limit, semaphore):
             news_source.last_crawled = end_time
             await sync_to_async(news_source.save)()
             close_old_connections()
+            return pages_added, journalists_added
         except Exception as e:
             logger.error(f"Error crawling {news_source.url}: {str(e)}")
+            return 0, 0
 
 
 def crawl_news_sources_sync(domain_limit: int = None, page_limit: int = None):
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(crawl_news_sources(domain_limit=domain_limit, page_limit=page_limit))
+    total_pages, total_journalists = loop.run_until_complete(
+        crawl_news_sources(domain_limit=domain_limit, page_limit=page_limit)
+    )
+    return total_pages, total_journalists
 
 
-async def fetch_website(url: str, limit: int = 1000_000, depth: int = 3) -> Website:
+async def fetch_website(url: str, limit: int = 1000_000, depth: int = 3) -> tuple[int, int]:
     try:
         user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
         website = (
@@ -88,6 +96,8 @@ async def fetch_website(url: str, limit: int = 1000_000, depth: int = 3) -> Webs
         
         news_source = await sync_to_async(NewsSource.objects.get)(url=url)
         
+        pages_added = 0
+        journalists_added = 0
         for page in pages:
             try:
                 slug = slugify(page.title)
@@ -102,7 +112,33 @@ async def fetch_website(url: str, limit: int = 1000_000, depth: int = 3) -> Webs
                         'slug': slug
                     }
                 )
-                #await process_single_page_journalists(news_page)
+                if created:
+                    pages_added += 1
+                    # Process journalists for new pages only
+                    journalists_data = extract_journalists_with_gpt(page.content)
+                    if journalists_data and 'journalists' in journalists_data:
+                        for journalist_dict in journalists_data['journalists']:
+                            if 'name' in journalist_dict:
+                                name = journalist_dict['name']
+                                profile_url = journalist_dict.get('profile_url')
+                                image_url = journalist_dict.get('image_url')
+                                journalist_slug = slugify(name)
+                                
+                                try:
+                                    journalist, j_created = await sync_to_async(Journalist.objects.get_or_create)(
+                                        name=name,
+                                        slug=journalist_slug,
+                                        defaults={
+                                            'profile_url': profile_url,
+                                            'image_url': image_url
+                                        }
+                                    )
+                                    if j_created:
+                                        journalists_added += 1
+                                    await sync_to_async(page.journalists.add)(journalist)
+                                except IntegrityError:
+                                    continue
+                
                 logger.info(f"Successfully processed page: {page.url}")
             except IntegrityError as e:
                 logger.warning(f"Skipping duplicate page: {page.url} - {str(e)}")
@@ -112,6 +148,7 @@ async def fetch_website(url: str, limit: int = 1000_000, depth: int = 3) -> Webs
                 continue
             
             close_old_connections()
+        return pages_added, journalists_added
     except Exception as e:
         logger.error(f"Error in fetch_website for {url}: {str(e)}")
         raise
