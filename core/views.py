@@ -9,7 +9,7 @@ load_dotenv()
 
 
 def home(request):
-    news_sources_count = NewsSource.objects.count()
+    news_sources_count = NewsSource.objects.filter(pages__isnull=False).distinct().count()
     news_pages_count = NewsPage.objects.count()
     journalist_count = Journalist.objects.count()
     example_journalists = (Journalist.objects
@@ -87,7 +87,7 @@ def search_results(request):
 
 
 def free_media_list(request):
-    news_sources_count = NewsSource.objects.count()
+    news_sources_count = NewsSource.objects.filter(pages__isnull=False).distinct().count()
     news_pages_count = NewsPage.objects.count()
     journalist_count = Journalist.objects.count()
     categories = NewsPageCategory.objects.all().order_by('name')
@@ -116,3 +116,7 @@ def refund_policy(request):
 def pricing(request):
     products = Product.objects.all()
     return render(request, 'core/pricing.html', {'products': products})
+
+
+def dashboard(request):
+    return render(request, 'core/dashboard.html')

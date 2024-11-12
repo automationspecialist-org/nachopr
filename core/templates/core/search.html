@@ -68,24 +68,22 @@
                     </div>
                 {% endif %}
 
-                {% if not user.is_authenticated %}
-                    <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}"></div>
-                {% endif %}
             </form>
         </div>
 
         <!-- Results Area - Fill remaining space -->
         <div class="flex-1">
             <div id="results-container" class="bg-white p-4 rounded-lg shadow">
-                {% if not user.is_authenticated %}
-                    <div class="cf-turnstile" 
-                         data-sitekey="0x4AAAAAAAzjbgyD1SHSrL-i"
-                         data-callback="enableSubmit"></div>
-                {% endif %}
                 <!-- Initial state or loading message -->
                 <p class="text-gray-500">Enter your search criteria...</p>
             </div>
         </div>
+
+        {% if not user.is_authenticated %}
+            <div class="cf-turnstile" 
+                    data-sitekey="0x4AAAAAAAzjbgyD1SHSrL-i"
+                    data-callback="enableSubmit"></div>
+        {% endif %}
         
     </div>
 </div>

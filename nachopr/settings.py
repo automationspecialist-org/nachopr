@@ -226,3 +226,5 @@ DAT_GOOGLE_ENABLE_ONETAP_LOGIN = True  # decide if you want to show the google o
 DAT_GOOGLE_CLIENT_ID = ''  # google client id , e.g. XXXXXXXXXX39-62ckbbeXXXXXXXXXXXXXXXXXXXXXm1.apps.googleusercontent.com
 DAT_BASE_URL = ''  # e.g. http://localhost:8000
 DAT_TOS_MESSAGE = 'By registering, you agree to our <a href="/terms-of-service/">Terms of Service</a> and <a href="/privacy-policy/">Privacy Policy.</a>'  # optional
+
+LOGIN_REDIRECT_URL = '/dashboard/'
