@@ -268,6 +268,7 @@ def extract_journalists_with_gpt(content: str) -> dict:
             run_id=run_id,
             error=error_data
         )
+        logger.error(f"Error in extract_journalists_with_gpt: {str(e)}")
         print('error:', result if 'result' in locals() else str(e))
         journalists_data = {}
 
