@@ -1,10 +1,12 @@
 import logging
+from django.db import connection
 from django.utils import timezone
 from dotenv import load_dotenv
 import requests
 import os
 from core.tasks import crawl_news_sources_sync, process_all_journalists_sync
 from core.models import Journalist, NewsPage
+from django.conf import settings
 
 if 'AZURE' not in os.environ:
     load_dotenv()
@@ -35,3 +37,42 @@ def crawl_job():
     message = f"[{timezone.now()}] NachoPR crawl completed. {newspage_count_after - newspage_count_before} pages, {journalist_count_after - journalist_count_before} journalists added."
     logger.info(message)
     requests.post(slack_webhook_url, json={"text": message})
+
+
+def send_slack_alert(message: str):
+    """
+    Send alert to Slack webhook if configured
+    """
+    try:
+        if hasattr(settings, 'SLACK_WEBHOOK_URL') and settings.SLACK_WEBHOOK_URL:
+            payload = {
+                "text": f"🚨 Database Alert: {message}"
+            }
+            requests.post(settings.SLACK_WEBHOOK_URL, json=payload)
+    except Exception as e:
+        logger.error(f"Failed to send Slack alert: {str(e)}")
+
+
+def check_database_integrity():
+    """
+    Run SQLite database integrity check.
+    Returns True if database is healthy, False otherwise.
+    """
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute('PRAGMA integrity_check;')
+            result = cursor.fetchone()[0]
+            
+            if result == 'ok':
+                logger.info("Database integrity check passed")
+                return True
+            else:
+                error_msg = f"Database integrity check failed: {result}"
+                logger.error(error_msg)
+                send_slack_alert(error_msg)
+                return False
+    except Exception as e:
+        error_msg = f"Error running database integrity check: {str(e)}"
+        logger.error(error_msg)
+        send_slack_alert(error_msg)
+        return False

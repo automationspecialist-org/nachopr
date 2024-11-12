@@ -186,8 +186,11 @@ INTERNAL_IPS = [
 #CRON_LOG_FILE = '/persistent/cron.log'
 
 CRONJOBS = [
-    ('*/15 * * * *', 'core.cron.crawl_job', '>> /tmp/cron.log 2>&1')
+    ('*/15 * * * *', 'core.cron.crawl_job', '>> /tmp/cron.log 2>&1'),
+    ('*/10 * * * *', 'core.cron.check_database_integrity', '>> /tmp/cron_db_check.log 2>&1'),
 ]
 
 
 DJSTRIPE_FOREIGN_KEY_TO_FIELD = 'djstripe_id'
+
+SLACK_WEBHOOK_URL = os.environ.get('SLACK_WEBHOOK_URL')
