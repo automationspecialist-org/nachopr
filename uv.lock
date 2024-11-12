@@ -653,7 +653,7 @@ wheels = [
 
 [[package]]
 name = "lunary"
-version = "1.1.13"
+version = "1.1.14"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -665,9 +665,9 @@ dependencies = [
     { name = "setuptools" },
     { name = "tenacity" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1b/df/a664de87263d07d98b74480102bed94581fbdf3f3f81006e8a0d9a773613/lunary-1.1.13.tar.gz", hash = "sha256:f51866ae6513dc26f6d1173ae0450be40f575ff59c14d6e32768d51b41b1b12f", size = 16894 }
+sdist = { url = "https://files.pythonhosted.org/packages/92/db/3d541572279116218477fc448cf36f6e75f8b36d904ffa8180cdfc69de34/lunary-1.1.14.tar.gz", hash = "sha256:d09cbea17bac86975e2ba39c77aa7ef95f8686767feee67e0d31d367de2250ae", size = 16867 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f1/da/96932fcef81a492762f6e1a2e955b03e9ff27a2699acd73ef9b4e2ef8fdf/lunary-1.1.13-py3-none-any.whl", hash = "sha256:52a001a9dcfce5619bef7b4ca228f29185c17471d0ffda48c5633e0e8a04cb19", size = 19931 },
+    { url = "https://files.pythonhosted.org/packages/93/da/982ba808b6546dc31da0d13730d2fa65ec2fe9e2c061aa3eb7719c306bc3/lunary-1.1.14-py3-none-any.whl", hash = "sha256:d69d9c91d4ab610364644b09e30b438522b1f476c4c5f2cbe38c00301f503298", size = 19886 },
 ]
 
 [[package]]
@@ -827,7 +827,7 @@ requires-dist = [
     { name = "django-extensions" },
     { name = "django-tailwind" },
     { name = "granian" },
-    { name = "lunary", specifier = ">=1.1.13" },
+    { name = "lunary", specifier = "==1.1.14" },
     { name = "openai" },
     { name = "pillow", specifier = ">=11.0.0" },
     { name = "psutil", specifier = ">=6.1.0" },

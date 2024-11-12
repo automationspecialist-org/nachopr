@@ -160,9 +160,11 @@ def clean_html(html: str) -> str:
 
     cleaned_html = {
         "title": cleaned_dict.get("title"),
-        "journalist_names": cleaned_dict.get("byline"),
         "content": cleaned_dict.get("plain_content")
     }
+
+    if 'byline' in cleaned_dict:
+        cleaned_html["journalist_names"] = cleaned_dict.get("byline")
 
     
     return cleaned_html
