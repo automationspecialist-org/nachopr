@@ -27,7 +27,7 @@ def crawl_job():
     message = f"[{timezone.now()}] NachoPR crawl starting..."
     logger.info(message)
     requests.post(slack_webhook_url, json={"text": message})
-    crawl_news_sources_sync(domain_limit=2, page_limit=2000)
+    crawl_news_sources_sync(domain_limit=10, page_limit=2000, max_concurrent_tasks=80)
     process_all_journalists_sync()
 
     newspage_count_after = NewsPage.objects.count()
