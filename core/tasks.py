@@ -80,7 +80,7 @@ async def crawl_single_news_source(news_source, limit, semaphore):
 
 def crawl_news_sources_sync(domain_limit: int = None, page_limit: int = None, max_concurrent_tasks: int = 20):
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(crawl_news_sources(
+    loop.run_until_complete(crawl_news_sources( 
         domain_limit=domain_limit, 
         page_limit=page_limit, 
         max_concurrent_tasks=max_concurrent_tasks
