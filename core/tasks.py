@@ -156,7 +156,7 @@ async def fetch_website(url: str, limit: int = 1000_000, depth: int = 3) -> Webs
 
 
 def clean_html(html: str) -> str:
-    cleaned_dict = simple_json_from_html_string(html, use_readability=True)
+    cleaned_dict = simple_json_from_html_string(html, use_readability=False)
 
     cleaned_html = {
         "title": cleaned_dict.get("title"),

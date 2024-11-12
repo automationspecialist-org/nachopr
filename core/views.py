@@ -86,7 +86,7 @@ def search_results(request):
 
 
 def free_media_list(request):
-    news_sources_count = NewsSource.objects.count()
+    news_sources_count = NewsSource.objects.filter(journalists__isnull=False).distinct().count()
     news_pages_count = NewsPage.objects.count()
     journalist_count = Journalist.objects.count()
     categories = NewsPageCategory.objects.all().order_by('name')
