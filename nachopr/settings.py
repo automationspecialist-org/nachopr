@@ -188,3 +188,6 @@ INTERNAL_IPS = [
 CRONJOBS = [
     ('*/15 * * * *', 'core.cron.crawl_job', '>> /tmp/cron.log 2>&1')
 ]
+
+
+DJSTRIPE_FOREIGN_KEY_TO_FIELD = 'djstripe_id'
