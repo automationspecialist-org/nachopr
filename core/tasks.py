@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 lunary.config(app_id=os.getenv('LUNARY_PUBLIC_KEY'))
 
 
-async def crawl_news_sources(domain_limit: int = None, page_limit: int = None, max_concurrent_tasks: int = 20):
+async def crawl_news_sources(domain_limit: int = None, page_limit: int = None, max_concurrent_tasks: int = 2):
     try:
         logger.info(f"Starting crawl at {timezone.now()}")
         
@@ -80,7 +80,7 @@ async def crawl_single_news_source(news_source, limit, semaphore):
             logger.error(f"Error crawling {news_source.url}: {str(e)}")
 
 
-def crawl_news_sources_sync(domain_limit: int = None, page_limit: int = None, max_concurrent_tasks: int = 20):
+def crawl_news_sources_sync(domain_limit: int = None, page_limit: int = None, max_concurrent_tasks: int = 2):
     loop = asyncio.get_event_loop()
     loop.run_until_complete(crawl_news_sources( 
         domain_limit=domain_limit, 

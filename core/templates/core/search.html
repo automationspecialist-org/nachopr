@@ -1,9 +1,4 @@
 <div class="container mx-auto px-4 py-8">
-    {% if not user.is_authenticated %}
-          <div class="cf-turnstile" 
-               data-sitekey="0x4AAAAAAAzjbgyD1SHSrL-i"
-               data-callback="enableSubmit"></div>
-    {% endif %}
     <div class="flex gap-6">
         <!-- Filters Sidebar - Fixed width -->
         <div class="w-64 flex-shrink-0 bg-white p-4 rounded-lg shadow">
@@ -72,16 +67,26 @@
                         </select>
                     </div>
                 {% endif %}
+
+                {% if not user.is_authenticated %}
+                    <div class="cf-turnstile" data-sitekey="{{ turnstile_site_key }}"></div>
+                {% endif %}
             </form>
         </div>
 
         <!-- Results Area - Fill remaining space -->
         <div class="flex-1">
             <div id="results-container" class="bg-white p-4 rounded-lg shadow">
+                {% if not user.is_authenticated %}
+                    <div class="cf-turnstile" 
+                         data-sitekey="0x4AAAAAAAzjbgyD1SHSrL-i"
+                         data-callback="enableSubmit"></div>
+                {% endif %}
                 <!-- Initial state or loading message -->
                 <p class="text-gray-500">Enter your search criteria...</p>
             </div>
         </div>
+        
     </div>
 </div>
 
@@ -90,3 +95,8 @@
         console.log('Turnstile token:', token);
     }
 </script>
+
+<!-- Add Turnstile script if not authenticated -->
+{% if not user.is_authenticated %}
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+{% endif %}

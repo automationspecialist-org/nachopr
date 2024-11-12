@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 import os
 from pathlib import Path
+from django.db.backends.signals import connection_created
+from django.dispatch import receiver
 
 if 'AZURE' in os.environ:
     print("Running on Azure")
@@ -114,8 +116,20 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': DB_PATH,
+        'OPTIONS': {
+            'timeout': 20,
+        }
     }
 }
+
+@receiver(connection_created)
+def configure_sqlite(sender, connection, **kwargs):
+    if connection.vendor == 'sqlite':
+        cursor = connection.cursor()
+        cursor.execute('PRAGMA journal_mode=WAL')
+        cursor.execute('PRAGMA synchronous=NORMAL')
+        cursor.execute('PRAGMA cache_size=-64000')  # 64MB
+        cursor.execute('PRAGMA foreign_keys=ON')
 
 
 STATIC_ROOT = BASE_DIR / 'static'
