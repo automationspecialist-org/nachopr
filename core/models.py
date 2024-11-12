@@ -1,5 +1,7 @@
 from django.db import models
 from django.utils.text import slugify
+from django.contrib.auth.models import AbstractUser
+import djstripe
 
 class NewsSource(models.Model):
     url = models.URLField(unique=True)
@@ -67,4 +69,26 @@ class NewsPage(models.Model):
         super().save(*args, **kwargs)
     
 
-
+class CustomUser(AbstractUser):
+    groups = models.ManyToManyField(
+        'auth.Group',
+        related_name='custom_user_set',
+        blank=True,
+        verbose_name='groups',
+        help_text='The groups this user belongs to.',
+    )
+    user_permissions = models.ManyToManyField(
+        'auth.Permission',
+        related_name='custom_user_set',
+        blank=True,
+        verbose_name='user permissions',
+        help_text='Specific permissions for this user.',
+    )
+    subscription = models.ForeignKey(
+        'djstripe.Subscription', null=True, blank=True, on_delete=models.SET_NULL,
+        help_text="The user's Stripe Subscription object, if it exists"
+    )
+    customer = models.ForeignKey(
+        'djstripe.Customer', null=True, blank=True, on_delete=models.SET_NULL,
+        help_text="The user's Stripe Customer object, if it exists"
+    )

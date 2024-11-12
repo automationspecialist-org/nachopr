@@ -1,0 +1,22 @@
+{% extends "marketing_base.html" %}
+
+{% block main %}
+
+<section class="py-20 bg-gray-50">
+  <div class="container px-4 mx-auto">
+    <div class="max-w-2xl mx-auto mb-16 text-center">
+      <h2 class="text-4xl font-bold text-gray-900 mb-4">Pricing Plans</h2>
+      <p class="text-lg text-gray-600">Choose the perfect plan for your needs</p>
+    </div>
+    
+
+        <script async src="https://js.stripe.com/v3/pricing-table.js"></script>
+        <stripe-pricing-table pricing-table-id="prctbl_1QKQJuIS7CEbPEJ1zlMmBQM1"
+        publishable-key="pk_test_51QKLnCIS7CEbPEJ1RLiwbQ2h623bH3yq3z7nhYPktrYnb9vzWD6BOPBHpOwaw5kvAH3b8NJrfoNUmg5H7PnQyJMb00ZDLsPY2h">
+        </stripe-pricing-table>
+
+  </div>
+</section>
+{% endblock %}
+
+  

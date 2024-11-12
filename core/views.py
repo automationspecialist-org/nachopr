@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from django.shortcuts import render
 import requests
 from core.models import NewsSource, NewsPage, Journalist, NewsPageCategory
+from djstripe.models import Product
 
 load_dotenv()
 
@@ -111,3 +112,7 @@ def privacy_policy(request):
 
 def refund_policy(request):
     return render(request, 'core/refund_policy.html')
+
+def pricing(request):
+    products = Product.objects.all()
+    return render(request, 'core/pricing.html', {'products': products})
