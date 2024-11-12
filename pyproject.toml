@@ -26,4 +26,5 @@ dependencies = [
     "readabilipy>=0.2.0",
     "dj-stripe>=2.8.4",
     "lunary==1.1.14",
+    "markdownify>=0.13.1",
 ]

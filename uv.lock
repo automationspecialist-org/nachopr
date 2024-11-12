@@ -730,6 +730,19 @@ wheels = [
 ]
 
 [[package]]
+name = "markdownify"
+version = "0.13.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "beautifulsoup4" },
+    { name = "six" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/19/5a/bd1b685ee9efbfb0b22774a30188dfb4048c64e8a6c80a65a7f207af4ea1/markdownify-0.13.1.tar.gz", hash = "sha256:ab257f9e6bd4075118828a28c9d02f8a4bfeb7421f558834aa79b2dfeb32a098", size = 13609 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6c/e9/6e2757a670b8c48bc48eff1c20cb9d71f1476e844038bdbdb76f17e6a12b/markdownify-0.13.1-py3-none-any.whl", hash = "sha256:1d181d43d20902bcc69d7be85b5316ed174d0dda72ff56e14ae4c95a4a407d22", size = 10800 },
+]
+
+[[package]]
 name = "multidict"
 version = "6.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -801,6 +814,7 @@ dependencies = [
     { name = "django-tailwind" },
     { name = "granian" },
     { name = "lunary" },
+    { name = "markdownify" },
     { name = "openai" },
     { name = "pillow" },
     { name = "psutil" },
@@ -828,6 +842,7 @@ requires-dist = [
     { name = "django-tailwind" },
     { name = "granian" },
     { name = "lunary", specifier = "==1.1.14" },
+    { name = "markdownify", specifier = ">=0.13.1" },
     { name = "openai" },
     { name = "pillow", specifier = ">=11.0.0" },
     { name = "psutil", specifier = ">=6.1.0" },
