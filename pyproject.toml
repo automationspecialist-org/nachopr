@@ -27,4 +27,6 @@ dependencies = [
     "dj-stripe>=2.8.4",
     "lunary==1.1.14",
     "markdownify>=0.13.1",
+    "django-allauth-theme>=0.7.3",
+    "crispy-tailwind>=1.0.3",
 ]

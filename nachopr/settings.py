@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'whitenoise',
     'allauth',
     'allauth.account',
+    'allauth.socialaccount',
     'django_crontab',
     'django.contrib.humanize',
     'tailwind',
@@ -55,6 +56,9 @@ INSTALLED_APPS = [
     'django_browser_reload',
     'core',
     'djstripe',
+    'crispy_forms',
+    'crispy_tailwind',
+    'allauth_theme',
 ]
 
 MIDDLEWARE = [
@@ -83,6 +87,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'allauth_theme.context_processors.welcome_text',
             ],
         },
     },
@@ -210,3 +215,14 @@ STRIPE_LIVE_MODE = os.environ.get("STRIPE_LIVE_MODE")
 STRIPE_PRICING_TABLE_ID = "prctbl_1QKQJuIS7CEbPEJ1zlMmBQM1"
 
 SLACK_WEBHOOK_URL = os.environ.get('SLACK_WEBHOOK_URL')
+
+CRISPY_ALLOWED_TEMPLATE_PACKS = "tailwind"
+CRISPY_TEMPLATE_PACK = "tailwind"
+
+DAT_WELCOME_TITLE = 'NachoPR'  # title
+DAT_WELCOME_TITLE_MOBILE = 'NachoPR'  # mobile title
+DAT_WELCOME_TEXT = 'NachoPR is a platform for finding relevant journalists for your PR campaigns.'  # text for your project
+DAT_GOOGLE_ENABLE_ONETAP_LOGIN = True  # decide if you want to show the google one tap login
+DAT_GOOGLE_CLIENT_ID = ''  # google client id , e.g. XXXXXXXXXX39-62ckbbeXXXXXXXXXXXXXXXXXXXXXm1.apps.googleusercontent.com
+DAT_BASE_URL = ''  # e.g. http://localhost:8000
+DAT_TOS_MESSAGE = 'By registering, you agree to our <a href="/terms-of-service/">Terms of Service</a> and <a href="/privacy-policy/">Privacy Policy.</a>'  # optional

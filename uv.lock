@@ -299,6 +299,19 @@ wheels = [
 ]
 
 [[package]]
+name = "crispy-tailwind"
+version = "1.0.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+    { name = "django-crispy-forms" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ae/ac/a307ae5ce869d7151b90d4b8b042a48eb454a936dacc695f6418486e5bd8/crispy-tailwind-1.0.3.tar.gz", hash = "sha256:2bc9f616d406e4b003f25d46fcb0079f1c2522719d97adb107667271d849459a", size = 19172 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c9/ca/11f65e24f3c182dfaf90fd3710d2dcca0fbc3026923e47b43f52a4a2349b/crispy_tailwind-1.0.3-py3-none-any.whl", hash = "sha256:31427f66b1c4fd0d6fb040f4197cfb97d104cdbe7641ea2dea940c0057c4db4b", size = 25700 },
+]
+
+[[package]]
 name = "cryptography"
 version = "43.0.3"
 source = { registry = "https://pypi.org/simple" }
@@ -379,6 +392,17 @@ socialaccount = [
     { name = "requests" },
     { name = "requests-oauthlib" },
 ]
+
+[[package]]
+name = "django-allauth-theme"
+version = "0.7.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+    { name = "django-allauth" },
+    { name = "django-crispy-forms" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/01/d0/8e46581a8bab45659bfee62faf4f2b1f1545735dbd7b6cf9304db8ac59e2/django_allauth_theme-0.7.3.tar.gz", hash = "sha256:ff775225a5842854ff409802299b1f3b4f99a795927c9d0f9d61e7024c6630e5", size = 25387 }
 
 [[package]]
 name = "django-browser-reload"
@@ -803,9 +827,11 @@ source = { virtual = "." }
 dependencies = [
     { name = "asyncio" },
     { name = "beautifulsoup4" },
+    { name = "crispy-tailwind" },
     { name = "dj-stripe" },
     { name = "django" },
     { name = "django-allauth", extra = ["socialaccount"] },
+    { name = "django-allauth-theme" },
     { name = "django-browser-reload" },
     { name = "django-crispy-forms" },
     { name = "django-crontab" },
@@ -831,9 +857,11 @@ dependencies = [
 requires-dist = [
     { name = "asyncio" },
     { name = "beautifulsoup4" },
+    { name = "crispy-tailwind", specifier = ">=1.0.3" },
     { name = "dj-stripe", specifier = ">=2.8.4" },
     { name = "django", specifier = ">=5.1.2" },
     { name = "django-allauth", extras = ["socialaccount"] },
+    { name = "django-allauth-theme", specifier = ">=0.7.3" },
     { name = "django-browser-reload", specifier = ">=1.17.0" },
     { name = "django-crispy-forms" },
     { name = "django-crontab", specifier = ">=0.7.1" },

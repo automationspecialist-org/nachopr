@@ -19,7 +19,8 @@ from django.urls import path, include
 from core import views
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('accounts/', include('allauth.urls')),
+    #path('accounts/', include('allauth.urls')),
+    path('', include('allauth_theme.urls')),
     path("stripe/", include("djstripe.urls", namespace="djstripe")),
     path('', include('core.urls')),
     path('static/', include('django.contrib.staticfiles.urls')),
