@@ -20,6 +20,7 @@ import lunary
 from readabilipy import simple_json_from_html_string
 from dotenv import load_dotenv
 import uuid
+from django.db import transaction
 
 
 load_dotenv()
@@ -102,34 +103,40 @@ async def fetch_website(url: str, limit: int = 1000_000, depth: int = 3) -> Webs
         pages = website.get_pages()
         logger.info(f"Fetched {len(pages)} pages from {url}")
         
-        news_source = await sync_to_async(NewsSource.objects.get)(url=url)
+        try:
+            news_source = await sync_to_async(NewsSource.objects.get)(url=url)
+        except Exception as e:
+            logger.error(f"Error retrieving NewsSource for {url}: {str(e)}")
+            raise
         
         for page in pages:
             try:
-                slug = slugify(page.title)
-                
-                news_page, created = await sync_to_async(NewsPage.objects.get_or_create)(
-                    url=page.url,
-                    slug=slug,
-                    defaults={
-                        'title': page.title,
-                        'content': page.content,
-                        'source': news_source,
-                        'slug': slug
-                    }
-                )
-                #await process_single_page_journalists(news_page)
-                logger.info(f"Successfully processed page: {page.url}")
+                # Add transaction handling
+                async with transaction.atomic():
+                    slug = slugify(page.title)
+                    
+                    news_page, created = await sync_to_async(NewsPage.objects.get_or_create)(
+                        url=page.url,
+                        slug=slug,
+                        defaults={
+                            'title': page.title,
+                            'content': page.content,
+                            'source': news_source,
+                            'slug': slug
+                        }
+                    )
+                    logger.info(f"Successfully processed page: {page.url}")
             except IntegrityError as e:
                 logger.warning(f"Skipping duplicate page: {page.url} - {str(e)}")
                 continue
             except Exception as e:
-                logger.error(f"Error processing page {page.url}: {str(e)}")
+                logger.error(f"Error processing page {page.url}: {str(e)}", exc_info=True)
                 continue
-            
-            close_old_connections()
+            finally:
+                close_old_connections()
+
     except Exception as e:
-        logger.error(f"Error in fetch_website for {url}: {str(e)}")
+        logger.error(f"Error in fetch_website for {url}: {str(e)}", exc_info=True)
         raise
 
 
