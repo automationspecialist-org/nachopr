@@ -199,7 +199,7 @@ def extract_journalists_with_gpt(content: str) -> dict:
     prompt = f"""
     Extract journalist information from the following HTML content and return it as a JSON object with the journalist's name as the key and their metadata (profile_url and image_url) as the value:
     
-    HTML content parsed to JSON:
+    HTML content:
     ```
     {clean_content}
     ```
