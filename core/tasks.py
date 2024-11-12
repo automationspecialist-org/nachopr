@@ -91,14 +91,24 @@ def crawl_news_sources_sync(domain_limit: int = None, page_limit: int = None, ma
 async def fetch_website(url: str, limit: int = 1000_000, depth: int = 3) -> Website:
     try:
         user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
-        website = (
-            Website(url)
-            .with_budget({"*": limit})
-            .with_user_agent(user_agent)
-            .with_request_timeout(30000)
-            .with_respect_robots_txt(False)
-            .with_depth(depth)
-        )
+        if limit:
+            website = (
+                Website(url)
+                .with_budget({"*": limit})
+                .with_user_agent(user_agent)
+                .with_request_timeout(30000)
+                .with_respect_robots_txt(False)
+                .with_depth(depth)
+            )
+        else:
+            website = (
+                Website(url)
+                .with_user_agent(user_agent)
+                .with_request_timeout(30000)
+                .with_respect_robots_txt(False)
+                .with_depth(depth)
+            )
+
         website.scrape()
         pages = website.get_pages()
         logger.info(f"Fetched {len(pages)} pages from {url}")
@@ -110,22 +120,27 @@ async def fetch_website(url: str, limit: int = 1000_000, depth: int = 3) -> Webs
             raise
         
         for page in pages:
+            await asyncio.sleep(0.1)
             try:
-                # Add transaction handling
-                async with transaction.atomic():
-                    slug = slugify(page.title)
-                    
-                    news_page, created = await sync_to_async(NewsPage.objects.get_or_create)(
-                        url=page.url,
-                        slug=slug,
-                        defaults={
-                            'title': page.title,
-                            'content': page.content,
-                            'source': news_source,
-                            'slug': slug
-                        }
-                    )
-                    logger.info(f"Successfully processed page: {page.url}")
+                @sync_to_async
+                def create_news_page():
+                    with transaction.atomic():
+                        slug = slugify(page.title)
+                        news_page, created = NewsPage.objects.get_or_create(
+                            url=page.url,
+                            slug=slug,
+                            defaults={
+                                'title': page.title,
+                                'content': page.content,
+                                'source': news_source,
+                                'slug': slug
+                            }
+                        )
+                        return news_page, created
+
+                news_page, created = await create_news_page()
+                logger.info(f"Successfully processed page: {page.url}")
+                
             except IntegrityError as e:
                 logger.warning(f"Skipping duplicate page: {page.url} - {str(e)}")
                 continue
