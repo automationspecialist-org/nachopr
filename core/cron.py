@@ -4,7 +4,7 @@ from django.utils import timezone
 from dotenv import load_dotenv
 import requests
 import os
-from core.tasks import crawl_news_sources_sync, process_all_journalists_sync
+from core.tasks import categorize_news_pages_with_gpt, crawl_news_sources_sync, process_all_journalists_sync
 from core.models import Journalist, NewsPage
 from django.conf import settings
 
@@ -76,3 +76,12 @@ def check_database_integrity():
         logger.error(error_msg)
         send_slack_alert(error_msg)
         return False
+    
+
+def categorize_job():
+    newspage_with_categories_count_before = NewsPage.objects.filter(categories__isnull=False).count()
+    categorize_news_pages_with_gpt()
+    newspage_with_categories_count_after = NewsPage.objects.filter(categories__isnull=False).count()
+    message = f"[{timezone.now()}] NachoPR categorize completed. {newspage_with_categories_count_after - newspage_with_categories_count_before} pages categorized."
+    logger.info(message)
+    requests.post(settings.SLACK_WEBHOOK_URL, json={"text": message})

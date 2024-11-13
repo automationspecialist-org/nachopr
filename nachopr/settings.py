@@ -207,6 +207,7 @@ INTERNAL_IPS = [
 CRONJOBS = [
     ('*/10 * * * *', 'core.cron.crawl_job', '>> /tmp/cron.log 2>&1'),
     ('0 * * * *', 'core.cron.check_database_integrity', '>> /tmp/cron_db_check.log 2>&1'),
+    ('*/30 * * * *', 'core.cron.categorize_job', '>> /tmp/cron_categorize.log 2>&1'),
 ]
 
 DJSTRIPE_FOREIGN_KEY_TO_FIELD = os.environ.get('DJSTRIPE_FOREIGN_KEY_TO_FIELD', 'djstripe_id')

@@ -84,13 +84,14 @@
             </div>
         </div>
 
-        {% if not user.is_authenticated %}
-            <div class="cf-turnstile" 
-                    data-sitekey="0x4AAAAAAAzjbgyD1SHSrL-i"
-                    data-callback="enableSubmit"></div>
-        {% endif %}
+       
         
     </div>
+    {% if not user.is_authenticated %}
+    <div class="cf-turnstile" 
+            data-sitekey="0x4AAAAAAAzjbgyD1SHSrL-i"
+            data-callback="enableSubmit"></div>
+    {% endif %}
 </div>
 
 <script>
