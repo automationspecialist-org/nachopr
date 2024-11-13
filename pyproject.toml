@@ -29,4 +29,5 @@ dependencies = [
     "markdownify>=0.13.1",
     "django-allauth-theme>=0.7.3",
     "crispy-tailwind>=1.0.3",
+    "pymemcache>=4.0.0",
 ]
