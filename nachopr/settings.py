@@ -209,7 +209,10 @@ CRONJOBS = [
     ('0 * * * *', 'core.cron.check_database_integrity', '>> /tmp/cron_db_check.log 2>&1'),
 ]
 
-DJSTRIPE_FOREIGN_KEY_TO_FIELD = 'djstripe_id'
+DJSTRIPE_FOREIGN_KEY_TO_FIELD = os.environ.get('DJSTRIPE_FOREIGN_KEY_TO_FIELD', 'djstripe_id')
+if 'AZURE' in os.environ:
+    print(f"DJ-Stripe foreign key field: {DJSTRIPE_FOREIGN_KEY_TO_FIELD}")
+
 STRIPE_LIVE_SECRET_KEY = os.environ.get("STRIPE_LIVE_SECRET_KEY")
 STRIPE_LIVE_MODE = os.environ.get("STRIPE_LIVE_MODE")
 STRIPE_PRICING_TABLE_ID = "prctbl_1QKQJuIS7CEbPEJ1zlMmBQM1"
