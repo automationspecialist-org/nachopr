@@ -4,6 +4,8 @@ from django.shortcuts import render
 import requests
 from core.models import NewsSource, NewsPage, Journalist, NewsPageCategory
 from djstripe.models import Product
+from django.db.models import Prefetch
+from django.db.models import Count
 
 load_dotenv()
 
@@ -50,7 +52,13 @@ def search_results(request):
     category_id = request.GET.get('category', '')
     
     # Start with all journalists
-    results = Journalist.objects.all()
+    results = Journalist.objects.prefetch_related(
+        'sources',
+        Prefetch(
+            'articles__categories',
+            queryset=NewsPageCategory.objects.all()
+        )
+    )
     
     # Apply filters
     if query:

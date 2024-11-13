@@ -7,6 +7,11 @@
             <form id="search-form" class="space-y-4" hx-get="{% url 'search_results' %}" 
                   hx-trigger="change, submit" hx-target="#results-container">
                 
+                <!-- Add hidden input for Turnstile token -->
+                {% if not user.is_authenticated %}
+                <input type="hidden" name="cf-turnstile-response" id="cf-turnstile-response">
+                {% endif %}
+                
                 <!-- Search Input -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Search</label>
@@ -91,6 +96,8 @@
 <script>
     function enableSubmit(token) {
         console.log('Turnstile token:', token);
+        // Add the token to the hidden input
+        document.getElementById('cf-turnstile-response').value = token;
     }
 </script>
 
