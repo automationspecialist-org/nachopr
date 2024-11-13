@@ -6,6 +6,7 @@ from core.models import NewsSource, NewsPage, Journalist, NewsPageCategory
 from djstripe.models import Product
 from django.db.models import Prefetch
 from django.db.models import Count
+from django.core.paginator import Paginator
 
 load_dotenv()
 
@@ -90,6 +91,11 @@ def search_results(request):
                         {'error': 'Security check failed'})
         
         results = results[:3]  # Limit results for non-subscribers
+    else:
+        # Add pagination for subscribers
+        page_number = request.GET.get('page', 1)
+        paginator = Paginator(results, 10)  # Show 10 results per page
+        results = paginator.get_page(page_number)
     
     return render(request, 'core/search_results.html', {'results': results})
 

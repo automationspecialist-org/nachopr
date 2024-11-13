@@ -16,7 +16,10 @@ from django.db.backends.signals import connection_created
 from django.dispatch import receiver
 
 if 'AZURE' in os.environ:
+    PROD = True
     print("Running on Azure")
+else:
+    PROD = False
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -231,4 +234,19 @@ DAT_GOOGLE_CLIENT_ID = ''  # google client id , e.g. XXXXXXXXXX39-62ckbbeXXXXXXX
 DAT_BASE_URL = ''  # e.g. http://localhost:8000
 DAT_TOS_MESSAGE = 'By registering, you agree to our <a href="/terms-of-service/">Terms of Service</a> and <a href="/privacy-policy/">Privacy Policy.</a>'  # optional
 
-LOGIN_REDIRECT_URL = '/dashboard/'
+LOGIN_REDIRECT_URL = '/app/'
+
+
+if PROD:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.memcached.PyMemcacheCache",
+            "LOCATION": "unix:/tmp/memcached.sock",  # Using Unix socket for better performance
+            "OPTIONS": {
+                "no_delay": True,
+                "ignore_exc": True,
+                "max_pool_size": 4,
+                "use_pooling": True,
+            }
+        }
+    }

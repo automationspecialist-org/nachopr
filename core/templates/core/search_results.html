@@ -56,8 +56,8 @@
       {% if not user.is_authenticated %}
         <div class="mt-8 text-center">
           <p class="mb-4">Start your free trial to access the full database.</p>
-          <a href="{% url 'signup' %}" 
-             class="font-space border border-gray-300 text-gray-700 px-8 py-4 rounded-lg text-lg font-medium hover:bg-gray-50 transition-colors">
+          <a href="{% url 'pricing' %}" 
+             class="font-space border bg-green-600 border-gray-300 text-gray-700 px-8 py-4 rounded-lg text-lg font-medium hover:bg-gray-50 transition-colors">
             Sign Up
           </a>
         </div>
@@ -65,5 +65,31 @@
     {% else %}
       <p class="text-gray-500">No results found.</p>
     {% endif %}
+  {% endif %}
+
+  {% if user.is_authenticated and results.paginator %}
+    <div class="mt-6 flex justify-center space-x-4">
+      {% if results.has_previous %}
+        <a href="?{{ request.GET.urlencode }}&page={{ results.previous_page_number }}" 
+           class="px-4 py-2 border rounded hover:bg-gray-50"
+           hx-get="{% url 'search_results' %}?{{ request.GET.urlencode }}&page={{ results.previous_page_number }}"
+           hx-target="#results-container">
+          Previous
+        </a>
+      {% endif %}
+      
+      <span class="px-4 py-2">
+        Page {{ results.number }} of {{ results.paginator.num_pages }}
+      </span>
+
+      {% if results.has_next %}
+        <a href="?{{ request.GET.urlencode }}&page={{ results.next_page_number }}"
+           class="px-4 py-2 border rounded hover:bg-gray-50"
+           hx-get="{% url 'search_results' %}?{{ request.GET.urlencode }}&page={{ results.next_page_number }}"
+           hx-target="#results-container">
+          Next
+        </a>
+      {% endif %}
+    </div>
   {% endif %}
 {% endblock %}

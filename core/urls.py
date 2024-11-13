@@ -8,6 +8,6 @@ urlpatterns = [
     path('free-media-database/', views.free_media_list, name='free-media-list'),
     path('signup/', views.signup, name='signup'),
     path('pricing/', views.pricing, name='pricing'),
-    path('dashboard/', views.dashboard, name='dashboard'),
+    path('app/', views.dashboard, name='dashboard'),
 ]
 
