@@ -62,7 +62,6 @@ INSTALLED_APPS = [
     'crispy_forms',
     'crispy_tailwind',
     'allauth_theme',
-    'algoliasearch_django',
 ]
 
 MIDDLEWARE = [
