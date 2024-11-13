@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     'crispy_forms',
     'crispy_tailwind',
     'allauth_theme',
+    'algoliasearch_django',
 ]
 
 MIDDLEWARE = [
@@ -250,3 +251,8 @@ if PROD:
             }
         }
     }
+
+ALGOLIA = {
+  'APPLICATION_ID': 'SXW045HL4C',
+  'API_KEY': 'b03fb3d30fde244903b39447833aa615'
+}
