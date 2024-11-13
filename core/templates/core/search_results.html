@@ -4,6 +4,12 @@
     <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
       {{ error }}
     </div>
+    {% if reset_turnstile %}
+    <script>
+      // Reset the Turnstile widget
+      turnstile.reset();
+    </script>
+    {% endif %}
   {% else %}
     {% if results %}
       <div class="space-y-6">

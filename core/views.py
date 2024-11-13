@@ -76,7 +76,8 @@ def search_results(request):
         token = request.GET.get('cf-turnstile-response')
         if not token:
             return render(request, 'core/search_results.html', 
-                        {'error': 'Please complete the security check'})
+                        {'error': 'Please complete the security check',
+                         'reset_turnstile': True})
         
         # Verify token with Cloudflare
         data = {
@@ -88,7 +89,8 @@ def search_results(request):
         
         if not response.json().get('success', False):
             return render(request, 'core/search_results.html', 
-                        {'error': 'Security check failed'})
+                        {'error': 'Security check failed',
+                         'reset_turnstile': True})
         
         results = results[:3]  # Limit results for non-subscribers
     else:
