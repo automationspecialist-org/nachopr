@@ -92,3 +92,16 @@ class CustomUser(AbstractUser):
         'djstripe.Customer', null=True, blank=True, on_delete=models.SET_NULL,
         help_text="The user's Stripe Customer object, if it exists"
     )
+
+
+class SavedSearch(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='saved_searches')
+    name = models.CharField(max_length=255)
+    query = models.CharField(max_length=255, blank=True, null=True)
+    countries = models.ManyToManyField('Journalist', related_name='saved_countries')
+    sources = models.ManyToManyField('NewsSource', related_name='saved_sources')
+    categories = models.ManyToManyField('NewsPageCategory', related_name='saved_categories')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return self.name

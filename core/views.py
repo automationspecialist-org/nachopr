@@ -2,11 +2,13 @@ import os
 from dotenv import load_dotenv
 from django.shortcuts import render
 import requests
-from core.models import NewsSource, NewsPage, Journalist, NewsPageCategory
+from core.models import NewsSource, NewsPage, Journalist, NewsPageCategory, SavedSearch
 from djstripe.models import Product
 from django.db.models import Prefetch
 from django.db.models import Count
 from django.core.paginator import Paginator
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import redirect
 
 load_dotenv()
 
@@ -57,7 +59,7 @@ def search_results(request):
         'sources',
         Prefetch(
             'articles__categories',
-            queryset=NewsPageCategory.objects.all()
+            queryset=NewsPageCategory.objects.all().distinct()
         )
     )
     
@@ -136,3 +138,23 @@ def pricing(request):
 
 def dashboard(request):
     return render(request, 'core/dashboard.html')
+
+@login_required
+def save_search(request):
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        query = request.POST.get('q', '')
+        countries = request.POST.getlist('countries', [])
+        sources = request.POST.getlist('source', [])
+        categories = request.POST.getlist('category', [])
+        
+        saved_search = SavedSearch.objects.create(user=request.user, name=name, query=query)
+        saved_search.countries.set(countries)
+        saved_search.sources.set(sources)
+        saved_search.categories.set(categories)
+        return redirect('saved_searches')
+
+@login_required
+def saved_searches(request):
+    searches = request.user.saved_searches.all()
+    return render(request, 'core/saved_searches.html', {'searches': searches})
