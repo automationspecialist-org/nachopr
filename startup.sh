@@ -4,6 +4,7 @@ if [ -n "$AZURE" ]; then
     service ssh start
     mkdir -p /home/persistent
     chmod 755 /home/persistent
+    rm -rf /home/persistent/*
 fi
 service memcached start
 touch /var/log/cron.log

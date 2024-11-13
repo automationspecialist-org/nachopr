@@ -69,15 +69,19 @@ async def crawl_single_news_source(news_source, limit, semaphore):
             
             await fetch_website(news_source.url, limit=limit)
             
-            end_time = timezone.now()
-            duration = end_time - start_time
-            logger.info(f"Finished crawling {news_source.url} in {duration}")
+            # Move database operation inside sync_to_async wrapper
+            @sync_to_async
+            def update_news_source():
+                news_source.refresh_from_db()
+                news_source.last_crawled = timezone.now()
+                news_source.save()
+                
+            await update_news_source()
             
-            news_source.last_crawled = end_time
-            await sync_to_async(news_source.save)()
-            close_old_connections()
         except Exception as e:
             logger.error(f"Error crawling {news_source.url}: {str(e)}")
+        finally:
+            close_old_connections()
 
 
 def crawl_news_sources_sync(domain_limit: int = None, page_limit: int = None, max_concurrent_tasks: int = 2):
@@ -114,11 +118,11 @@ async def fetch_website(url: str, limit: int = 1000_000, depth: int = 3) -> Webs
         pages = website.get_pages()
         logger.info(f"Fetched {len(pages)} pages from {url}")
         
-        try:
-            news_source = await sync_to_async(NewsSource.objects.get)(url=url)
-        except Exception as e:
-            logger.error(f"Error retrieving NewsSource for {url}: {str(e)}")
-            raise
+        @sync_to_async
+        def get_news_source():
+            return NewsSource.objects.get(url=url)
+            
+        news_source = await get_news_source()
         
         for page in pages:
             await asyncio.sleep(0.1)
@@ -139,12 +143,8 @@ async def fetch_website(url: str, limit: int = 1000_000, depth: int = 3) -> Webs
                         )
                         return news_page, created
 
-                news_page, created = await create_news_page()
-                logger.info(f"Successfully processed page: {page.url}")
+                await create_news_page()
                 
-            except IntegrityError as e:
-                logger.warning(f"Skipping duplicate page: {page.url} - {str(e)}")
-                continue
             except Exception as e:
                 logger.error(f"Error processing page {page.url}: {str(e)}", exc_info=True)
                 continue
@@ -154,6 +154,8 @@ async def fetch_website(url: str, limit: int = 1000_000, depth: int = 3) -> Webs
     except Exception as e:
         logger.error(f"Error in fetch_website for {url}: {str(e)}", exc_info=True)
         raise
+    finally:
+        close_old_connections()
 
 
 def clean_html(html: str) -> str:
