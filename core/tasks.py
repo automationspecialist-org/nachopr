@@ -165,7 +165,7 @@ def clean_html(html: str) -> str:
     return cleaned_html
 
 
-def extract_journalists_with_gpt(content: str) -> dict:
+def extract_journalists_with_gpt(content: str, track_prompt: bool = False) -> dict:
     """
     Extract journalist information from the HTML content using GPT-4 on Azure.
     """
@@ -213,19 +213,20 @@ def extract_journalists_with_gpt(content: str) -> dict:
     If you cannot find any journalists, return an empty JSON object. Never output the example JSON objects such as 'John Doe' and 'Jane Smith'.
     """
 
-    # Track the start of the LLM call
-    lunary.track_event(
-        run_type="llm",
-        event_name="start",
-        run_id=run_id,
-        name="gpt-4o-mini",
-        input=prompt,
-        params={
-            "max_tokens": 2000,
-            "temperature": 0.3,
-            "response_format": {"type": "json_object"}
-        }
-    )
+    if track_prompt:
+        # Track the start of the LLM call
+        lunary.track_event(
+            run_type="llm",
+            event_name="start",
+            run_id=run_id,
+            name="gpt-4o-mini",
+            input=prompt,
+            params={
+                "max_tokens": 2000,
+                "temperature": 0.3,
+                "response_format": {"type": "json_object"}
+                }
+        )
 
     try:
         # Call the GPT-4 API on Azure
@@ -245,17 +246,18 @@ def extract_journalists_with_gpt(content: str) -> dict:
         result = response.choices[0].message.content
         journalists_data = json.loads(result)
 
-        # Track successful completion with both raw and parsed output
-        lunary.track_event(
-            run_type="llm",
-            event_name="end",
-            run_id=run_id,
-            output={
-                "raw_response": result,
-                "parsed_data": journalists_data
-            },
-            token_usage=response.usage.total_tokens if hasattr(response, 'usage') else None
-        )
+        if track_prompt:
+            # Track successful completion with both raw and parsed output
+            lunary.track_event(
+                run_type="llm",
+                event_name="end",
+                run_id=run_id,
+                output={
+                    "raw_response": result,
+                    "parsed_data": journalists_data
+                },
+                token_usage=response.usage.total_tokens if hasattr(response, 'usage') else None
+            )
 
     except (Exception, json.JSONDecodeError) as e:
         # Track error with the raw response if available
@@ -277,47 +279,105 @@ def extract_journalists_with_gpt(content: str) -> dict:
     return journalists_data
 
 
-async def process_single_page_journalists(page: NewsPage):
-    """Process journalists for a single news page using GPT"""
-    journalists_data = extract_journalists_with_gpt(page.content)
-    
-    if journalists_data and 'journalists' in journalists_data:
-        for journalist_dict in journalists_data['journalists']:
-            if 'name' in journalist_dict:
-                name = journalist_dict['name']
-                profile_url = journalist_dict.get('profile_url')
-                image_url = journalist_dict.get('image_url')
-                
-                # Generate a slug from the journalist's name
-                journalist_slug = slugify(name)
-                
-                try:
-                    journalist, created = await sync_to_async(Journalist.objects.get_or_create)(
-                        name=name,
-                        slug=journalist_slug,
-                        defaults={
-                            'profile_url': profile_url,
-                            'image_url': image_url
-                        }
-                    )
-                    print('created:' if created else 'existing:', journalist_dict)
-                    
-                    # Associate the journalist with the news page
-                    await sync_to_async(page.journalists.add)(journalist)
-                except IntegrityError:
-                    print('skipping (integrity error):', journalist_dict)
-    
-    page.processed = True
-    await sync_to_async(page.save)()
-
 async def process_all_pages_journalists(limit: int = 10, re_process: bool = False):
     """Process journalists for multiple pages using GPT"""
+    # Create queues for processing
+    gpt_queue = asyncio.Queue()  # Queue of pages to process with GPT
+    db_queue = asyncio.Queue()   # Queue of results to write to DB
+    
+    # Get pages to process
     if re_process:
         pages = await sync_to_async(list)(NewsPage.objects.all()[:limit])
     else:
         pages = await sync_to_async(list)(NewsPage.objects.filter(processed=False)[:limit])
+    
+    # Add all pages to the GPT queue
     for page in pages:
-        await process_single_page_journalists(page)
+        await gpt_queue.put(page)
+
+    async def gpt_worker():
+        """Async worker to process GPT requests"""
+        while True:
+            try:
+                # Get next page from queue
+                page = await gpt_queue.get()
+                
+                # Process with GPT
+                journalists_data = extract_journalists_with_gpt(page.content)
+                
+                # Put results in DB queue
+                await db_queue.put((page, journalists_data))
+                
+                # Mark task as done
+                gpt_queue.task_done()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Error in GPT worker: {str(e)}")
+                gpt_queue.task_done()
+
+    async def db_worker():
+        """Sequential worker to handle DB writes"""
+        while True:
+            try:
+                # Get next result from queue
+                page, journalists_data = await db_queue.get()
+                
+                # Write to DB synchronously
+                @sync_to_async
+                def save_to_db():
+                    with transaction.atomic():
+                        if journalists_data and 'journalists' in journalists_data:
+                            for journalist_dict in journalists_data['journalists']:
+                                if 'name' in journalist_dict:
+                                    name = journalist_dict['name']
+                                    profile_url = journalist_dict.get('profile_url')
+                                    image_url = journalist_dict.get('image_url')
+                                    journalist_slug = slugify(name)
+                                    
+                                    try:
+                                        journalist, created = Journalist.objects.get_or_create(
+                                            name=name,
+                                            slug=journalist_slug,
+                                            defaults={
+                                                'profile_url': profile_url,
+                                                'image_url': image_url
+                                            }
+                                        )
+                                        page.journalists.add(journalist)
+                                    except IntegrityError:
+                                        logger.error(f"Integrity error for journalist: {name}")
+                        
+                        page.processed = True
+                        page.save()
+                
+                await save_to_db()
+                
+                # Mark task as done
+                db_queue.task_done()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Error in DB worker: {str(e)}")
+                db_queue.task_done()
+            finally:
+                close_old_connections()
+
+    # Create multiple GPT workers but only one DB worker
+    gpt_workers = [asyncio.create_task(gpt_worker()) for _ in range(3)]
+    db_worker_task = asyncio.create_task(db_worker())
+    
+    # Wait for all pages to be processed
+    await gpt_queue.join()
+    await db_queue.join()
+    
+    # Cancel workers
+    for worker in gpt_workers:
+        worker.cancel()
+    db_worker_task.cancel()
+    
+    # Wait for workers to finish
+    await asyncio.gather(*gpt_workers, db_worker_task, return_exceptions=True)
 
 def process_all_journalists_sync(limit: int = 10, re_process: bool = False):
     """Sync wrapper for processing multiple pages"""
