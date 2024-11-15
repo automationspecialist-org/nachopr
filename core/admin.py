@@ -1,11 +1,11 @@
 from django.contrib import admin
-from .models import NewsPageCategory, NewsSource, NewsPage, Journalist
+from .models import NewsPageCategory, NewsSource, NewsPage, Journalist, CustomUser
 from .tasks import crawl_news_sources_sync
 from django.contrib import messages
 
 admin.site.register(Journalist)
 admin.site.register(NewsPageCategory)
-
+admin.site.register(CustomUser)
 
 @admin.register(NewsSource)
 class NewsSourceAdmin(admin.ModelAdmin):
@@ -23,4 +23,5 @@ class NewsSourceAdmin(admin.ModelAdmin):
 @admin.register(NewsPage)
 class NewsPageAdmin(admin.ModelAdmin):
     pass
+
 

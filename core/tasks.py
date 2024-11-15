@@ -1,8 +1,6 @@
 import asyncio
 import json
 import os
-import re
-from bs4 import BeautifulSoup
 from django.utils import timezone
 from tqdm import tqdm
 from core.models import NewsPage, NewsPageCategory, NewsSource, Journalist
@@ -17,8 +15,6 @@ from PIL import Image, ImageDraw, ImageFont
 from django.conf import settings
 from django.db.models import Q
 import lunary
-from readabilipy import simple_json_from_html_string
-from dotenv import load_dotenv
 import uuid
 from markdownify import markdownify
 from django.db import transaction
@@ -65,7 +61,6 @@ async def crawl_single_news_source(news_source, limit, semaphore):
     async with semaphore:
         try:
             logger.info(f"Starting crawl for {news_source.url}")
-            start_time = timezone.now()
             
             await fetch_website(news_source.url, limit=limit)
             

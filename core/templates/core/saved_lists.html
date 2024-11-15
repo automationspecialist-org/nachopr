@@ -1,0 +1,17 @@
+{% extends "app_base.html" %}
+
+{% block main %}
+
+<h1 class="text-2xl">Saved lists</h1>
+
+{% if saved_lists %}
+{% for list in saved_lists %}
+<p>{{list.name}}</p>
+{% endfor %}
+
+{% else %}
+<p>You haven't saved any lists yet.</p>
+<p>To create your first list, search for journalists and then select journalists to save.</p>
+{% endif %}
+
+{% endblock %}

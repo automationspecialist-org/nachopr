@@ -2,13 +2,23 @@ import os
 from dotenv import load_dotenv
 from django.shortcuts import render
 import requests
-from core.models import NewsSource, NewsPage, Journalist, NewsPageCategory, SavedSearch
+from core.models import CustomUser, NewsSource, NewsPage, Journalist, NewsPageCategory, SavedSearch
 from djstripe.models import Product
 from django.db.models import Prefetch
-from django.db.models import Count
 from django.core.paginator import Paginator
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect
+from django.views.decorators.csrf import csrf_exempt
+from django.http import HttpResponse
+from django.contrib.auth import get_user_model
+from django.conf import settings
+import stripe
+from djstripe.models import Customer, Subscription
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
 
 load_dotenv()
 
@@ -44,7 +54,7 @@ def search(request):
         'languages': languages,
         'turnstile_site_key': os.getenv('CLOUDFLARE_TURNSTILE_SITE_KEY'),
     }
-    return render(request, 'core/search.html', context=context)
+    return render(request, 'core/app_search.html', context=context)
 
 
 def search_results(request):
@@ -96,6 +106,10 @@ def search_results(request):
         
         results = results[:3]  # Limit results for non-subscribers
     else:
+        #request.user.customuser.searches_count += 1
+
+        #request.user.customuser.searches_count += 1
+        #print(request.user.searches_count)
         # Add pagination for subscribers
         page_number = request.GET.get('page', 1)
         paginator = Paginator(results, 10)  # Show 10 results per page
@@ -158,3 +172,102 @@ def save_search(request):
 def saved_searches(request):
     searches = request.user.saved_searches.all()
     return render(request, 'core/saved_searches.html', {'searches': searches})
+
+@csrf_exempt
+def stripe_webhook(request):
+    payload = request.body
+    sig_header = request.META['HTTP_STRIPE_SIGNATURE']
+    
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
+        )
+    except ValueError:
+        return HttpResponse(status=400)
+    except stripe.error.SignatureVerificationError:
+        return HttpResponse(status=400)
+        
+    # Handle the event
+    if event.type == "customer.subscription.created":
+        handle_subscription_created(event)
+    elif event.type == "customer.subscription.updated":
+        # Handle subscription update
+        pass
+    elif event.type == "customer.subscription.deleted":
+        # Handle subscription deletion
+        pass
+    
+    return HttpResponse(status=200)
+
+def handle_subscription_created(event):
+    """
+    Handle the customer.subscription.created webhook from Stripe
+    """
+    # Get customer email from the event
+    customer_email = event.data.object.customer_email
+    
+    User = get_user_model()
+    
+    # Check if user exists
+    user = User.objects.filter(email=customer_email).first()
+    
+    if not user:
+        # Create new user with a random password
+        # They can reset it later via email
+        random_password = User.objects.make_random_password()
+        username = customer_email.split('@')[0]
+        # Ensure username is unique
+        base_username = username
+        counter = 1
+        while User.objects.filter(username=username).exists():
+            username = f"{base_username}{counter}"
+            counter += 1
+            
+        user = User.objects.create_user(
+            username=username,
+            email=customer_email,
+            password=random_password
+        )
+        
+        # TODO: Send welcome email with password reset link
+        
+    # Link Stripe Customer to User
+    customer = Customer.objects.get(id=event.data.object.customer)
+    user.customer = customer
+    
+    # Link Subscription to User
+    subscription = Subscription.objects.get(id=event.data.object.id)
+    user.subscription = subscription
+    
+    user.save()
+
+def send_welcome_email(user):
+    """Send welcome email with password reset link to new users."""
+    token = default_token_generator.make_token(user)
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    password_reset_url = f"/reset/{uid}/{token}/"
+    
+    context = {
+        'user': user,
+        'password_reset_url': password_reset_url,
+    }
+    
+    message = render_to_string('core/email/welcome.html', context)
+    
+    send_mail(
+        'Welcome to NachoPR',
+        message,
+        'support@nachopr.com',
+        [user.email],
+        fail_silently=False,
+    )
+
+
+@login_required
+def settings(request):
+    return render(request, 'core/settings.html')
+
+
+@login_required
+def saved_lists(request):
+    return render(request, "core/saved_lists.html")

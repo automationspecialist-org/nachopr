@@ -12,7 +12,10 @@
 
         <script async src="https://js.stripe.com/v3/pricing-table.js"></script>
         <stripe-pricing-table pricing-table-id="prctbl_1QKQJuIS7CEbPEJ1zlMmBQM1"
-        publishable-key="pk_test_51QKLnCIS7CEbPEJ1RLiwbQ2h623bH3yq3z7nhYPktrYnb9vzWD6BOPBHpOwaw5kvAH3b8NJrfoNUmg5H7PnQyJMb00ZDLsPY2h">
+        publishable-key="pk_test_51QKLnCIS7CEbPEJ1RLiwbQ2h623bH3yq3z7nhYPktrYnb9vzWD6BOPBHpOwaw5kvAH3b8NJrfoNUmg5H7PnQyJMb00ZDLsPY2h"
+        customer-email="auto"
+        client-reference-id="{{request.user.id|default:''}}"
+        >
         </stripe-pricing-table>
 
   </div>

@@ -1,7 +1,6 @@
 from django.db import models
 from django.utils.text import slugify
 from django.contrib.auth.models import AbstractUser
-import djstripe
 
 class NewsSource(models.Model):
     url = models.URLField(unique=True)
@@ -85,13 +84,48 @@ class CustomUser(AbstractUser):
         help_text='Specific permissions for this user.',
     )
     subscription = models.ForeignKey(
-        'djstripe.Subscription', null=True, blank=True, on_delete=models.SET_NULL,
+        'djstripe.Subscription', 
+        null=True, 
+        blank=True, 
+        on_delete=models.SET_NULL,
+        related_name='subscribers', 
         help_text="The user's Stripe Subscription object, if it exists"
     )
     customer = models.ForeignKey(
-        'djstripe.Customer', null=True, blank=True, on_delete=models.SET_NULL,
+        'djstripe.Customer', 
+        null=True, 
+        blank=True, 
+        on_delete=models.SET_NULL,
+        related_name='users', 
         help_text="The user's Stripe Customer object, if it exists"
     )
+
+    searches_count = models.IntegerField(default=0)
+
+    @property
+    def is_subscribed(self):
+        """Return True if the user has an active subscription."""
+        return self.subscription is not None and self.subscription.status in ('active', 'trialing')
+
+    @property
+    def subscription_status(self):
+        """Return the subscription status or None if no subscription exists."""
+        if self.subscription:
+            return self.subscription.status
+        return None
+
+    @property
+    def subscription_period_end(self):
+        """Return the end date of the current subscription period."""
+        if self.subscription and self.subscription.current_period_end:
+            return self.subscription.current_period_end
+        return None
+
+    def get_stripe_subscription_url(self):
+        """Get URL for managing subscription in Stripe Customer Portal."""
+        if not self.customer:
+            return None
+        return f"https://billing.stripe.com/p/session/{self.customer.id}"
 
 
 class SavedSearch(models.Model):

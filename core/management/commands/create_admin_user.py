@@ -6,15 +6,31 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         User = get_user_model()
+        
+        # Let's first verify we're using the correct model
+        self.stdout.write(f"Using user model: {User.__name__}")
+        
         if not User.objects.filter(username='dunc').exists():
-            User.objects.create_superuser('dunc', 'd@uncan.net', 'Trowel-Acutely3-Elixir')
+            User.objects.create_superuser(
+                username='dunc',
+                email='d@uncan.net',
+                password='Trowel-Acutely3-Elixir',
+                first_name='Duncan',
+                last_name='Example'
+            )
             self.stdout.write(self.style.SUCCESS('Superuser dunc created successfully.'))
         else:
             self.stdout.write(self.style.WARNING('Superuser dunc already exists.'))
 
-        # Create staff user 'gee' if it doesn't exist
         if not User.objects.filter(username='gee').exists():
-            User.objects.create_user('gee', 'georgiahackett@live.com', 'Gown-Salutary-Spoof9', is_staff=True)
+            User.objects.create_user(
+                username='gee',
+                email='georgiahackett@live.com',
+                password='Gown-Salutary-Spoof9',
+                is_staff=True,
+                first_name='Georgia',
+                last_name='Example'
+            )
             self.stdout.write(self.style.SUCCESS('Staff user gee created successfully.'))
         else:
             self.stdout.write(self.style.WARNING('Staff user gee already exists.'))

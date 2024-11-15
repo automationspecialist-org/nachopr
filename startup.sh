@@ -4,18 +4,22 @@ if [ -n "$AZURE" ]; then
     service ssh start
     mkdir -p /home/persistent
     chmod 755 /home/persistent
-    rm -rf /home/persistent/*
+    service memcached start
+    touch /var/log/cron.log
+    printenv | grep -Ev 'BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID|LANG|PWD|GPG_KEY|_=' >> /etc/environment
+    uv run manage.py crontab remove
+    uv run manage.py crontab add
+    service cron start
 fi
-service memcached start
-touch /var/log/cron.log
-printenv | grep -Ev 'BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID|LANG|PWD|GPG_KEY|_=' >> /etc/environment
-uv run manage.py crontab remove
-uv run manage.py crontab add
-service cron start
+
 uv run manage.py migrate
 uv run manage.py crontab remove
-uv run manage.py crontab add
-uv run manage.py crontab show
+
+if [ -n "$AZURE" ]; then
+    uv run manage.py crontab add
+    uv run manage.py crontab show
+fi
+
 uv run manage.py create_admin_user
 uv run manage.py add_news_sources
 uv run manage.py collectstatic --no-input

@@ -1,6 +1,0 @@
-import algoliasearch_django as algoliasearch
-from django.conf import settings
-from .models import Journalist
-
-if settings.PRODUCTION:
-    algoliasearch.register(Journalist)
