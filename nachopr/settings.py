@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 from django.db.backends.signals import connection_created
 from django.dispatch import receiver
+import dj_database_url  # Add this import
 
 if 'AZURE' in os.environ:
     PROD = True
@@ -41,6 +42,7 @@ else:
 # Application definition
 
 INSTALLED_APPS = [
+    'core',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -57,7 +59,6 @@ INSTALLED_APPS = [
     'theme',
     #'django_cotton',
     'django_browser_reload',
-    'core',
     'djstripe',
     'crispy_forms',
     'crispy_tailwind',
@@ -117,28 +118,34 @@ CSRF_TRUSTED_ORIGINS = [
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-DB_PATH = Path('/home/persistent/db.sqlite3') if os.environ.get('AZURE') else (
-    Path('/persistent/db.sqlite3') if os.environ.get('CAPROVER') else BASE_DIR / 'db.sqlite3'
-)
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': DB_PATH,
-        'OPTIONS': {
-            'timeout': 20,
+# Database settings
+if PROD:
+    # Use Azure Database for PostgreSQL in production
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('PGDATABASE'),
+            'USER': os.environ.get('PGUSER'),
+            'PASSWORD': os.environ.get('PGPASSWORD'),
+            'HOST': os.environ.get('PGHOST'),
+            'PORT': os.environ.get('PGPORT'),
+            'OPTIONS': {
+                'sslmode': 'require',  # Azure PostgreSQL requires SSL
+            },
         }
     }
-}
-
-@receiver(connection_created)
-def configure_sqlite(sender, connection, **kwargs):
-    if connection.vendor == 'sqlite':
-        cursor = connection.cursor()
-        cursor.execute('PRAGMA journal_mode=WAL')
-        cursor.execute('PRAGMA synchronous=NORMAL')
-        cursor.execute('PRAGMA cache_size=-64000')  # 64MB
-        cursor.execute('PRAGMA foreign_keys=ON')
+else:
+    # Use SQLite in development
+    DB_PATH = BASE_DIR / 'db.sqlite3'
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': DB_PATH,
+            'OPTIONS': {
+                'timeout': 20,
+            }
+        }
+    }
 
 
 STATIC_ROOT = BASE_DIR / 'static'
@@ -259,3 +266,5 @@ ALGOLIA = {
 }
 
 STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
+
+AUTH_USER_MODEL = 'core.CustomUser'

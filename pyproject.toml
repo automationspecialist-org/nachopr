@@ -31,4 +31,6 @@ dependencies = [
     "crispy-tailwind>=1.0.3",
     "pymemcache>=4.0.0",
     "algoliasearch-django>=3.0,<4.0",
+    "dj-database-url>=2.3.0",
+    "psycopg2-binary>=2.9.10",
 ]

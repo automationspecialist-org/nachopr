@@ -84,20 +84,18 @@ class CustomUser(AbstractUser):
         help_text='Specific permissions for this user.',
     )
     subscription = models.ForeignKey(
-        'djstripe.Subscription', 
-        null=True, 
-        blank=True, 
+        'djstripe.Subscription',
+        null=True,
+        blank=True,
         on_delete=models.SET_NULL,
-        related_name='subscribers', 
-        help_text="The user's Stripe Subscription object, if it exists"
+        related_name='custom_users'
     )
     customer = models.ForeignKey(
-        'djstripe.Customer', 
-        null=True, 
-        blank=True, 
+        'djstripe.Customer',
+        null=True,
+        blank=True,
         on_delete=models.SET_NULL,
-        related_name='users', 
-        help_text="The user's Stripe Customer object, if it exists"
+        related_name='custom_users'
     )
 
     searches_count = models.IntegerField(default=0)
