@@ -86,7 +86,7 @@ def search_results(request):
     if query:
         results = results.filter(
             Q(name__icontains=query) | Q(articles__categories__name__icontains=query)
-        ).order_by('name')
+        ).order_by('name').distinct()
     if country:
         results = results.filter(country=country)
     if source_id:
@@ -170,8 +170,20 @@ def pricing(request):
     return render(request, 'core/pricing.html', {'products': products})
 
 
+@login_required
 def dashboard(request):
-    return render(request, 'core/dashboard.html')
+    if request.user.is_authenticated:
+        context = {
+            'checklist': {
+                'has_searched': request.user.has_searched,
+                'has_created_list': request.user.has_created_list,
+                'has_saved_journalist': request.user.has_saved_journalist,
+                'has_retrieved_email': request.user.has_retrieved_email,
+                'has_exported_list': request.user.has_exported_list,
+            }
+        }
+        return render(request, 'core/dashboard.html', context)
+    return redirect('login')
 
 @login_required
 def save_search(request):
@@ -310,6 +322,15 @@ def save_to_list(request):
         new_list_name = data.get('new_list_name')
         journalists = data.get('journalists', [])
 
+        if not list_id:
+            # New list being created
+            request.user.has_created_list = True
+        
+        if journalists:
+            request.user.has_saved_journalist = True
+        
+        request.user.save()
+        
         if list_id:
             saved_list = SavedList.objects.get(id=list_id, user=request.user)
         else:

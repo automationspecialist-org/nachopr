@@ -60,6 +60,9 @@
                 {% if journalist.description %}
                   <p class="text-gray-700 text-sm mb-4">{{ journalist.description|truncatewords:30 }}</p>
                 {% endif %}
+                {% if user.is_staff %}
+                  <p>Id: {{ journalist.id }}</p>
+                {% endif %}
                 
                 {% if journalist.sources.all %}
                   <p class="text-gray-600 text-sm mb-2">
@@ -81,10 +84,10 @@
 
                 <div class="flex space-x-2">
                   {% if journalist.profile_url %}
-                    <a href="{{ journalist.profile_url }}" class="text-blue-600 hover:underline text-sm">Profile</a>
+                    <a href="{{ journalist.profile_url }}" target="_blank" class="text-blue-600 hover:underline text-sm">Profile</a>
                   {% endif %}
                   {% if journalist.x_profile_url %}
-                    <a href="{{ journalist.x_profile_url }}" class="text-blue-600 hover:underline text-sm">Twitter/X</a>
+                    <a href="{{ journalist.x_profile_url }}" target="_blank" class="text-blue-600 hover:underline text-sm">Twitter/X</a>
                   {% endif %}
                 </div>
               </div>

@@ -4,21 +4,56 @@
 <div class="w-full border-slate-200 rounded border-2 p-4 bg-white">
     <h1 class="text-2xl mb-4">Getting started checklist</h1>
     <ul class="space-y-2">
-        <li>Do your first journalist search</li>
-        <li>Create a list of saved journalists</li>
-        <li>Save journalists to your list</li>
-        <li>Get a journalist's email</li>
-        <li>Export your list as a csv to import into your email sending app</li>
+        <li class="flex items-center {% if checklist.has_searched %}text-green-600{% endif %}">
+            {% if checklist.has_searched %}
+                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                </svg>
+            {% endif %}
+            Do your first journalist search
+            {% if not checklist.has_searched %}
+                <a href="{% url 'search' %}" class="ml-2 text-blue-600 hover:text-blue-800">Start now →</a>
+            {% endif %}
+        </li>
+        
+        <li class="flex items-center {% if checklist.has_created_list %}text-green-600{% endif %}">
+            {% if checklist.has_created_list %}
+                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                </svg>
+            {% endif %}
+            Create a list of saved journalists
+            {% if not checklist.has_created_list %}
+                <a href="{% url 'saved_lists' %}" class="ml-2 text-blue-600 hover:text-blue-800">Start now →</a>
+            {% endif %}
+        </li>
+        
+        <li class="flex items-center {% if checklist.has_saved_journalist %}text-green-600{% endif %}">
+            {% if checklist.has_saved_journalist %}
+                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                </svg>
+            {% endif %}
+            Save journalists to your list
+        </li>
+        
+        <li class="flex items-center {% if checklist.has_retrieved_email %}text-green-600{% endif %}">
+            {% if checklist.has_retrieved_email %}
+                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                </svg>
+            {% endif %}
+            Get a journalist's email
+        </li>
+        
+        <li class="flex items-center {% if checklist.has_exported_list %}text-green-600{% endif %}">
+            {% if checklist.has_exported_list %}
+                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                </svg>
+            {% endif %}
+            Export your list as a csv
+        </li>
     </ul>
-</div>
-
-<div class="flex">
-    <div>
-
-    </div>
-
-    <div>
-
-    </div>
 </div>
 {% endblock %}

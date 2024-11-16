@@ -99,6 +99,11 @@ class CustomUser(AbstractUser):
     )
 
     searches_count = models.IntegerField(default=0)
+    has_searched = models.BooleanField(default=False)
+    has_created_list = models.BooleanField(default=False)
+    has_saved_journalist = models.BooleanField(default=False)
+    has_retrieved_email = models.BooleanField(default=False)
+    has_exported_list = models.BooleanField(default=False)
 
     @property
     def is_subscribed(self):
