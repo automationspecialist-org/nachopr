@@ -147,3 +147,21 @@ class SavedList(models.Model):
     
     def __str__(self):
         return self.name
+
+
+class DigitalPRExample(models.Model):
+    news_page = models.ForeignKey('NewsPage', on_delete=models.CASCADE, related_name='pr_examples')
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    url = models.URLField()
+    published_date = models.DateField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.title
+
+    class Meta:
+        ordering = ['-published_date']
+        verbose_name = 'Digital PR Example'
+        verbose_name_plural = 'Digital PR Examples'
