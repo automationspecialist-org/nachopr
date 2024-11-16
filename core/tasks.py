@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import random
 from django.utils import timezone
 from tqdm import tqdm
 from core.models import NewsPage, NewsPageCategory, NewsSource, Journalist
@@ -322,6 +323,9 @@ async def process_all_pages_journalists(limit: int = 10, re_process: bool = Fals
                 @sync_to_async
                 def save_to_db():
                     with transaction.atomic():
+                        # Save the is_news_article value
+                        page.is_news_article = journalists_data.get('content_is_full_news_article', False)
+                        
                         if journalists_data and 'journalists' in journalists_data:
                             for journalist_dict in journalists_data['journalists']:
                                 if 'name' in journalist_dict:
@@ -504,11 +508,168 @@ def find_digital_pr_examples():
     - Categorize them
     - Add them to the DB
     """
-    search_queries = [
-        'expert quote',
-        'new study'
+    pr_queries = [
+        '"study reveals"',
+        '"new research shows"',
+        '"according to new data"',
+        '"survey of * people found"',
+        '"% of Brits"',
+        '"new study by * reveals"',
+        '"research commissioned by"',
+        '"experts at * say"',
+        '"experts reveal"',
+        '"commented"',
+        '"according to * specialists"',
+        '"analysis of * revealed"',
+        '"data compiled by"',
+        '"research conducted by"',
+        '"findings suggest"',
+        '"new data released today"',
+        '"latest research indicates"',
+        '"in a recent study"'
     ]
     negative_queries = [
         'univeristy',
         'professor',
     ]
+
+    search_query = random.choice(pr_queries) + ' -' + random.choice(negative_queries)
+
+async def process_journalist_descriptions(limit: int = 10):
+    """Process descriptions for journalists that have profile URLs but no descriptions"""
+    # Create queues for processing
+    scrape_queue = asyncio.Queue()  # Queue of journalists to scrape
+    gpt_queue = asyncio.Queue()     # Queue of content to process with GPT
+    db_queue = asyncio.Queue()      # Queue of results to write to DB
+    
+    # Get journalists to process
+    journalists = await sync_to_async(list)(
+        Journalist.objects.filter(
+            profile_url__isnull=False,
+            description__isnull=True
+        )[:limit]
+    )
+    
+    # Add all journalists to the scrape queue
+    for journalist in journalists:
+        await scrape_queue.put(journalist)
+
+    async def scrape_worker():
+        """Async worker to scrape profile pages"""
+        while True:
+            try:
+                journalist = await scrape_queue.get()
+                
+                # Scrape the profile page
+                website = (
+                    Website(journalist.profile_url)
+                    .with_user_agent("Mozilla/5.0")
+                    .with_request_timeout(30000)
+                    .with_respect_robots_txt(False)
+                    .with_depth(0)
+                )
+                
+                website.scrape()
+                pages = website.get_pages()
+                
+                if pages:
+                    # Put content in GPT queue
+                    await gpt_queue.put((journalist, pages[0].content))
+                
+                scrape_queue.task_done()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Error scraping {journalist.profile_url}: {str(e)}")
+                scrape_queue.task_done()
+
+    async def gpt_worker():
+        """Async worker to process GPT requests"""
+        while True:
+            try:
+                journalist, content = await gpt_queue.get()
+                
+                # Process with GPT
+                client = AzureOpenAI(
+                    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+                    azure_deployment="gpt-4o-mini",
+                    api_version="2024-08-01-preview",
+                    api_key=os.getenv("AZURE_OPENAI_API_KEY")
+                )
+
+                prompt = f"""
+                Extract a professional description of the journalist from their profile page.
+                Return a JSON object with a single 'description' field containing a 2-3 sentence summary.
+                
+                Profile content:
+                {clean_html(content)}
+                """
+
+                response = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {"role": "system", "content": "You are a professional bio writer."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    max_tokens=500,
+                    temperature=0.3,
+                    response_format={"type": "json_object"}
+                )
+
+                result = json.loads(response.choices[0].message.content)
+                
+                # Put results in DB queue
+                await db_queue.put((journalist, result.get('description')))
+                
+                gpt_queue.task_done()
+            except Exception as e:
+                logger.error(f"Error in GPT processing: {str(e)}")
+                gpt_queue.task_done()
+
+    async def db_worker():
+        """Sequential worker to handle DB writes"""
+        while True:
+            try:
+                journalist, description = await db_queue.get()
+                
+                @sync_to_async
+                def save_to_db():
+                    with transaction.atomic():
+                        journalist.description = description
+                        journalist.save()
+                
+                await save_to_db()
+                
+                db_queue.task_done()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Error in DB worker: {str(e)}")
+                db_queue.task_done()
+            finally:
+                close_old_connections()
+
+    # Create workers
+    scrape_workers = [asyncio.create_task(scrape_worker()) for _ in range(5)]
+    gpt_workers = [asyncio.create_task(gpt_worker()) for _ in range(3)]
+    db_worker_task = asyncio.create_task(db_worker())
+    
+    # Wait for all journalists to be processed
+    await scrape_queue.join()
+    await gpt_queue.join()
+    await db_queue.join()
+    
+    # Cancel workers
+    for worker in scrape_workers:
+        worker.cancel()
+    for worker in gpt_workers:
+        worker.cancel()
+    db_worker_task.cancel()
+    
+    # Wait for workers to finish
+    await asyncio.gather(*scrape_workers, *gpt_workers, db_worker_task, return_exceptions=True)
+
+def process_journalist_descriptions_sync(limit: int = 10):
+    """Sync wrapper for processing journalist descriptions"""
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(process_journalist_descriptions(limit))

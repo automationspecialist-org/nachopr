@@ -1,4 +1,6 @@
 {% load static %}
+{% load subscription_tags %}
+{% get_subscription_status user as sub_status %}
 
 <nav class="bg-white border-b border-gray-200 sticky top-0 z-50 align-middle">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">   
@@ -11,14 +13,72 @@
                     </div>
                 </a>
             </div>
-            <div class="flex-1 flex justify-center items-center">
+            <div class="flex items-center sm:hidden">
+                <button type="button" class="mobile-menu-button inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100" aria-controls="mobile-menu" aria-expanded="false">
+                    <span class="sr-only">Open main menu</span>
+                    <svg class="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+            </div>
+            <div class="hidden sm:flex-1 sm:flex sm:justify-center sm:items-center">
                 <a href="{% url 'pricing' %}" class="text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Pricing</a>
                 {% comment %} <a href="/features" class="text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Features</a> {% endcomment %}
             </div>
-            <div class="flex-1 flex justify-end items-center">
-                <a href="{% url 'account_login' %}" class="text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Login</a>
-                <a href="{% url 'pricing' %}" class="ml-4 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">Start Free Trial</a>
+            <div class="hidden sm:flex-1 sm:flex sm:justify-end sm:items-center">
+                {% if user.is_authenticated %}
+                    <a href="{% url 'dashboard' %}" class="text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Dashboard</a>
+                    
+                    {% if sub_status == 'trial' %}
+                        <span class="text-green-600 px-3 py-2 text-sm font-medium">Trial Active</span>
+                        <a href="{% url 'pricing' %}" class="ml-4 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">Upgrade Now</a>
+                    {% elif sub_status == 'active' %}
+                        <span class="text-blue-600 px-3 py-2 text-sm font-medium">Premium Member</span>
+                        <a href="{% url 'subscription_settings' %}" class="ml-4 bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors">Manage Subscription</a>
+                    {% elif sub_status == 'trial_expired' %}
+                        <span class="text-red-600 px-3 py-2 text-sm font-medium">Trial Expired</span>
+                        <a href="{% url 'pricing' %}" class="ml-4 bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors">Renew Now</a>
+                    {% else %}
+                        <a href="{% url 'pricing' %}" class="ml-4 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">Start Free Trial</a>
+                    {% endif %}
+                {% else %}
+                    <a href="{% url 'account_login' %}" class="text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Login</a>
+                    <a href="{% url 'pricing' %}" class="ml-4 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">Start Free Trial</a>
+                {% endif %}
             </div>
         </div>
     </div>
+    <div class="sm:hidden hidden" id="mobile-menu">
+        <div class="px-2 pt-2 pb-3 space-y-1">
+            <a href="{% url 'pricing' %}" class="block text-gray-700 px-3 py-2 rounded-md text-base font-medium">Pricing</a>
+            {% if user.is_authenticated %}
+                <a href="{% url 'dashboard' %}" class="block text-gray-700 px-3 py-2 rounded-md text-base font-medium">Dashboard</a>
+                
+                {% if sub_status == 'trial' %}
+                    <span class="block text-green-600 px-3 py-2 text-base font-medium">Trial Active</span>
+                    <a href="{% url 'pricing' %}" class="block px-3 py-2 rounded-md text-base font-medium bg-green-600 text-white hover:bg-green-700 transition-colors">Upgrade Now</a>
+                {% elif sub_status == 'active' %}
+                    <span class="block text-blue-600 px-3 py-2 text-base font-medium">Premium Member</span>
+                    <a href="{% url 'subscription_settings' %}" class="block px-3 py-2 rounded-md text-base font-medium bg-gray-600 text-white hover:bg-gray-700 transition-colors">Manage Subscription</a>
+                {% elif sub_status == 'trial_expired' %}
+                    <span class="block text-red-600 px-3 py-2 text-base font-medium">Trial Expired</span>
+                    <a href="{% url 'pricing' %}" class="block px-3 py-2 rounded-md text-base font-medium bg-red-600 text-white hover:bg-red-700 transition-colors">Renew Now</a>
+                {% else %}
+                    <a href="{% url 'pricing' %}" class="block px-3 py-2 rounded-md text-base font-medium bg-green-600 text-white hover:bg-green-700 transition-colors">Start Free Trial</a>
+                {% endif %}
+            {% else %}
+                <a href="{% url 'account_login' %}" class="block text-gray-700 px-3 py-2 rounded-md text-base font-medium">Login</a>
+                <a href="{% url 'pricing' %}" class="block px-3 py-2 rounded-md text-base font-medium bg-green-600 text-white hover:bg-green-700 transition-colors">Start Free Trial</a>
+            {% endif %}
+        </div>
+    </div>
 </nav>
+
+<script>
+    const mobileMenuButton = document.querySelector('.mobile-menu-button');
+    const mobileMenu = document.querySelector('#mobile-menu');
+
+    mobileMenuButton.addEventListener('click', () => {
+        mobileMenu.classList.toggle('hidden');
+    });
+</script>

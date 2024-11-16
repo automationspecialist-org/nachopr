@@ -215,6 +215,7 @@ INTERNAL_IPS = [
 CRONJOBS = [
     ('*/10 * * * *', 'core.cron.crawl_job', '>> /tmp/cron.log 2>&1'),
     ('*/30 * * * *', 'core.cron.categorize_job', '>> /tmp/cron_categorize.log 2>&1'),
+    ('*/30 * * * *', 'core.cron.process_journalist_profiles_job', '>> /tmp/cron_process_journalist_profiles.log 2>&1'),
 ]
 
 DJSTRIPE_FOREIGN_KEY_TO_FIELD = os.environ.get('DJSTRIPE_FOREIGN_KEY_TO_FIELD', 'djstripe_id')
@@ -264,3 +265,8 @@ ALGOLIA = {
 STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
 
 AUTH_USER_MODEL = 'core.CustomUser'
+
+ACCOUNT_LOGIN_BY_CODE_ENABLED = True
+
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False

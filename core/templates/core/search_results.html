@@ -14,53 +14,105 @@
     {% endif %}
   {% else %}
     {% if results %}
+      <div class="mb-4 flex justify-between items-center">
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-2">
+            <input type="checkbox" 
+                   id="selectAllCheckbox" 
+                   class="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
+            <label for="selectAllCheckbox" class="text-sm text-gray-600 cursor-pointer select-none">
+              Select All
+            </label>
+          </div>
+          <div id="selectionCounter" class="text-sm text-gray-600 hidden">
+            <span id="selectedCount">0</span> journalists selected
+          </div>
+          {% if user.is_authenticated %}
+            <button id="saveSelectedBtn" 
+                    class="hidden px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Add to List
+            </button>
+          {% endif %}
+        </div>
+      </div>
       <div class="space-y-6">
         {% for journalist in results %}
-          <div class="flex gap-6 border rounded-lg p-4 hover:shadow-lg transition-shadow">
-            {% if journalist.image_url %}
-              <img src="{{ journalist.image_url }}" alt="{{ journalist.name }}" 
-                   class="w-32 h-32 object-cover rounded-lg flex-shrink-0">
-            {% endif %}
-            <div class="flex-1 text-left">
-              <h3 class="font-bold text-lg mb-2">{{ journalist.name }}</h3>
-              {% if journalist.country %}
-                <p class="text-gray-600 text-sm mb-2">{{ journalist.country }}</p>
+          <div class="flex gap-6 border rounded-lg p-4 hover:shadow-lg transition-shadow group">
+            <div class="flex items-start gap-4">
+              <div class="pt-1">
+                <input type="checkbox" 
+                       class="journalist-checkbox w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                       data-id="{{ journalist.id }}" 
+                       data-name="{{ journalist.name }}">
+              </div>
+              {% if journalist.image_url %}
+                <img src="{{ journalist.image_url }}" alt="{{ journalist.name }}" 
+                     class="w-32 h-32 object-cover rounded-lg flex-shrink-0">
               {% endif %}
-              {% if journalist.description %}
-                <p class="text-gray-700 text-sm mb-4">{{ journalist.description|truncatewords:30 }}</p>
-              {% endif %}
-              
-              {% if journalist.sources.all %}
+              <div class="flex-1 text-left">
+                <h3 class="font-bold text-lg mb-2">{{ journalist.name }}</h3>
+                {% if journalist.country %}
+                  <p class="text-gray-600 text-sm mb-2">{{ journalist.country }}</p>
+                {% endif %}
+                {% if journalist.description %}
+                  <p class="text-gray-700 text-sm mb-4">{{ journalist.description|truncatewords:30 }}</p>
+                {% endif %}
+                
+                {% if journalist.sources.all %}
+                  <p class="text-gray-600 text-sm mb-2">
+                    <span class="font-medium">Sources:</span>
+                    {% for source in journalist.sources.all %}
+                      {{ source.name }}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                  </p>
+                {% endif %}
+                
                 <p class="text-gray-600 text-sm mb-2">
-                  <span class="font-medium">Sources:</span>
-                  {% for source in journalist.sources.all %}
-                    {{ source.name }}{% if not forloop.last %}, {% endif %}
+                  <span class="font-medium">Categories:</span>
+                  {% for article in journalist.articles.all %}
+                    {% for category in article.categories.all %}
+                      {{ category.name }}{% if not forloop.last or not forloop.parentloop.last %}, {% endif %}
+                    {% endfor %}
                   {% endfor %}
                 </p>
-              {% endif %}
-              
-              <p class="text-gray-600 text-sm mb-2">
-                <span class="font-medium">Categories:</span>
-                {% for article in journalist.articles.all %}
-                  {% for category in article.categories.all %}
-                    {{ category.name }}{% if not forloop.last or not forloop.parentloop.last %}, {% endif %}
-                  {% endfor %}
-                {% endfor %}
-              </p>
 
-              <div class="flex space-x-2">
-                {% if journalist.profile_url %}
-                  <a href="{{ journalist.profile_url }}" class="text-blue-600 hover:underline text-sm">Profile</a>
-                {% endif %}
-                {% if journalist.x_profile_url %}
-                  <a href="{{ journalist.x_profile_url }}" class="text-blue-600 hover:underline text-sm">Twitter/X</a>
-                {% endif %}
+                <div class="flex space-x-2">
+                  {% if journalist.profile_url %}
+                    <a href="{{ journalist.profile_url }}" class="text-blue-600 hover:underline text-sm">Profile</a>
+                  {% endif %}
+                  {% if journalist.x_profile_url %}
+                    <a href="{{ journalist.x_profile_url }}" class="text-blue-600 hover:underline text-sm">Twitter/X</a>
+                  {% endif %}
+                </div>
               </div>
             </div>
           </div>
         {% endfor %}
       </div>
       
+      <!-- Modal for saving journalists -->
+      <div id="saveListModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center">
+        <div class="bg-white p-6 rounded-lg w-96">
+          <h3 class="text-lg font-bold mb-4">Save to List</h3>
+          <select id="existingLists" class="w-full mb-4 p-2 border rounded">
+            <option value="new">Create New List</option>
+            {% for list in user.saved_lists.all %}
+              <option value="{{ list.id }}">{{ list.name }}</option>
+            {% endfor %}
+          </select>
+          <div id="newListInput" class="mb-4">
+            <input type="text" id="newListName" placeholder="Enter list name" class="w-full p-2 border rounded">
+          </div>
+          <div class="flex justify-end gap-2">
+            <button id="cancelSave" class="px-4 py-2 border rounded hover:bg-gray-50">Cancel</button>
+            <button id="confirmSave" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save</button>
+          </div>
+        </div>
+      </div>
+
       {% if not user.is_authenticated %}
         <div class="mt-8 text-center">
           <p class="mb-4">Start your free trial to access the full database.</p>
@@ -100,4 +152,76 @@
       {% endif %}
     </div>
   {% endif %}
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+      const saveSelectedBtn = document.getElementById('saveSelectedBtn');
+      const checkboxes = document.querySelectorAll('.journalist-checkbox');
+      const selectionCounter = document.getElementById('selectionCounter');
+      const selectedCountSpan = document.getElementById('selectedCount');
+      const modal = document.getElementById('saveListModal');
+
+      function updateSelectionUI() {
+        const checkedBoxes = document.querySelectorAll('.journalist-checkbox:checked');
+        const checkedCount = checkedBoxes.length;
+        
+        // Update counter
+        selectedCountSpan.textContent = checkedCount;
+        selectionCounter.classList.toggle('hidden', checkedCount === 0);
+        
+        // Update save button
+        saveSelectedBtn.classList.toggle('hidden', checkedCount === 0);
+        
+        // Update select all checkbox
+        selectAllCheckbox.checked = checkedCount === checkboxes.length;
+        selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
+      }
+
+      selectAllCheckbox.addEventListener('click', () => {
+        const newState = selectAllCheckbox.checked;
+        checkboxes.forEach(cb => cb.checked = newState);
+        updateSelectionUI();
+      });
+
+      checkboxes.forEach(cb => {
+        cb.addEventListener('change', updateSelectionUI);
+      });
+
+      saveSelectedBtn.addEventListener('click', () => {
+        {% if user.is_authenticated %}
+          modal.classList.remove('hidden');
+          modal.classList.add('flex');
+        {% else %}
+          window.open("{% url 'pricing' %}", '_blank');
+        {% endif %}
+      });
+
+      modal.addEventListener('click', function(event) {
+        if (event.target === modal) {
+          modal.classList.add('hidden');
+        }
+      });
+    });
+  </script>
+
+  <style>
+    /* Custom checkbox styles */
+    .journalist-checkbox, #selectAllCheckbox {
+      @apply transition-opacity;
+    }
+    
+    .group:hover .journalist-checkbox {
+      @apply opacity-100;
+    }
+    
+    /* Improve modal styles */
+    #saveListModal {
+      @apply backdrop-blur-sm;
+    }
+    
+    #saveListModal .bg-white {
+      @apply shadow-xl;
+    }
+  </style>
 {% endblock %}

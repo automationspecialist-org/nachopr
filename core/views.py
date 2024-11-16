@@ -2,14 +2,14 @@ import os
 from dotenv import load_dotenv
 from django.shortcuts import render
 import requests
-from core.models import NewsSource, NewsPage, Journalist, NewsPageCategory, SavedSearch
+from core.models import NewsSource, NewsPage, Journalist, NewsPageCategory, SavedSearch, SavedList
 from djstripe.models import Product
 from django.db.models import Prefetch
 from django.core.paginator import Paginator
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect
 from django.views.decorators.csrf import csrf_exempt
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.contrib.auth import get_user_model
 from django.conf import settings
 import stripe
@@ -21,6 +21,12 @@ from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 from django.db.models import Q
 from django.utils import timezone
+from django.contrib.auth import login
+# Create a session for the user
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import update_last_login
+import json
+
 
 load_dotenv()
 
@@ -227,7 +233,6 @@ def handle_subscription_created(event):
     
     if not user:
         # Create new user with a random password
-        # They can reset it later via email
         random_password = User.objects.make_random_password()
         username = customer_email.split('@')[0]
         # Ensure username is unique
@@ -243,8 +248,9 @@ def handle_subscription_created(event):
             password=random_password
         )
         
-        # TODO: Send welcome email with password reset link
-        
+        # Send welcome email with password reset link
+        send_welcome_email(user)
+    
     # Link Stripe Customer to User
     customer = Customer.objects.get(id=event.data.object.customer)
     user.customer = customer
@@ -254,6 +260,16 @@ def handle_subscription_created(event):
     user.subscription = subscription
     
     user.save()
+
+
+    User = get_user_model()
+    # Update last login timestamp
+    update_last_login(None, user)
+    # Create session
+    request = event.request
+    if request:
+        login(request, user)
+
 
 def send_welcome_email(user):
     """Send welcome email with password reset link to new users."""
@@ -285,3 +301,27 @@ def settings_view(request):
 @login_required
 def saved_lists(request):
     return render(request, "core/saved_lists.html")
+
+@login_required
+def save_to_list(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        list_id = data.get('list_id')
+        new_list_name = data.get('new_list_name')
+        journalists = data.get('journalists', [])
+
+        if list_id:
+            saved_list = SavedList.objects.get(id=list_id, user=request.user)
+        else:
+            saved_list = SavedList.objects.create(
+                user=request.user,
+                name=new_list_name
+            )
+
+        # Add journalists to the list
+        journalist_ids = [j['id'] for j in journalists]
+        saved_list.journalists.add(*journalist_ids)
+
+        return JsonResponse({'status': 'success'})
+
+    return JsonResponse({'status': 'error'}, status=400)

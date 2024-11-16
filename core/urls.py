@@ -11,6 +11,7 @@ urlpatterns = [
     path('app/', views.dashboard, name='dashboard'),
     path('app/settings/', views.settings_view, name='settings'),
     path('webhooks/stripe/', views.stripe_webhook, name='stripe-webhook'),
-    path('app/saved_lists.html', views.saved_lists, name='saved_lists'),
+    path('app/saved_lists/', views.saved_lists, name='saved_lists'),
+    path('app/save-to-list/', views.save_to_list, name='save_to_list'),
 ]
 

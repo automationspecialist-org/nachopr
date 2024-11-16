@@ -58,6 +58,7 @@ class NewsPage(models.Model):
     journalists = models.ManyToManyField(Journalist, related_name='articles')
     processed = models.BooleanField(default=False)
     categories = models.ManyToManyField(NewsPageCategory, related_name='pages')
+    is_news_article = models.BooleanField(default=False)
 
     def __str__(self):
         return self.title
@@ -132,6 +133,16 @@ class SavedSearch(models.Model):
     countries = models.ManyToManyField('Journalist', related_name='saved_countries')
     sources = models.ManyToManyField('NewsSource', related_name='saved_sources')
     categories = models.ManyToManyField('NewsPageCategory', related_name='saved_categories')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return self.name
+
+
+class SavedList(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='saved_lists')
+    name = models.CharField(max_length=255)
+    journalists = models.ManyToManyField(Journalist, related_name='saved_lists')
     created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):
