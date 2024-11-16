@@ -56,7 +56,6 @@ class NewsPage(models.Model):
     content = models.TextField()
     source = models.ForeignKey(NewsSource, on_delete=models.CASCADE, related_name='pages')
     journalists = models.ManyToManyField(Journalist, related_name='articles')
-    slug = models.SlugField(unique=True)
     processed = models.BooleanField(default=False)
     categories = models.ManyToManyField(NewsPageCategory, related_name='pages')
 

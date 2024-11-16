@@ -125,18 +125,18 @@ async def fetch_website(url: str, limit: int = 1000_000, depth: int = 3) -> Webs
                 @sync_to_async
                 def create_news_page():
                     with transaction.atomic():
-                        slug = slugify(page.title)
-                        news_page, created = NewsPage.objects.get_or_create(
+                        # Skip if page already exists
+                        if NewsPage.objects.filter(url=page.url).exists():
+                            return None, False
+                            
+                        # Create new page only if it doesn't exist
+                        news_page = NewsPage.objects.create(
                             url=page.url,
-                            slug=slug,
-                            defaults={
-                                'title': page.title,
-                                'content': page.content,
-                                'source': news_source,
-                                'slug': slug
-                            }
+                            title=page.title,
+                            content=page.content,
+                            source=news_source
                         )
-                        return news_page, created
+                        return news_page, True
 
                 await create_news_page()
                 
@@ -341,7 +341,7 @@ async def process_all_pages_journalists(limit: int = 10, re_process: bool = Fals
                                         )
                                         page.journalists.add(journalist)
                                     except IntegrityError:
-                                        logger.error(f"Integrity error for journalist: {name}")
+                                        logger.error(f"Integrity error for journalist: {name} (usually duplicate name)")
                         
                         page.processed = True
                         page.save()
@@ -359,7 +359,7 @@ async def process_all_pages_journalists(limit: int = 10, re_process: bool = Fals
                 close_old_connections()
 
     # Create multiple GPT workers but only one DB worker
-    gpt_workers = [asyncio.create_task(gpt_worker()) for _ in range(3)]
+    gpt_workers = [asyncio.create_task(gpt_worker()) for _ in range(20)]
     db_worker_task = asyncio.create_task(db_worker())
     
     # Wait for all pages to be processed
@@ -378,6 +378,7 @@ def process_all_journalists_sync(limit: int = 10, re_process: bool = False):
     """Sync wrapper for processing multiple pages"""
     loop = asyncio.get_event_loop()
     loop.run_until_complete(process_all_pages_journalists(limit, re_process))
+
 
 
 def categorize_news_page_with_gpt(page: NewsPage):
@@ -493,3 +494,21 @@ def create_social_sharing_image():
     output_path = os.path.join(settings.STATIC_ROOT, 'img', 'social_share.png')
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     image.save(output_path, 'PNG')
+
+
+
+def find_digital_pr_examples():
+    """
+    Todo:
+    - Find digital PR examples
+    - Categorize them
+    - Add them to the DB
+    """
+    search_queries = [
+        'expert quote',
+        'new study'
+    ]
+    negative_queries = [
+        'univeristy',
+        'professor',
+    ]

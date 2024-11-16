@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from django.shortcuts import render
 import requests
-from core.models import CustomUser, NewsSource, NewsPage, Journalist, NewsPageCategory, SavedSearch
+from core.models import NewsSource, NewsPage, Journalist, NewsPageCategory, SavedSearch
 from djstripe.models import Product
 from django.db.models import Prefetch
 from django.core.paginator import Paginator
@@ -19,6 +19,8 @@ from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
+from django.db.models import Q
+from django.utils import timezone
 
 load_dotenv()
 
@@ -58,6 +60,7 @@ def search(request):
 
 
 def search_results(request):
+    starttime = timezone.now()
     is_subscriber = request.user.is_authenticated
     query = request.GET.get('q', '')
     country = request.GET.get('country', '')
@@ -75,13 +78,19 @@ def search_results(request):
     
     # Apply filters
     if query:
-        results = results.filter(name__icontains=query)
+        results = results.filter(
+            Q(name__icontains=query) | Q(articles__categories__name__icontains=query)
+        ).order_by('name')
     if country:
         results = results.filter(country=country)
     if source_id:
         results = results.filter(sources__id=source_id)
     if category_id:
         results = results.filter(articles__categories__id=category_id).distinct()
+
+    # debug:
+    #if not settings.PROD:
+    print(f"Query: {query}")
     
     # Handle non-subscribers
     if not is_subscriber:
@@ -104,7 +113,7 @@ def search_results(request):
                         {'error': 'Security check failed',
                          'reset_turnstile': True})
         
-        results = results[:3]  # Limit results for non-subscribers
+        filtered_results = results[:3]  # Limit results for non-subscribers
     else:
         #request.user.customuser.searches_count += 1
 
@@ -113,9 +122,14 @@ def search_results(request):
         # Add pagination for subscribers
         page_number = request.GET.get('page', 1)
         paginator = Paginator(results, 10)  # Show 10 results per page
-        results = paginator.get_page(page_number)
-    
-    return render(request, 'core/search_results.html', {'results': results})
+        filtered_results = paginator.get_page(page_number)
+
+    unfiltered_results_count = results.count()
+    time_taken = timezone.now() - starttime
+    print(f'time taken: {time_taken}')
+    return render(
+        request, 'core/search_results.html',
+        {'results': filtered_results, 'time_taken': time_taken, 'unfiltered_results_count': unfiltered_results_count})
 
 
 def free_media_list(request):
@@ -264,7 +278,7 @@ def send_welcome_email(user):
 
 
 @login_required
-def settings(request):
+def settings_view(request):
     return render(request, 'core/settings.html')
 
 

@@ -12,9 +12,6 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 import os
 from pathlib import Path
-from django.db.backends.signals import connection_created
-from django.dispatch import receiver
-import dj_database_url  # Add this import
 
 if 'AZURE' in os.environ:
     PROD = True
@@ -217,7 +214,6 @@ INTERNAL_IPS = [
 
 CRONJOBS = [
     ('*/10 * * * *', 'core.cron.crawl_job', '>> /tmp/cron.log 2>&1'),
-    ('0 * * * *', 'core.cron.check_database_integrity', '>> /tmp/cron_db_check.log 2>&1'),
     ('*/30 * * * *', 'core.cron.categorize_job', '>> /tmp/cron_categorize.log 2>&1'),
 ]
 

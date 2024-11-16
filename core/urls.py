@@ -9,7 +9,7 @@ urlpatterns = [
     path('signup/', views.signup, name='signup'),
     path('pricing/', views.pricing, name='pricing'),
     path('app/', views.dashboard, name='dashboard'),
-    path('app/settings/', views.settings, name='settings'),
+    path('app/settings/', views.settings_view, name='settings'),
     path('webhooks/stripe/', views.stripe_webhook, name='stripe-webhook'),
     path('app/saved_lists.html', views.saved_lists, name='saved_lists'),
 ]
