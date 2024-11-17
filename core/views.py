@@ -26,6 +26,7 @@ from django.contrib.auth import login
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import update_last_login
 import json
+from django.db import transaction
 
 
 load_dotenv()
@@ -234,50 +235,99 @@ def stripe_webhook(request):
     
     return HttpResponse(status=200)
 
+
+def create_new_user(email, customer=None):
+    """
+    Create a new user with the given email and optional Stripe customer.
+    Returns a tuple of (user, password) where password is only set for new users.
+    """
+    User = get_user_model()
+    random_password = User.objects.make_random_password()
+    username = email.split('@')[0]
+    
+    # Ensure username is unique
+    base_username = username
+    counter = 1
+    while User.objects.filter(username=username).exists():
+        username = f"{base_username}{counter}"
+        counter += 1
+        
+    user = User.objects.create_user(
+        username=username,
+        email=email,
+        password=random_password
+    )
+    
+    if customer:
+        user.customer = customer
+        user.save()
+    
+    # Send welcome email with password reset link
+    send_welcome_email(user)
+    
+    return user, random_password
+
+def subscription_confirm(request):
+    # Get the session ID from query parameters
+    session_id = request.GET.get('session_id')
+    if not session_id:
+        return redirect('home')
+    
+    try:
+        # Retrieve the checkout session from Stripe
+        stripe.api_key = settings.STRIPE_SECRET_KEY
+        session = stripe.checkout.Session.retrieve(session_id)
+        
+        # Verify session is paid/complete
+        if session.payment_status != 'paid':
+            return render(request, 'core/subscription_confirm.html', {
+                'error': 'Payment incomplete'
+            })
+        
+        User = get_user_model()
+        customer_email = session.customer_details.email
+        
+        with transaction.atomic():
+            user = User.objects.select_for_update().filter(email=customer_email).first()
+            
+            if not user:
+                customer = Customer.objects.get(id=session.customer)
+                user, _ = create_new_user(customer_email, customer)
+            elif not hasattr(user, 'customer'):
+                customer = Customer.objects.get(id=session.customer)
+                user.customer = customer
+                user.save()
+            
+            login(request, user)
+            
+        return render(request, 'core/subscription_confirm.html', {
+            'success': True
+        })
+            
+    except stripe.error.StripeError as e:
+        return render(request, 'core/subscription_confirm.html', {
+            'error': str(e)
+        })
+
+
 def handle_subscription_created(event):
     """
     Handle the customer.subscription.created webhook from Stripe
     """
-    # Get customer email from the event
     customer_email = event.data.object.customer_email
-    
     User = get_user_model()
     
-    # Check if user exists
     user = User.objects.filter(email=customer_email).first()
     
     if not user:
-        # Create new user with a random password
-        random_password = User.objects.make_random_password()
-        username = customer_email.split('@')[0]
-        # Ensure username is unique
-        base_username = username
-        counter = 1
-        while User.objects.filter(username=username).exists():
-            username = f"{base_username}{counter}"
-            counter += 1
-            
-        user = User.objects.create_user(
-            username=username,
-            email=customer_email,
-            password=random_password
-        )
-        
-        # Send welcome email with password reset link
-        send_welcome_email(user)
-    
-    # Link Stripe Customer to User
-    customer = Customer.objects.get(id=event.data.object.customer)
-    user.customer = customer
+        customer = Customer.objects.get(id=event.data.object.customer)
+        user, _ = create_new_user(customer_email, customer)
     
     # Link Subscription to User
     subscription = Subscription.objects.get(id=event.data.object.id)
     user.subscription = subscription
-    
     user.save()
 
-
-    User = get_user_model()
     # Update last login timestamp
     update_last_login(None, user)
     # Create session
