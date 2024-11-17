@@ -47,6 +47,22 @@ class Journalist(models.Model):
         self.slug = slugify(self.name)
         super().save(*args, **kwargs)
 
+    def get_unique_categories(self):
+        """Return unique categories across all articles for this journalist."""
+        if hasattr(self, 'prefetched_articles'):
+            # Get categories from prefetched articles
+            categories = []
+            seen = set()
+            for article in self.prefetched_articles:
+                for category in article.unique_categories:
+                    if category.id not in seen:
+                        seen.add(category.id)
+                        categories.append(category)
+            return categories
+        else:
+            # Fallback if articles aren't prefetched
+            return NewsPageCategory.objects.filter(pages__journalist=self).distinct()
+
 
 class NewsPageCategory(models.Model):
     name = models.CharField(max_length=255)

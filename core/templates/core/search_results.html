@@ -75,11 +75,11 @@
                 
                 <p class="text-gray-600 text-sm mb-2">
                   <span class="font-medium">Categories:</span>
-                  {% for article in journalist.prefetched_articles %}
-                    {% for category in article.unique_categories %}
+                  {% with categories=journalist.get_unique_categories %}
+                    {% for category in categories %}
                       {{ category.name }}{% if not forloop.last %}, {% endif %}
                     {% endfor %}
-                  {% endfor %}
+                  {% endwith %}
                 </p>
 
                 <div class="flex space-x-2">
@@ -95,7 +95,6 @@
                         </span>
                       </a>
                     {% endif %}
-                  {% endif %}
                   {% else %}
                   <a href="{% url 'pricing' %}" 
                      class="text-blue-600 hover:underline text-sm relative group">
