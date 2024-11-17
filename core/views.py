@@ -79,10 +79,17 @@ def search_results(request):
     results = Journalist.objects.prefetch_related(
         'sources',
         Prefetch(
-            'articles__categories',
-            queryset=NewsPageCategory.objects.all().distinct()
+            'articles',
+            queryset=NewsPage.objects.prefetch_related(
+                Prefetch(
+                    'categories',
+                    queryset=NewsPageCategory.objects.all(),
+                    to_attr='unique_categories'
+                )
+            ),
+            to_attr='prefetched_articles'
         )
-    )
+    ).distinct()
     
     # Apply filters
     if query:

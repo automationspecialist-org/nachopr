@@ -33,4 +33,5 @@ dependencies = [
     "algoliasearch-django>=3.0,<4.0",
     "dj-database-url>=2.3.0",
     "psycopg2-binary>=2.9.10",
+    "mailscout>=0.1.1",
 ]

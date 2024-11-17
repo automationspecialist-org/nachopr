@@ -13,6 +13,8 @@ if [ -n "$AZURE" ]; then
 fi
 
 uv run manage.py migrate
+uv run manage.py clean_db
+uv run manage.py guess_emails
 uv run manage.py crontab remove
 
 if [ -n "$AZURE" ]; then

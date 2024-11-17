@@ -30,6 +30,15 @@ class Journalist(models.Model):
     country = models.CharField(max_length=255, null=True, blank=True)
     x_profile_url = models.URLField(null=True, blank=True, unique=True)
     email_address = models.EmailField(blank=True, null=True, unique=True)
+    email_status = models.CharField(
+        max_length=32,
+        choices=[
+            ('guessed', 'Guessed (60%)'),
+            ('guessed_by_third_party', 'Guessed by Third Party (70%)'),
+            ('verified', 'Verified (99%)')
+        ],
+        default='guessed'
+    )
     
     def __str__(self):
         return self.name

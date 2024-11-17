@@ -19,6 +19,9 @@ import lunary
 import uuid
 from markdownify import markdownify
 from django.db import transaction
+from mailscout import Scout
+from functools import lru_cache
+import dns.exception
 
 
 load_dotenv()
@@ -32,6 +35,13 @@ logger = logging.getLogger(__name__)
 
 lunary.config(app_id=os.getenv('LUNARY_PUBLIC_KEY'))
 
+# Cache failed domains to avoid rechecking
+failed_domains = set()
+
+@lru_cache(maxsize=1000)
+def is_failed_domain(domain: str) -> bool:
+    """Check if domain is in failed set"""
+    return domain in failed_domains
 
 async def crawl_news_sources(domain_limit: int = None, page_limit: int = None, max_concurrent_tasks: int = 2):
     try:
@@ -674,3 +684,73 @@ def process_journalist_descriptions_sync(limit: int = 10):
     """Sync wrapper for processing journalist descriptions"""
     loop = asyncio.get_event_loop()
     loop.run_until_complete(process_journalist_descriptions(limit))
+
+
+def guess_journalist_email_address(journalist: Journalist):
+    """Guess an email address for a journalist based on their first linked publication"""
+    try:
+        # Skip if email already exists
+        if journalist.email_address:
+            return
+            
+        # Get first linked source's domain
+        first_source = journalist.sources.first()
+        if not first_source:
+            return
+            
+        # Extract domain from source URL and remove www if present
+        domain = first_source.url.split('//')[1].split('/')[0]
+        domain = domain.replace('www.', '')
+        
+        # Skip if domain previously failed
+        if is_failed_domain(domain):
+            logger.debug(f"Skipping known failed domain: {domain}")
+            return
+            
+        # Initialize mailscout with shorter timeout
+        scout = Scout(
+            check_variants=False,  # We'll handle variants ourselves
+            check_prefixes=False,
+            check_catchall=True,
+            normalize=True,
+            smtp_timeout=2
+        )
+        
+        # Split journalist name into parts
+        name_parts = journalist.name.split()
+        first_name = name_parts[0].lower()
+        
+        # Try a single email first to validate domain
+        test_email = f"{first_name}@{domain}"
+        try:
+            valid_emails = scout.find_valid_emails(domain, name_parts)
+            if not valid_emails:
+                # If no valid emails found, mark domain as failed
+                failed_domains.add(domain)
+                logger.warning(f"Adding {domain} to failed domains - no valid emails found")
+                return None
+                
+            # Save first valid email found
+            with transaction.atomic():
+                journalist.email_address = valid_emails[0]
+                journalist.email_status = 'guessed'
+                journalist.save()
+                
+            return valid_emails[0]
+            
+        except Exception as e:
+            # Handle any other exceptions
+            failed_domains.add(domain)
+            logger.error(f"Error guessing email for {journalist.name}: {str(e)}")
+            return None
+            
+    except Exception as e:
+        logger.error(f"Error guessing email for {journalist.name}: {str(e)}")
+        return None
+
+
+def guess_journalist_email_addresses(limit: int = 10):
+    """Guess email addresses for journalists that have no email addresses"""
+    journalists = Journalist.objects.filter(email_address__isnull=True)[:limit]
+    for journalist in tqdm(journalists, desc="Guessing emails"):
+        guess_journalist_email_address(journalist)
