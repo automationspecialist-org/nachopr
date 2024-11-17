@@ -15,5 +15,6 @@ urlpatterns = [
     path('app/save-to-list/', views.save_to_list, name='save_to_list'),
     path('app/list/<int:id>/', views.single_saved_list, name='single_saved_list'),
     path('subscription-confirm/', views.subscription_confirm, name='subscription_confirm'),
+    path('health/', views.health, name='health'),
 ]
 

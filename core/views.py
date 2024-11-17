@@ -441,3 +441,13 @@ def single_saved_list(request, id):
     list = get_object_or_404(SavedList, id=id)
     context = {'list': list}
     return render(request, 'core/single_saved_list.html', context=context)
+
+
+@login_required
+def health(request):
+    if not request.user.is_staff:
+        return HttpResponse(status=403)  # Forbidden
+    
+    journalist_email_count = Journalist.objects.exclude(email_address__isnull=True).exclude(email_address='').count()
+    return HttpResponse(f"OK - {journalist_email_count} journalists with email", status=200)
+    
