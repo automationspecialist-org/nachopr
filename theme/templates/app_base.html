@@ -54,7 +54,7 @@
                 <div class="px-4 py-3">
                     <div class="flex items-center justify-between">
                         <h1 class="text-xl font-semibold">{% block header %}{% endblock %}</h1>
-                        <!-- Add additional navbar items here -->
+                        <span class="text-xs text-slate-500 p-2 border-2 rounded border-slate-300">Credits: {{request.user.credits}}</span>
                     </div>
                 </div>
             </nav>

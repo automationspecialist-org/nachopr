@@ -22,10 +22,6 @@
                     <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                 </svg>
             {% endif %}
-            Create a list of saved journalists
-            {% if not checklist.has_created_list %}
-                <a href="{% url 'saved_lists' %}" class="ml-2 text-blue-600 hover:text-blue-800">Start now →</a>
-            {% endif %}
         </li>
         
         <li class="flex items-center {% if checklist.has_saved_journalist %}text-green-600{% endif %}">
@@ -34,7 +30,7 @@
                     <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                 </svg>
             {% endif %}
-            Save journalists to your list
+            Save journalists to a list
         </li>
         
         <li class="flex items-center {% if checklist.has_retrieved_email %}text-green-600{% endif %}">

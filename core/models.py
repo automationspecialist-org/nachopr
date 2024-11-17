@@ -29,6 +29,7 @@ class Journalist(models.Model):
     image_url = models.URLField(null=True, blank=True, unique=True)
     country = models.CharField(max_length=255, null=True, blank=True)
     x_profile_url = models.URLField(null=True, blank=True, unique=True)
+    email_address = models.EmailField(blank=True, null=True, unique=True)
     
     def __str__(self):
         return self.name
@@ -97,13 +98,16 @@ class CustomUser(AbstractUser):
         on_delete=models.SET_NULL,
         related_name='custom_users'
     )
-
+    credits = models.IntegerField(default=0)
     searches_count = models.IntegerField(default=0)
     has_searched = models.BooleanField(default=False)
     has_created_list = models.BooleanField(default=False)
     has_saved_journalist = models.BooleanField(default=False)
     has_retrieved_email = models.BooleanField(default=False)
     has_exported_list = models.BooleanField(default=False)
+    has_access_to_journalists = models.ManyToManyField(Journalist)
+
+    brand_name = models.CharField(max_length=255, blank=True, null=True)
 
     @property
     def is_subscribed(self):
@@ -170,3 +174,12 @@ class DigitalPRExample(models.Model):
         ordering = ['-published_date']
         verbose_name = 'Digital PR Example'
         verbose_name_plural = 'Digital PR Examples'
+
+
+class DbStat(models.Model):
+    num_journalists = models.IntegerField(default=0)
+    num_journalists_added_today = models.IntegerField(default=0)
+    date = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.date} - {self.num_journalists_added_today} journalists added"

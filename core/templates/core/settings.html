@@ -2,8 +2,20 @@
 
 {% block main %}
 
-Settings
+<h1 class="text-2xl mb-4">Settings</h1>
 
 {{request.user.email}}
+
+{% if request.user.subscription %}
+{{request.user.subscription}}
+{% else %}
+<p>You currently do not have an active subscription.</p>
+{% endif %}
+
+{% if request.user.brand_name %}
+<p>Your brand name: {{request.user.brand_name}}</p>
+<p>We will use this check for media mentions.</p>
+{% else %}
+
 
 {% endblock %}

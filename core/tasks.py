@@ -534,6 +534,7 @@ def find_digital_pr_examples():
     ]
 
     search_query = random.choice(pr_queries) + ' -' + random.choice(negative_queries)
+    
 
 async def process_journalist_descriptions(limit: int = 10):
     """Process descriptions for journalists that have profile URLs but no descriptions"""

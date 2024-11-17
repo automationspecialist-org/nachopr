@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 import requests
 from core.models import NewsSource, NewsPage, Journalist, NewsPageCategory, SavedSearch, SavedList
 from djstripe.models import Product
@@ -119,12 +119,15 @@ def search_results(request):
                         {'error': 'Security check failed',
                          'reset_turnstile': True})
         
-        filtered_results = results[:3]  # Limit results for non-subscribers
+        filtered_results = results[:10]  # Limit results for non-subscribers
     else:
-        #request.user.customuser.searches_count += 1
+        request.user.searches_count += 1
+        if not request.user.has_searched:
+            request.user.has_searched = True
+        request.user.save()
 
         #request.user.customuser.searches_count += 1
-        #print(request.user.searches_count)
+        print(request.user.searches_count)
         # Add pagination for subscribers
         page_number = request.GET.get('page', 1)
         paginator = Paginator(results, 10)  # Show 10 results per page
@@ -312,7 +315,9 @@ def settings_view(request):
 
 @login_required
 def saved_lists(request):
-    return render(request, "core/saved_lists.html")
+    lists = SavedList.objects.filter(user=request.user)
+    context = {'lists': lists}
+    return render(request, "core/saved_lists.html", context=context)
 
 @login_required
 def save_to_list(request):
@@ -346,3 +351,10 @@ def save_to_list(request):
         return JsonResponse({'status': 'success'})
 
     return JsonResponse({'status': 'error'}, status=400)
+
+
+@login_required
+def single_saved_list(request, id):
+    list = get_object_or_404(SavedList, id=id)
+    context = {'list': list}
+    return render(request, 'core/single_saved_list.html', context=context)
