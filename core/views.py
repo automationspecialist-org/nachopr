@@ -27,6 +27,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import update_last_login
 import json
 from django.db import transaction
+from djstripe.sync import sync_subscriber
 
 
 load_dotenv()
@@ -236,9 +237,9 @@ def stripe_webhook(request):
     return HttpResponse(status=200)
 
 
-def create_new_user(email, customer=None):
+def create_new_user(email):
     """
-    Create a new user with the given email and optional Stripe customer.
+    Create a new user with the given email.
     Returns a tuple of (user, password) where password is only set for new users.
     """
     User = get_user_model()
@@ -258,17 +259,12 @@ def create_new_user(email, customer=None):
         password=random_password
     )
     
-    if customer:
-        user.customer = customer
-        user.save()
-    
     # Send welcome email with password reset link
     send_welcome_email(user)
     
     return user, random_password
 
 def subscription_confirm(request):
-    # Get the session ID from query parameters
     session_id = request.GET.get('session_id')
     if not session_id:
         return redirect('home')
@@ -278,10 +274,9 @@ def subscription_confirm(request):
         stripe.api_key = settings.STRIPE_SECRET_KEY
         session = stripe.checkout.Session.retrieve(
             session_id,
-            expand=['line_items.data.price.product']  # Expand to get product metadata
+            expand=['line_items.data.price.product']
         )
         
-        # Verify session is paid/complete
         if session.payment_status != 'paid':
             return render(request, 'core/subscription_confirm.html', {
                 'error': 'Payment incomplete'
@@ -302,16 +297,18 @@ def subscription_confirm(request):
             user = User.objects.select_for_update().filter(email=customer_email).first()
             
             if not user:
-                customer = Customer.objects.get(id=session.customer)
-                user, _ = create_new_user(customer_email, customer)
-                # Set initial credits
-                user.credits = credits
-                user.save()
-            elif not hasattr(user, 'customer'):
-                customer = Customer.objects.get(id=session.customer)
-                user.customer = customer
-                user.credits = credits
-                user.save()
+                # Create new user
+                user, _ = create_new_user(customer_email)
+            
+            # Sync the Stripe customer to dj-stripe's database
+            customer = sync_subscriber(
+                subscriber=user,
+                stripe_customer=stripe.Customer.retrieve(session.customer)
+            )
+            
+            # Set credits and save
+            user.credits = credits
+            user.save()
             
             login(request, user)
             
@@ -339,23 +336,30 @@ def handle_subscription_created(event):
     customer_email = subscription_object.customer_email
     User = get_user_model()
     
-    user = User.objects.filter(email=customer_email).first()
-    
-    if not user:
-        customer = Customer.objects.get(id=subscription_object.customer)
-        user, _ = create_new_user(customer_email, customer)
+    with transaction.atomic():
+        user = User.objects.filter(email=customer_email).first()
         
-    # Set credits and link subscription
-    user.credits = credits
-    user.subscription = subscription
-    user.save()
+        if not user:
+            # Create new user
+            user, _ = create_new_user(customer_email)
+        
+        # Sync the Stripe customer to dj-stripe's database
+        customer = sync_subscriber(
+            subscriber=user,
+            stripe_customer=stripe.Customer.retrieve(subscription_object.customer)
+        )
+        
+        # Set credits and subscription
+        user.credits = credits
+        user.subscription = subscription
+        user.save()
 
-    # Update last login timestamp
-    update_last_login(None, user)
-    # Create session
-    request = event.request
-    if request:
-        login(request, user)
+        # Update last login timestamp
+        update_last_login(None, user)
+        # Create session
+        request = event.request
+        if request:
+            login(request, user)
 
 
 def send_welcome_email(user):
