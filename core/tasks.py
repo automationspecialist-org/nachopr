@@ -451,7 +451,7 @@ def categorize_news_page_with_gpt(page: NewsPage):
 
 def categorize_news_pages_with_gpt(limit: int = 1000_000):
     print("Categorizing news pages with GPT")
-    pages = NewsPage.objects.filter(categories__isnull=True)[:limit]
+    pages = NewsPage.objects.filter(categories__isnull=True, journalists__isnull=False).distinct()[:limit]
     for page in tqdm(pages):
         categorize_news_page_with_gpt(page)
 
