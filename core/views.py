@@ -271,7 +271,7 @@ def subscription_confirm(request):
     
     try:
         # Retrieve the checkout session from Stripe
-        stripe.api_key = settings.STRIPE_SECRET_KEY
+        stripe.api_key = settings.STRIPE_TEST_SECRET_KEY #change to live secret key
         session = stripe.checkout.Session.retrieve(
             session_id,
             expand=['line_items.data.price.product']

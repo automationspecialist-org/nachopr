@@ -196,7 +196,7 @@ def extract_journalists_with_gpt(content: str, track_prompt: bool = False) -> di
     # Define the prompt for GPT-4
     prompt = f"""
     Extract journalist information from the following HTML content and return it as a JSON object with the journalist's name as the key and their metadata (profile_url and image_url) as the value:
-    
+    Only extract journalists that are individual humans, not editorial teams such as 'Weather Team', '11alive.com', or '1News Reporters'.
     HTML content:
     ```
     {clean_content}
@@ -206,7 +206,7 @@ def extract_journalists_with_gpt(content: str, track_prompt: bool = False) -> di
     ```
     {journalist_json}
     ```
-    If you cannot find any journalists, return an empty JSON object. Never output the example JSON objects such as 'John Doe' and 'Jane Smith'.
+    If you cannot find any valid journalists, return an empty JSON object. Never output the example JSON objects such as 'John Doe' and 'Jane Smith'.
     """
 
     if track_prompt:

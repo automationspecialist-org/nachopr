@@ -225,8 +225,8 @@ if 'AZURE' in os.environ:
 STRIPE_LIVE_SECRET_KEY = os.environ.get("STRIPE_LIVE_SECRET_KEY")
 STRIPE_LIVE_MODE = os.environ.get("STRIPE_LIVE_MODE")
 STRIPE_PRICING_TABLE_ID = "prctbl_1QKQJuIS7CEbPEJ1zlMmBQM1"
+STRIPE_TEST_SECRET_KEY = os.environ.get("STRIPE_TEST_SECRET_KEY")
 
-STRIPE_SECRET_KEY = os.environ.get("STRIPE_TEST_SECRET_KEY") # TODO: change to live secret key
 
 SLACK_WEBHOOK_URL = os.environ.get('SLACK_WEBHOOK_URL')
 
