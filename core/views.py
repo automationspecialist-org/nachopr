@@ -276,13 +276,24 @@ def subscription_confirm(request):
     try:
         # Retrieve the checkout session from Stripe
         stripe.api_key = settings.STRIPE_SECRET_KEY
-        session = stripe.checkout.Session.retrieve(session_id)
+        session = stripe.checkout.Session.retrieve(
+            session_id,
+            expand=['line_items.data.price.product']  # Expand to get product metadata
+        )
         
         # Verify session is paid/complete
         if session.payment_status != 'paid':
             return render(request, 'core/subscription_confirm.html', {
                 'error': 'Payment incomplete'
             })
+        
+        # Get credits from product metadata
+        line_items = session.line_items.data
+        if line_items:
+            product = line_items[0].price.product
+            credits = int(product.metadata.get('email_credits', 0))
+        else:
+            credits = 0
         
         User = get_user_model()
         customer_email = session.customer_details.email
@@ -293,9 +304,13 @@ def subscription_confirm(request):
             if not user:
                 customer = Customer.objects.get(id=session.customer)
                 user, _ = create_new_user(customer_email, customer)
+                # Set initial credits
+                user.credits = credits
+                user.save()
             elif not hasattr(user, 'customer'):
                 customer = Customer.objects.get(id=session.customer)
                 user.customer = customer
+                user.credits = credits
                 user.save()
             
             login(request, user)
@@ -314,17 +329,24 @@ def handle_subscription_created(event):
     """
     Handle the customer.subscription.created webhook from Stripe
     """
-    customer_email = event.data.object.customer_email
+    subscription_object = event.data.object
+    
+    # Get product details to access metadata
+    subscription = Subscription.objects.get(id=subscription_object.id)
+    product = subscription.plan.product
+    credits = int(product.metadata.get('email_credits', 0))
+    
+    customer_email = subscription_object.customer_email
     User = get_user_model()
     
     user = User.objects.filter(email=customer_email).first()
     
     if not user:
-        customer = Customer.objects.get(id=event.data.object.customer)
+        customer = Customer.objects.get(id=subscription_object.customer)
         user, _ = create_new_user(customer_email, customer)
-    
-    # Link Subscription to User
-    subscription = Subscription.objects.get(id=event.data.object.id)
+        
+    # Set credits and link subscription
+    user.credits = credits
     user.subscription = subscription
     user.save()
 
