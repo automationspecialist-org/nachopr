@@ -217,6 +217,7 @@ CRONJOBS = [
     ('*/30 * * * *', 'core.cron.categorize_job', '>> /tmp/cron_categorize.log 2>&1'),
     ('*/30 * * * *', 'core.cron.process_journalist_profiles_job', '>> /tmp/cron_process_journalist_profiles.log 2>&1'),
     ('*/30 * * * *', 'core.cron.guess_emails_job', '>> /tmp/cron_guess_emails.log 2>&1'),
+    ('*/30 * * * *', 'core.cron.clean_db_job', '>> /tmp/cron_clean_db.log 2>&1'),
 ]
 
 DJSTRIPE_FOREIGN_KEY_TO_FIELD = os.environ.get('DJSTRIPE_FOREIGN_KEY_TO_FIELD', 'djstripe_id')
