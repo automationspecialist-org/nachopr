@@ -28,6 +28,8 @@ from django.contrib.auth.models import update_last_login
 import json
 from django.db import transaction
 from djstripe.sync import sync_subscriber
+import random
+import string
 
 
 load_dotenv()
@@ -244,13 +246,18 @@ def stripe_webhook(request):
     return HttpResponse(status=200)
 
 
+def generate_random_password(length=12):
+    """Generate a random password of given length"""
+    characters = string.ascii_letters + string.digits + string.punctuation
+    return ''.join(random.choice(characters) for _ in range(length))
+
 def create_new_user(email):
     """
     Create a new user with the given email.
     Returns a tuple of (user, password) where password is only set for new users.
     """
     User = get_user_model()
-    random_password = User.objects.make_random_password()
+    random_password = generate_random_password()
     username = email.split('@')[0]
     
     # Ensure username is unique
