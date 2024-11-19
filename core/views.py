@@ -103,7 +103,14 @@ def search_results(request, use_algolia=True):
         params = {
             'hitsPerPage': 10,
             'page': int(page_number) - 1,  # Algolia uses 0-based pagination
-            'filters': []
+            'filters': [],
+            'attributesToRetrieve': [
+                'name',
+                'description',
+                'sources',
+                'categories',  # Make sure categories are included
+                'country'
+            ]
         }
         
         # Add filters based on search criteria
@@ -113,6 +120,11 @@ def search_results(request, use_algolia=True):
             params['filters'].append(f'sources.id:{source_id}')
         if category_id:
             params['filters'].append(f'categories.id:{category_id}')
+        if query:
+            # Add faceting on categories
+            params['facets'] = ['categories.name']
+            # Optional: Boost category matches
+            params['optionalFilters'] = [f'categories.name:{query}<score=2>']
             
         # Join filters with AND operator if multiple exist
         if params['filters']:
@@ -208,16 +220,18 @@ def search_results(request, use_algolia=True):
                 SearchVector('description', weight='B') +
                 SearchVector('articles__categories__name', weight='B') +
                 SearchVector('sources__name', weight='B')
-                #SearchVector('articles__content', weight='C')
             )
             
             # Create search query
             search_query = SearchQuery(query, config='english')
             
-            # Apply search with ranking
+            # Modify the query to properly join with categories
             results = results.annotate(
                 rank=SearchRank(search_vector, search_query)
-            ).filter(rank__gt=0).order_by('-rank').distinct()
+            ).filter(
+                Q(rank__gt=0) |  # Original search criteria
+                Q(articles__categories__name__icontains=query)  # Add direct category name search
+            ).order_by('-rank').distinct()
         if country:
             results = results.filter(country=country)
         if source_id:

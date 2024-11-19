@@ -20,12 +20,14 @@ class JournalistIndex(AlgoliaIndex):
             'sources.name',
             'articles.title',
             'articles.snippet',
+            'categories.name',
             'country'
         ],
         'attributesForFaceting': [
             'country',
             'sources.id',
-            'categories.id'
+            'categories.id',
+            'searchable(categories.name)'
         ]
     }
 
@@ -41,11 +43,12 @@ class JournalistIndex(AlgoliaIndex):
             'name': source.name,
         } for source in instance.sources.all().select_related()[:10]]
         
-        # Limit categories similarly
+        # Get categories with better optimization
         categories = instance.get_unique_categories()[:10]
         record['categories'] = [{
             'id': category.id,
-            'name': category.name
+            'name': category.name,
+            'searchable_name': category.name.lower()
         } for category in categories]
         
         # Reduce article data - shorter snippets and fewer articles
@@ -53,10 +56,11 @@ class JournalistIndex(AlgoliaIndex):
             'id': article.id,
             'title': article.title,
             'snippet': self.get_article_snippet(article.content, max_length=1000),
-            'published_date': article.published_date.isoformat() if article.published_date else None
-        } for article in instance.articles.all().select_related()[:3]]  # Reduced to 3 most recent articles
+            'published_date': article.published_date.isoformat() if article.published_date else None,
+            'categories': [{'id': cat.id, 'name': cat.name} for cat in article.categories.all()]
+        } for article in instance.articles.all().select_related()[:3]]
         
-        record['articles_count'] = instance.articles.count()  # Use count() instead of len()
+        record['articles_count'] = instance.articles.count()
         
         return record
 
