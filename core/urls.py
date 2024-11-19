@@ -1,4 +1,5 @@
 from django.urls import path
+from django.views.generic import RedirectView
 from . import views
 
 urlpatterns = [
@@ -6,6 +7,7 @@ urlpatterns = [
     path('app/search/', views.search, name='search'),
     path('search-results/', views.search_results, name='search_results'),
     path('free-media-database/', views.free_media_list, name='free-media-list'),
+    path('free-media-list/', RedirectView.as_view(url='/free-media-database/', permanent=True), name='free-media-list-redirect'),
     path('signup/', views.signup, name='signup'),
     path('pricing/', views.pricing, name='pricing'),
     path('app/', views.dashboard, name='dashboard'),
