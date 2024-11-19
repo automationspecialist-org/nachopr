@@ -122,25 +122,29 @@ def search_results(request, use_algolia=True):
             
         # Execute Algolia search with error handling
         try:
+            print(f"Attempting Algolia search with query: {query} and params: {params}")  # Pre-search logging
             results = raw_search(Journalist, query, params)
+            print(f"Raw Algolia response: {results}")  # Log the raw response
             
             # Add error handling for None results
             if results is None:
-                print(f"Algolia search error: Results returned None for query: {query}, params: {params}")  # Debug logging
+                print(f"Algolia search error: Results returned None for query: {query}, params: {params}")
                 return render(request, 'core/search_results.html', {
                     'error': 'Search service temporarily unavailable',
                     'reset_turnstile': True,
-                    'debug_info': f"Query: {query}, Params: {params}, Results: {results}"
+                    'debug_info': f"Query: {query}, Params: {params}, Results: None. Known journalist 'Kate Raphael' exists in DB but not returned."
                 })
                 
         except Exception as e:
             print(f"Algolia search exception: {str(e)}")
             print(f"Query: {query}")
             print(f"Params: {params}")
+            print(f"Exception type: {type(e)}")  # Log the exception type
+            print(f"Exception traceback: ", exc_info=True)  # Log full traceback
             return render(request, 'core/search_results.html', {
                 'error': 'Search service error',
                 'reset_turnstile': True,
-                'debug_info': f"Error: {str(e)}, Query: {query}, Params: {params}"
+                'debug_info': f"Error: {str(e)}, Query: {query}, Params: {params}, Exception type: {type(e)}"
             })
 
         # Create a custom paginated response for Algolia results
