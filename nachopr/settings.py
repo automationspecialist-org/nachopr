@@ -223,6 +223,7 @@ CRONJOBS = [
     ('*/30 * * * *', 'core.cron.clean_db_job', '>> /tmp/cron_clean_db.log 2>&1'),
 ]
 DJSTRIPE_FOREIGN_KEY_TO_FIELD = 'djstripe_id'
+DJSTRIPE_WEBHOOK_VALIDATION='retrieve_event'
 POLAR_SERVER = os.environ.get("POLAR_SERVER")
 
 if POLAR_SERVER == "sandbox":

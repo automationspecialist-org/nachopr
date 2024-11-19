@@ -2,6 +2,13 @@
 {% block content %}
   <h1 class="text-2xl font-bold mb-2">Search Results</h1>
   <div class="text-xs text-slate-500 mb-4">Found {{unfiltered_results_count}} journalists in {{time_taken | time_diff_display}}</div>
+  {% if user.is_staff %}
+  {% if debug_info %}
+      <div class="alert alert-warning">
+          Debug info: {{ debug_info }}
+      </div>
+    {% endif %}
+  {% endif %}
   {% if error %}
     <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
       {{ error }}

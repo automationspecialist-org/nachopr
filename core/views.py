@@ -125,9 +125,11 @@ def search_results(request, use_algolia=True):
         
         # Add error handling for None results
         if results is None:
+            print(f"Algolia search error: Results returned None for query: {query}, params: {params}")  # Debug logging
             return render(request, 'core/search_results.html', {
                 'error': 'Search service temporarily unavailable',
-                'reset_turnstile': True
+                'reset_turnstile': True,
+                'debug_info': f"Query: {query}, Params: {params}"
             })
 
         # Create a custom paginated response for Algolia results
