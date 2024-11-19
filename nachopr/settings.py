@@ -105,7 +105,8 @@ ASGI_APPLICATION = 'nachopr.asgi.application'
 ALLOWED_HOSTS = [
     '0.0.0.0', '127.0.0.1', 'nachopr.apps.innermaps.org',
     'nachoapp-ekewd4f3gdbwcxcu.eastus-01.azurewebsites.net',
-    'nachopr.com'
+    'nachopr.com',
+    '169.254.130.3'
 ]
 
 # Add CSRF trusted origins for your domains
@@ -275,3 +276,31 @@ ACCOUNT_LOGIN_BY_CODE_ENABLED = True
 
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_USERNAME_REQUIRED = False
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}

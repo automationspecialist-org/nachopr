@@ -29,6 +29,10 @@ from .polar import PolarClient
 from django.contrib.postgres.search import SearchQuery, SearchRank, SearchVector
 from algoliasearch_django import raw_search
 import resend
+import logging
+
+# Get logger instance at the top of the file
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -442,21 +446,21 @@ def create_new_user(email):
 
 def subscription_confirm(request):
     session_id = request.GET.get('session_id')
-    print(f"DEBUG: Received session_id: {session_id}")
+    logger.info(f"Received session_id: {session_id}")
     
     if not session_id:
-        print("DEBUG: No session_id provided")
+        logger.warning("No session_id provided")
         return redirect('home')
     
     try:
         # Get checkout session
         polar = PolarClient.get_client()
-        print(f"DEBUG: Getting checkout using client_get with session_id: {session_id}")
+        logger.info(f"Getting checkout using client_get with session_id: {session_id}")
         checkout = polar.checkouts.custom.get(id=session_id)
-        print(f"DEBUG: Checkout retrieved: {checkout}")
+        logger.info(f"Checkout retrieved: {checkout}")
         
         if checkout.status != 'succeeded':
-            print(f"DEBUG: Payment incomplete - status: {checkout.status}")
+            logger.warning(f"Payment incomplete - status: {checkout.status}")
             return render(request, 'core/subscription_confirm.html', {
                 'error': 'Payment incomplete'
             })
@@ -464,21 +468,21 @@ def subscription_confirm(request):
         # Get or create user based on checkout email
         customer_email = checkout.customer_email
         if not customer_email:
-            print("DEBUG: No customer email provided in checkout")
+            logger.error("No customer email provided in checkout")
             return render(request, 'core/subscription_confirm.html', {
                 'error': 'No email provided'
             })
             
         User = get_user_model()
         user = User.objects.filter(email=customer_email).first()
-        print(f"DEBUG: Existing user found: {user is not None}")
+        logger.info(f"Existing user found: {user is not None}")
         
         if not user:
             try:
                 user, password = create_new_user(customer_email)
-                print(f"DEBUG: Created new user: {user.email}")
+                logger.info(f"Created new user: {user.email}")
             except Exception as e:
-                print(f"DEBUG: Error creating user: {str(e)}")
+                logger.exception(f"Error creating user: {str(e)}")
                 return render(request, 'core/subscription_confirm.html', {
                     'error': f'Error creating user account: {str(e)}'
                 })
@@ -489,26 +493,25 @@ def subscription_confirm(request):
             user.subscription_status = 'active'
             user.credits = checkout.metadata.get('credits', 0)
             user.save()
-            print(f"DEBUG: Updated subscription for user: {user.email}")
+            logger.info(f"Updated subscription for user: {user.email}")
             
             # If user wasn't logged in, log them in now
             if not request.user.is_authenticated:
-                # Use allauth's login method
                 from allauth.account.utils import perform_login
-                print("DEBUG: Attempting to login user with allauth")
+                logger.info("Attempting to login user with allauth")
                 perform_login(
                     request, 
                     user,
-                    email_verification='optional',  # or 'mandatory' if you require email verification
+                    email_verification='optional',
                     redirect_url=None,
                     signal_kwargs={
-                        "signup": False,  # True if this is a new user
+                        "signup": False,
                     }
                 )
-                print(f"DEBUG: Successfully logged in user with allauth: {user.email}")
+                logger.info(f"Successfully logged in user with allauth: {user.email}")
             
         except Exception as e:
-            print(f"DEBUG: Error updating subscription: {str(e)}")
+            logger.exception(f"Error updating subscription: {str(e)}")
             return render(request, 'core/subscription_confirm.html', {
                 'error': f'Error updating subscription: {str(e)}'
             })
@@ -519,7 +522,7 @@ def subscription_confirm(request):
         })
         
     except Exception as e:
-        print(f"DEBUG: Unexpected error: {str(e)}")
+        logger.exception(f"Unexpected error in subscription_confirm: {str(e)}")
         return render(request, 'core/subscription_confirm.html', {
             'error': str(e)
         })
