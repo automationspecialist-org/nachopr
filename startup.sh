@@ -14,7 +14,6 @@ fi
 
 uv run manage.py migrate
 uv run manage.py clean_db
-uv run manage.py algolia_reindex
 uv run manage.py crontab remove
 
 if [ -n "$AZURE" ]; then
