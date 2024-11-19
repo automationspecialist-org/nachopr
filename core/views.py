@@ -445,5 +445,10 @@ def health(request):
         return HttpResponse(status=403)  # Forbidden
     
     journalist_email_count = Journalist.objects.exclude(email_address__isnull=True).exclude(email_address='').count()
-    return HttpResponse(f"OK - {journalist_email_count} journalists with email", status=200)
+    news_article_count = NewsPage.objects.filter(is_news_article=True).count()
+    
+    return HttpResponse(
+        f"OK - {journalist_email_count} journalists with email, {news_article_count} news articles", 
+        status=200
+    )
     
