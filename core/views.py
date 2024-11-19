@@ -35,7 +35,7 @@ load_dotenv()
 
 def home(request):
     news_sources_count = NewsSource.objects.filter(pages__isnull=False).distinct().count()
-    news_pages_count = NewsPage.objects.count()
+    news_pages_count = NewsPage.objects.filter(is_news_article=True)
     journalist_count = Journalist.objects.count()
     example_journalists = (Journalist.objects
                          .filter(image_url__isnull=False, description__isnull=False)
