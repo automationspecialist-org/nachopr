@@ -35,29 +35,28 @@ class JournalistIndex(AlgoliaIndex):
         """Override get_raw_record to add computed fields"""
         record = super(JournalistIndex, self).get_raw_record(instance)
         
-        # Add related data with minimal fields to save space
+        # Limit to essential source fields and max 10 sources
         record['sources'] = [{
             'id': source.id,
             'name': source.name,
-            'country': source.country
-        } for source in instance.sources.all().select_related()]
+        } for source in instance.sources.all().select_related()[:10]]
         
-        # Get categories with minimal fields
-        categories = instance.get_unique_categories()
+        # Limit categories similarly
+        categories = instance.get_unique_categories()[:10]
         record['categories'] = [{
             'id': category.id,
             'name': category.name
         } for category in categories]
         
-        # Add articles data with larger snippets (up to 5000 chars)
+        # Reduce article data - shorter snippets and fewer articles
         record['articles'] = [{
             'id': article.id,
             'title': article.title,
-            'snippet': self.get_article_snippet(article.content, max_length=5000),
+            'snippet': self.get_article_snippet(article.content, max_length=1000),
             'published_date': article.published_date.isoformat() if article.published_date else None
-        } for article in instance.articles.all().select_related()[:5]]  # Limit to 5 most recent articles
+        } for article in instance.articles.all().select_related()[:3]]  # Reduced to 3 most recent articles
         
-        record['articles_count'] = len(record['articles'])
+        record['articles_count'] = instance.articles.count()  # Use count() instead of len()
         
         return record
 
