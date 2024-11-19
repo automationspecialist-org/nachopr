@@ -94,6 +94,19 @@ class NewsPage(models.Model):
         super().save(*args, **kwargs)
     
 
+class PricingPlan(models.Model):
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    credits = models.IntegerField(default=100)
+    polar_id = models.CharField(max_length=255)
+    is_recurring = models.BooleanField(default=False)
+    is_archived = models.BooleanField(default=False)
+    checkout_url = models.URLField(blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+
 class CustomUser(AbstractUser):
     groups = models.ManyToManyField(
         'auth.Group',
@@ -109,20 +122,9 @@ class CustomUser(AbstractUser):
         verbose_name='user permissions',
         help_text='Specific permissions for this user.',
     )
-    subscription = models.ForeignKey(
-        'djstripe.Subscription',
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name='custom_users'
-    )
-    customer = models.ForeignKey(
-        'djstripe.Customer',
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name='custom_users'
-    )
+    polar_subscription_id = models.CharField(max_length=255, null=True, blank=True)
+    polar_customer_id = models.CharField(max_length=255, null=True, blank=True)
+    pricing_plan = models.ForeignKey(PricingPlan, on_delete=models.SET_NULL, null=True, blank=True)
     credits = models.IntegerField(default=0)
     searches_count = models.IntegerField(default=0)
     has_searched = models.BooleanField(default=False)
@@ -133,31 +135,22 @@ class CustomUser(AbstractUser):
     has_access_to_journalists = models.ManyToManyField(Journalist)
 
     brand_name = models.CharField(max_length=255, blank=True, null=True)
-
-    @property
+    @property 
     def is_subscribed(self):
-        """Return True if the user has an active subscription."""
-        return self.subscription is not None and self.subscription.status in ('active', 'trialing')
+        """Return True if user has an active subscription"""
+        if not self.polar_subscription_id:
+            return False
+            
+        try:
+            from .polar import PolarClient
+            subscription = PolarClient.get_client().users.subscriptions.get(
+                id=self.polar_subscription_id
+            )
+            return subscription.status == 'active'
+        except:
+            return False
 
-    @property
-    def subscription_status(self):
-        """Return the subscription status or None if no subscription exists."""
-        if self.subscription:
-            return self.subscription.status
-        return None
-
-    @property
-    def subscription_period_end(self):
-        """Return the end date of the current subscription period."""
-        if self.subscription and self.subscription.current_period_end:
-            return self.subscription.current_period_end
-        return None
-
-    def get_stripe_subscription_url(self):
-        """Get URL for managing subscription in Stripe Customer Portal."""
-        if not self.customer:
-            return None
-        return f"https://billing.stripe.com/p/session/{self.customer.id}"
+    
 
 
 class SavedSearch(models.Model):
@@ -208,3 +201,4 @@ class DbStat(models.Model):
 
     def __str__(self):
         return f"{self.date} - {self.num_journalists_added_today} journalists added"
+    

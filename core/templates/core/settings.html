@@ -16,6 +16,8 @@
 <p>Your brand name: {{request.user.brand_name}}</p>
 <p>We will use this check for media mentions.</p>
 {% else %}
+<p>You do not have a brand name set.</p>
+{% endif %}
 
 
 {% endblock %}

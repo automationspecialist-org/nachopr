@@ -2,8 +2,7 @@ import os
 from dotenv import load_dotenv
 from django.shortcuts import get_object_or_404, render
 import requests
-from core.models import NewsSource, NewsPage, Journalist, NewsPageCategory, SavedSearch, SavedList
-from djstripe.models import Product
+from core.models import NewsSource, NewsPage, Journalist, NewsPageCategory, PricingPlan, SavedSearch, SavedList
 from django.db.models import Prefetch
 from django.core.paginator import Paginator
 from django.contrib.auth.decorators import login_required
@@ -12,8 +11,6 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth import get_user_model
 from django.conf import settings
-import stripe
-from djstripe.models import Customer, Subscription
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
@@ -27,9 +24,9 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import update_last_login
 import json
 from django.db import transaction
-from djstripe.sync import sync_subscriber
 import random
 import string
+from .polar import PolarClient
 
 
 load_dotenv()
@@ -50,7 +47,7 @@ def home(request):
     }
     return render(request, 'core/home.html', context=context)
 
-
+@login_required
 def search(request):
     # Get unique countries and sources for filters
     countries = Journalist.objects.exclude(country__isnull=True).values_list('country', flat=True).distinct()
@@ -180,8 +177,8 @@ def refund_policy(request):
     return render(request, 'core/refund_policy.html')
 
 def pricing(request):
-    products = Product.objects.all()
-    return render(request, 'core/pricing.html', {'products': products})
+    pricing_plans = PricingPlan.objects.filter(is_archived=False)
+    return render(request, 'core/pricing.html', {'pricing_plans': pricing_plans})
 
 
 @login_required
@@ -220,30 +217,32 @@ def saved_searches(request):
     return render(request, 'core/saved_searches.html', {'searches': searches})
 
 @csrf_exempt
-def stripe_webhook(request):
-    payload = request.body
-    sig_header = request.META['HTTP_STRIPE_SIGNATURE']
-    
+def polar_webhook(request):
     try:
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
+        polar = PolarClient.get_client()
+        event = polar.webhooks.construct_event(
+            request.body,
+            request.headers.get('Polar-Signature')
         )
-    except ValueError:
-        return HttpResponse(status=400)
-    except stripe.error.SignatureVerificationError:
-        return HttpResponse(status=400)
         
-    # Handle the event
-    if event.type == "customer.subscription.created":
-        handle_subscription_created(event)
-    elif event.type == "customer.subscription.updated":
-        # Handle subscription update
-        pass
-    elif event.type == "customer.subscription.deleted":
-        # Handle subscription deletion
-        pass
-    
-    return HttpResponse(status=200)
+        # Handle subscription events
+        if event.type.startswith('subscription.'):
+            User = get_user_model()
+            subscription_id = event.data.get('id')
+            user = User.objects.filter(polar_subscription_id=subscription_id).first()
+            
+            if user:
+                if event.type == 'subscription.deleted':
+                    user.polar_subscription_id = None
+                    user.credits = 0
+                elif event.type in ['subscription.created', 'subscription.updated']:
+                    user.credits = event.data.get('metadata', {}).get('credits', 0)
+                user.save()
+                
+        return HttpResponse(status=200)
+        
+    except Exception as e:
+        return HttpResponse(status=400)
 
 
 def generate_random_password(length=12):
@@ -280,100 +279,87 @@ def create_new_user(email):
 
 def subscription_confirm(request):
     session_id = request.GET.get('session_id')
+    print(f"DEBUG: Received session_id: {session_id}")
+    
     if not session_id:
+        print("DEBUG: No session_id provided")
         return redirect('home')
     
     try:
-        # Retrieve the checkout session from Stripe
-        stripe.api_key = settings.STRIPE_TEST_SECRET_KEY #change to live secret key
-        session = stripe.checkout.Session.retrieve(
-            session_id,
-            expand=['line_items.data.price.product']
-        )
+        # Get checkout session
+        polar = PolarClient.get_client()
+        print(f"DEBUG: Getting checkout using client_get with session_id: {session_id}")
+        checkout = polar.checkouts.custom.get(id=session_id)
+        print(f"DEBUG: Checkout retrieved: {checkout}")
         
-        if session.payment_status != 'paid':
+        if checkout.status != 'succeeded':
+            print(f"DEBUG: Payment incomplete - status: {checkout.status}")
             return render(request, 'core/subscription_confirm.html', {
                 'error': 'Payment incomplete'
             })
-        
-        # Get credits from product metadata
-        line_items = session.line_items.data
-        if line_items:
-            product = line_items[0].price.product
-            credits = int(product.metadata.get('email_credits', 0))
-        else:
-            credits = 0
-        
+
+        # Get or create user based on checkout email
+        customer_email = checkout.customer_email
+        if not customer_email:
+            print("DEBUG: No customer email provided in checkout")
+            return render(request, 'core/subscription_confirm.html', {
+                'error': 'No email provided'
+            })
+            
         User = get_user_model()
-        customer_email = session.customer_details.email
+        user = User.objects.filter(email=customer_email).first()
+        print(f"DEBUG: Existing user found: {user is not None}")
         
-        with transaction.atomic():
-            user = User.objects.select_for_update().filter(email=customer_email).first()
+        if not user:
+            try:
+                user, password = create_new_user(customer_email)
+                print(f"DEBUG: Created new user: {user.email}")
+            except Exception as e:
+                print(f"DEBUG: Error creating user: {str(e)}")
+                return render(request, 'core/subscription_confirm.html', {
+                    'error': f'Error creating user account: {str(e)}'
+                })
             
-            if not user:
-                # Create new user
-                user, _ = create_new_user(customer_email)
-            
-            # Sync the Stripe customer to dj-stripe's database
-            customer = sync_subscriber(
-                subscriber=user,
-                stripe_customer=stripe.Customer.retrieve(session.customer)
-            )
-            
-            # Set credits and save
-            user.credits = credits
+        # Update user subscription
+        try:
+            user.polar_subscription_id = checkout.subscription_id
+            user.subscription_status = 'active'
+            user.credits = checkout.metadata.get('credits', 0)
             user.save()
+            print(f"DEBUG: Updated subscription for user: {user.email}")
             
-            login(request, user)
+            # If user wasn't logged in, log them in now
+            if not request.user.is_authenticated:
+                # Use allauth's login method
+                from allauth.account.utils import perform_login
+                print("DEBUG: Attempting to login user with allauth")
+                perform_login(
+                    request, 
+                    user,
+                    email_verification='optional',  # or 'mandatory' if you require email verification
+                    redirect_url=None,
+                    signal_kwargs={
+                        "signup": False,  # True if this is a new user
+                    }
+                )
+                print(f"DEBUG: Successfully logged in user with allauth: {user.email}")
             
+        except Exception as e:
+            print(f"DEBUG: Error updating subscription: {str(e)}")
+            return render(request, 'core/subscription_confirm.html', {
+                'error': f'Error updating subscription: {str(e)}'
+            })
+        
         return render(request, 'core/subscription_confirm.html', {
-            'success': True
+            'success': True,
+            'is_new_user': user.date_joined > timezone.now() - timezone.timedelta(minutes=5)
         })
-            
-    except stripe.error.StripeError as e:
+        
+    except Exception as e:
+        print(f"DEBUG: Unexpected error: {str(e)}")
         return render(request, 'core/subscription_confirm.html', {
             'error': str(e)
         })
-
-
-def handle_subscription_created(event):
-    """
-    Handle the customer.subscription.created webhook from Stripe
-    """
-    subscription_object = event.data.object
-    
-    # Get product details to access metadata
-    subscription = Subscription.objects.get(id=subscription_object.id)
-    product = subscription.plan.product
-    credits = int(product.metadata.get('email_credits', 0))
-    
-    customer_email = subscription_object.customer_email
-    User = get_user_model()
-    
-    with transaction.atomic():
-        user = User.objects.filter(email=customer_email).first()
-        
-        if not user:
-            # Create new user
-            user, _ = create_new_user(customer_email)
-        
-        # Sync the Stripe customer to dj-stripe's database
-        customer = sync_subscriber(
-            subscriber=user,
-            stripe_customer=stripe.Customer.retrieve(subscription_object.customer)
-        )
-        
-        # Set credits and subscription
-        user.credits = credits
-        user.subscription = subscription
-        user.save()
-
-        # Update last login timestamp
-        update_last_login(None, user)
-        # Create session
-        request = event.request
-        if request:
-            login(request, user)
 
 
 def send_welcome_email(user):

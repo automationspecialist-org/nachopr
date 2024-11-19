@@ -12,6 +12,9 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 if 'AZURE' in os.environ:
     PROD = True
@@ -56,11 +59,11 @@ INSTALLED_APPS = [
     'theme',
     #'django_cotton',
     'django_browser_reload',
-    'djstripe',
     'crispy_forms',
     'crispy_tailwind',
     'allauth_theme',
     'algoliasearch_django',
+    'djstripe',
 ]
 
 MIDDLEWARE = [
@@ -219,16 +222,20 @@ CRONJOBS = [
     ('*/30 * * * *', 'core.cron.guess_emails_job', '>> /tmp/cron_guess_emails.log 2>&1'),
     ('*/30 * * * *', 'core.cron.clean_db_job', '>> /tmp/cron_clean_db.log 2>&1'),
 ]
+DJSTRIPE_FOREIGN_KEY_TO_FIELD = 'djstripe_id'
+POLAR_SERVER = os.environ.get("POLAR_SERVER")
 
-DJSTRIPE_FOREIGN_KEY_TO_FIELD = os.environ.get('DJSTRIPE_FOREIGN_KEY_TO_FIELD', 'djstripe_id')
-if 'AZURE' in os.environ:
-    print(f"DJ-Stripe foreign key field: {DJSTRIPE_FOREIGN_KEY_TO_FIELD}")
-
-STRIPE_LIVE_SECRET_KEY = os.environ.get("STRIPE_LIVE_SECRET_KEY")
-STRIPE_LIVE_MODE = os.environ.get("STRIPE_LIVE_MODE")
-STRIPE_PRICING_TABLE_ID = "prctbl_1QKQJuIS7CEbPEJ1zlMmBQM1"
-STRIPE_TEST_SECRET_KEY = os.environ.get("STRIPE_TEST_SECRET_KEY")
-
+if POLAR_SERVER == "sandbox":
+    POLAR_ACCESS_TOKEN = os.environ.get("POLAR_TEST_ACCESS_TOKEN")
+    POLAR_ORGANIZATION_ID = os.environ.get("POLAR_TEST_ORGANIZATION_ID")
+else:
+    POLAR_ACCESS_TOKEN = os.environ.get("POLAR_ACCESS_TOKEN")
+    POLAR_ORGANIZATION_ID = os.environ.get("POLAR_ORGANIZATION_ID")
+ALGOLIA = {
+  'APPLICATION_ID': 'SXW045HL4C',
+  'API_KEY': 'b03fb3d30fde244903b39447833aa615',
+  'INDEX_PREFIX': '_dev' if not PROD else '_prod'
+}
 
 SLACK_WEBHOOK_URL = os.environ.get('SLACK_WEBHOOK_URL')
 
@@ -259,14 +266,6 @@ if PROD:
             }
         }
     }
-
-ALGOLIA = {
-  'APPLICATION_ID': 'SXW045HL4C',
-  'API_KEY': 'b03fb3d30fde244903b39447833aa615',
-  'INDEX_PREFIX': '_dev' if not PROD else '_prod'
-}
-
-STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET')
 
 AUTH_USER_MODEL = 'core.CustomUser'
 

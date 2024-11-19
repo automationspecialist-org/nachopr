@@ -39,11 +39,11 @@
                         <span class="text-red-600 px-3 py-2 text-sm font-medium">Trial Expired</span>
                         <a href="{% url 'pricing' %}" class="ml-4 bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors">Renew Now</a>
                     {% else %}
-                        <a href="{% url 'pricing' %}" class="ml-4 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">Start Free Trial</a>
+                        <a href="{% url 'pricing' %}" class="ml-4 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">Sign Up</a>
                     {% endif %}
                 {% else %}
                     <a href="{% url 'account_login' %}" class="text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Login</a>
-                    <a href="{% url 'pricing' %}" class="ml-4 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">Start Free Trial</a>
+                    <a href="{% url 'pricing' %}" class="ml-4 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">Sign Up</a>
                 {% endif %}
             </div>
         </div>
