@@ -105,11 +105,13 @@ def search_results(request, use_algolia=True):
             'page': int(page_number) - 1,  # Algolia uses 0-based pagination
             'filters': [],
             'attributesToRetrieve': [
+                'objectID',
                 'name',
                 'description',
                 'sources',
-                'categories',  # Make sure categories are included
-                'country'
+                'categories',
+                'country',
+                'id'
             ]
         }
         
@@ -159,11 +161,20 @@ def search_results(request, use_algolia=True):
                 'debug_info': f"Error: {str(e)}, Query: {query}, Params: {params}, Exception type: {type(e)}"
             })
 
-        # Create a custom paginated response for Algolia results
+        # Modify the AlgoliaPaginator class to normalize the results
         class AlgoliaPaginator:
             def __init__(self, results):
-                self.hits = results['hits']
-                self.number = results['page'] + 1  # Convert from 0-based to 1-based
+                # Transform Algolia hits to have consistent ID field
+                self.hits = [{
+                    'id': hit.get('objectID') or hit.get('id'),  # Use objectID or fallback to id
+                    'name': hit.get('name'),
+                    'description': hit.get('description'),
+                    'sources': hit.get('sources'),
+                    'categories': hit.get('categories'),
+                    'country': hit.get('country'),
+                    # Add other fields as needed
+                } for hit in results['hits']]
+                self.number = results['page'] + 1
                 self.paginator = type('Paginator', (), {
                     'num_pages': results['nbPages'],
                     'count': results['nbHits']
@@ -210,6 +221,12 @@ def search_results(request, use_algolia=True):
                 ),
                 to_attr='prefetched_articles'
             )
+        ).values(
+            'id',
+            'name',
+            'description',
+            'country',
+            # Add other fields as needed
         ).distinct()
         
         # Apply filters

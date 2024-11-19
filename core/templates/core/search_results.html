@@ -52,7 +52,7 @@
               <div class="pt-1">
                 <input type="checkbox" 
                        class="journalist-checkbox w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                       data-id="{{ journalist.id|default:journalist.objectID }}" 
+                       data-id="{{ journalist.id }}" 
                        data-name="{{ journalist.name }}">
               </div>
               {% if journalist.image_url %}
@@ -73,7 +73,7 @@
                   </p>
                 {% endif %}
                 {% if user.is_staff %}
-                  <p>Id: {{ journalist.id|default:journalist.objectID }}</p>
+                  <p>Id: {{ journalist.id }}</p>
                 {% endif %}
                 
                 {% if journalist.sources.all %}
