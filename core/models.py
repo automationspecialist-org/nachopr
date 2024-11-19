@@ -144,7 +144,7 @@ class CustomUser(AbstractUser):
     polar_subscription_id = models.CharField(max_length=255, null=True, blank=True)
     polar_customer_id = models.CharField(max_length=255, null=True, blank=True)
     pricing_plan = models.ForeignKey(PricingPlan, on_delete=models.SET_NULL, null=True, blank=True)
-    credits = models.IntegerField(default=0)
+    credits = models.IntegerField(default=100)
     searches_count = models.IntegerField(default=0)
     has_searched = models.BooleanField(default=False)
     has_created_list = models.BooleanField(default=False)
