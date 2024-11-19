@@ -1,6 +1,10 @@
 from django.db import models
 from django.utils.text import slugify
 from django.contrib.auth.models import AbstractUser
+from django.contrib.postgres.search import SearchVectorField
+from django.contrib.postgres.indexes import GinIndex
+from django.contrib.postgres.search import SearchVector
+
 
 class NewsSource(models.Model):
     url = models.URLField(unique=True)
@@ -78,21 +82,33 @@ class NewsPageCategory(models.Model):
 
 class NewsPage(models.Model):
     url = models.URLField(unique=True)
-    title = models.CharField(max_length=255)
+    title = models.CharField(max_length=500)
     content = models.TextField()
     source = models.ForeignKey(NewsSource, on_delete=models.CASCADE, related_name='pages')
     journalists = models.ManyToManyField(Journalist, related_name='articles')
     processed = models.BooleanField(default=False)
     categories = models.ManyToManyField(NewsPageCategory, related_name='pages')
     is_news_article = models.BooleanField(default=False)
+    search_vector = SearchVectorField(null=True, blank=True)
+    published_date = models.DateField(null=True, blank=True)
+
 
     def __str__(self):
         return self.title
     
+    def update_search_vector(self):
+        vector = SearchVector('title', weight='A') + SearchVector('content', weight='B')
+        NewsPage.objects.filter(pk=self.pk).update(search_vector=vector)
+
     def save(self, *args, **kwargs):
-        self.slug = slugify(self.title)
         super().save(*args, **kwargs)
+        self.update_search_vector()
     
+    class Meta:
+        indexes = [
+            GinIndex(fields=['search_vector'])
+        ]
+
 
 class PricingPlan(models.Model):
     name = models.CharField(max_length=255)

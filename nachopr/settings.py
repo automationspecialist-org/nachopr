@@ -135,15 +135,15 @@ if PROD:
         }
     }
 else:
-    # Use SQLite in development
-    DB_PATH = BASE_DIR / 'db.sqlite3'
+    # Use local PostgreSQL in development
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': DB_PATH,
-            'OPTIONS': {
-                'timeout': 20,
-            }
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'postgres',  # default database name
+            'USER': 'postgres',  # default postgres user
+            'PASSWORD': 'postgres',  # change this to your local password
+            'HOST': 'localhost',
+            'PORT': '5434',
         }
     }
 

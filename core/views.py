@@ -27,6 +27,7 @@ from django.db import transaction
 import random
 import string
 from .polar import PolarClient
+from django.contrib.postgres.search import SearchQuery, SearchRank, SearchVector
 
 
 load_dotenv()
@@ -92,12 +93,22 @@ def search_results(request):
     
     # Apply filters
     if query:
-        results = results.filter(
-            Q(name__icontains=query) |
-            Q(description__icontains=query) |
-            Q(articles__categories__name__icontains=query) |
-            Q(sources__name__icontains=query)
-        ).order_by('name').distinct()
+        # Create search vectors for different fields
+        search_vector = (
+            SearchVector('name', weight='A') +
+            SearchVector('description', weight='B') +
+            SearchVector('articles__categories__name', weight='B') +
+            SearchVector('sources__name', weight='B') +
+            SearchVector('articles__content', weight='C')
+        )
+        
+        # Create search query
+        search_query = SearchQuery(query, config='english')
+        
+        # Apply search with ranking
+        results = results.annotate(
+            rank=SearchRank(search_vector, search_query)
+        ).filter(rank__gt=0).order_by('-rank').distinct()
     if country:
         results = results.filter(country=country)
     if source_id:

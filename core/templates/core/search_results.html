@@ -60,6 +60,11 @@
                 {% if journalist.description %}
                   <p class="text-gray-700 text-sm mb-4">{{ journalist.description|truncatewords:30 }}</p>
                 {% endif %}
+                {% if journalist.matching_articles_count > 0 %}
+                  <p class="text-gray-600 text-sm mb-2">
+                    <span class="font-medium">{{ journalist.matching_articles_count }} matching article{{ journalist.matching_articles_count|pluralize }}</span>
+                  </p>
+                {% endif %}
                 {% if user.is_staff %}
                   <p>Id: {{ journalist.id }}</p>
                 {% endif %}

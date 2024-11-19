@@ -22,6 +22,7 @@ from django.db import transaction
 from mailscout import Scout
 from functools import lru_cache
 import dns.exception
+from datetime import datetime
 
 
 load_dotenv()
@@ -188,6 +189,7 @@ def extract_journalists_with_gpt(content: str, track_prompt: bool = False) -> di
 
     journalist_json = { 
         "content_is_full_news_article": True,
+        "article_published_date": "2024-01-01",
         "journalists": [
             {
                 "name": "John Doe",
@@ -217,6 +219,7 @@ def extract_journalists_with_gpt(content: str, track_prompt: bool = False) -> di
     {journalist_json}
     ```
     If you cannot find any valid journalists, return an empty JSON object. Never output the example JSON objects such as 'John Doe' and 'Jane Smith'.
+    If you cannot extract the publushed article date, return an empty string for 'article_published_date'. 
     """
 
     if track_prompt:
@@ -335,6 +338,17 @@ async def process_all_pages_journalists(limit: int = 10, re_process: bool = Fals
                     with transaction.atomic():
                         # Save the is_news_article value
                         page.is_news_article = journalists_data.get('content_is_full_news_article', False)
+                        
+                        # Try to save the published date if it exists and is valid
+                        published_date_str = journalists_data.get('article_published_date')
+                        if published_date_str:
+                            try:
+                                # Convert string to date object
+                                published_date = datetime.strptime(published_date_str, '%Y-%m-%d').date()
+                                page.published_date = published_date
+                            except (ValueError, TypeError):
+                                # If date is invalid, just ignore it and continue processing
+                                logger.warning(f"Invalid date format for page {page.id}: {published_date_str}")
                         
                         if journalists_data and 'journalists' in journalists_data:
                             for journalist_dict in journalists_data['journalists']:
