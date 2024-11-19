@@ -121,15 +121,26 @@ def search_results(request, use_algolia=True):
             del params['filters']
             
         # Execute Algolia search with error handling
-        results = raw_search(Journalist, query, params)
-        
-        # Add error handling for None results
-        if results is None:
-            print(f"Algolia search error: Results returned None for query: {query}, params: {params}")  # Debug logging
+        try:
+            results = raw_search(Journalist, query, params)
+            
+            # Add error handling for None results
+            if results is None:
+                print(f"Algolia search error: Results returned None for query: {query}, params: {params}")  # Debug logging
+                return render(request, 'core/search_results.html', {
+                    'error': 'Search service temporarily unavailable',
+                    'reset_turnstile': True,
+                    'debug_info': f"Query: {query}, Params: {params}, Results: {results}"
+                })
+                
+        except Exception as e:
+            print(f"Algolia search exception: {str(e)}")
+            print(f"Query: {query}")
+            print(f"Params: {params}")
             return render(request, 'core/search_results.html', {
-                'error': 'Search service temporarily unavailable',
+                'error': 'Search service error',
                 'reset_turnstile': True,
-                'debug_info': f"Query: {query}, Params: {params}"
+                'debug_info': f"Error: {str(e)}, Query: {query}, Params: {params}"
             })
 
         # Create a custom paginated response for Algolia results
