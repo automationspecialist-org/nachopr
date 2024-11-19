@@ -123,17 +123,39 @@ def search_results(request, use_algolia=True):
         # Execute Algolia search
         results = raw_search(Journalist, query, params)
         
-        # Update user search stats for subscribers
+        # Create a custom paginated response for Algolia results
+        class AlgoliaPaginator:
+            def __init__(self, results):
+                self.hits = results['hits']
+                self.number = results['page'] + 1  # Convert from 0-based to 1-based
+                self.paginator = type('Paginator', (), {
+                    'num_pages': results['nbPages'],
+                    'count': results['nbHits']
+                })
+                
+            def __iter__(self):
+                return iter(self.hits)
+                
+            def has_previous(self):
+                return self.number > 1
+                
+            def has_next(self):
+                return self.number < self.paginator.num_pages
+                
+            def previous_page_number(self):
+                return self.number - 1 if self.has_previous() else None
+                
+            def next_page_number(self):
+                return self.number + 1 if self.has_next() else None
+        
         if is_subscriber:
             request.user.searches_count += 1
             if not request.user.has_searched:
                 request.user.has_searched = True
             request.user.save()
-            
-            # Create a Django-style paginator for consistent template rendering
-            filtered_results = Paginator.from_algolia_response(results)
+            filtered_results = AlgoliaPaginator(results)
         else:
-            # Limit results for non-subscribers
+            # For non-subscribers, just return the first 10 hits
             filtered_results = results['hits'][:10]
         
         unfiltered_results_count = results['nbHits']
