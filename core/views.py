@@ -98,8 +98,8 @@ def search_results(request):
             SearchVector('name', weight='A') +
             SearchVector('description', weight='B') +
             SearchVector('articles__categories__name', weight='B') +
-            SearchVector('sources__name', weight='B') +
-            SearchVector('articles__content', weight='C')
+            SearchVector('sources__name', weight='B')
+            #SearchVector('articles__content', weight='C')
         )
         
         # Create search query
