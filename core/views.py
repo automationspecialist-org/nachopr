@@ -120,9 +120,16 @@ def search_results(request, use_algolia=True):
         else:
             del params['filters']
             
-        # Execute Algolia search
+        # Execute Algolia search with error handling
         results = raw_search(Journalist, query, params)
         
+        # Add error handling for None results
+        if results is None:
+            return render(request, 'core/search_results.html', {
+                'error': 'Search service temporarily unavailable',
+                'reset_turnstile': True
+            })
+
         # Create a custom paginated response for Algolia results
         class AlgoliaPaginator:
             def __init__(self, results):
@@ -155,7 +162,6 @@ def search_results(request, use_algolia=True):
             request.user.save()
             filtered_results = AlgoliaPaginator(results)
         else:
-            # For non-subscribers, just return the first 10 hits
             filtered_results = results['hits'][:10]
         
         unfiltered_results_count = results['nbHits']
