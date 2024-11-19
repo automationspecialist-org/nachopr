@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from core.models import Journalist
+from core.models import Journalist, NewsPageCategory
 
 class Command(BaseCommand):
     help = 'Remove journalists with unwanted terms in their names'
@@ -21,3 +21,11 @@ class Command(BaseCommand):
             self.stdout.write(f'Removed {count} journalists containing "{term}"')
             
         self.stdout.write(self.style.SUCCESS(f'Successfully removed {removed_count} total journalists'))
+        
+        # Remove specific NewsPageCategory
+        try:
+            category = NewsPageCategory.objects.get(name='New Categories Needed')
+            category.delete()
+            self.stdout.write(f'Removed NewsPageCategory "New Categories Needed"')
+        except NewsPageCategory.DoesNotExist:
+            self.stdout.write('NewsPageCategory "New Categories Needed" not found')
