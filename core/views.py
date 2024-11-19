@@ -93,7 +93,10 @@ def search_results(request):
     # Apply filters
     if query:
         results = results.filter(
-            Q(name__icontains=query) | Q(articles__categories__name__icontains=query)
+            Q(name__icontains=query) |
+            Q(description__icontains=query) |
+            Q(articles__categories__name__icontains=query) |
+            Q(sources__name__icontains=query)
         ).order_by('name').distinct()
     if country:
         results = results.filter(country=country)
