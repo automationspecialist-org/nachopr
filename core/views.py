@@ -28,6 +28,7 @@ import random
 import string
 from .polar import PolarClient
 from django.contrib.postgres.search import SearchQuery, SearchRank, SearchVector
+from algoliasearch_django import raw_search
 
 
 load_dotenv()
@@ -67,95 +68,159 @@ def search(request):
     return render(request, 'core/app_search.html', context=context)
 
 
-def search_results(request):
+def search_results(request, use_algolia=True):
     starttime = timezone.now()
     is_subscriber = request.user.is_authenticated
     query = request.GET.get('q', '')
     country = request.GET.get('country', '')
     source_id = request.GET.get('source', '')
     category_id = request.GET.get('category', '')
-    
-    # Start with all journalists
-    results = Journalist.objects.prefetch_related(
-        'sources',
-        Prefetch(
-            'articles',
-            queryset=NewsPage.objects.prefetch_related(
-                Prefetch(
-                    'categories',
-                    queryset=NewsPageCategory.objects.all(),
-                    to_attr='unique_categories'
-                )
-            ),
-            to_attr='prefetched_articles'
-        )
-    ).distinct()
-    
-    # Apply filters
-    if query:
-        # Create search vectors for different fields
-        search_vector = (
-            SearchVector('name', weight='A') +
-            SearchVector('description', weight='B') +
-            SearchVector('articles__categories__name', weight='B') +
-            SearchVector('sources__name', weight='B')
-            #SearchVector('articles__content', weight='C')
-        )
-        
-        # Create search query
-        search_query = SearchQuery(query, config='english')
-        
-        # Apply search with ranking
-        results = results.annotate(
-            rank=SearchRank(search_vector, search_query)
-        ).filter(rank__gt=0).order_by('-rank').distinct()
-    if country:
-        results = results.filter(country=country)
-    if source_id:
-        results = results.filter(sources__id=source_id)
-    if category_id:
-        results = results.filter(articles__categories__id=category_id).distinct()
+    page_number = request.GET.get('page', 1)
 
-    # debug:
-    #if not settings.PROD:
-    print(f"Query: {query}")
-    
-    # Handle non-subscribers
-    if not is_subscriber:
-        token = request.GET.get('cf-turnstile-response')
-        if not token:
-            return render(request, 'core/search_results.html', 
-                        {'error': 'Please complete the security check',
-                         'reset_turnstile': True})
-        
-        # Verify token with Cloudflare
-        data = {
-            'secret': os.getenv('CLOUDFLARE_TURNSTILE_SECRET_KEY'),
-            'response': token,
-            'remoteip': request.META.get('REMOTE_ADDR'),
+    if use_algolia and query:
+        # Handle non-subscribers first
+        if not is_subscriber:
+            token = request.GET.get('cf-turnstile-response')
+            if not token:
+                return render(request, 'core/search_results.html', 
+                            {'error': 'Please complete the security check',
+                             'reset_turnstile': True})
+            
+            # Verify token with Cloudflare
+            data = {
+                'secret': os.getenv('CLOUDFLARE_TURNSTILE_SECRET_KEY'),
+                'response': token,
+                'remoteip': request.META.get('REMOTE_ADDR'),
+            }
+            response = requests.post('https://challenges.cloudflare.com/turnstile/v0/siteverify', data=data)
+            
+            if not response.json().get('success', False):
+                return render(request, 'core/search_results.html', 
+                            {'error': 'Security check failed',
+                             'reset_turnstile': True})
+
+        # Configure Algolia search parameters
+        params = {
+            'hitsPerPage': 10,
+            'page': int(page_number) - 1,  # Algolia uses 0-based pagination
+            'filters': []
         }
-        response = requests.post('https://challenges.cloudflare.com/turnstile/v0/siteverify', data=data)
         
-        if not response.json().get('success', False):
-            return render(request, 'core/search_results.html', 
-                        {'error': 'Security check failed',
-                         'reset_turnstile': True})
+        # Add filters based on search criteria
+        if country:
+            params['filters'].append(f'country:"{country}"')
+        if source_id:
+            params['filters'].append(f'sources.id:{source_id}')
+        if category_id:
+            params['filters'].append(f'categories.id:{category_id}')
+            
+        # Join filters with AND operator if multiple exist
+        if params['filters']:
+            params['filters'] = ' AND '.join(params['filters'])
+        else:
+            del params['filters']
+            
+        # Execute Algolia search
+        results = raw_search(Journalist, query, params)
         
-        filtered_results = results[:10]  # Limit results for non-subscribers
+        # Update user search stats for subscribers
+        if is_subscriber:
+            request.user.searches_count += 1
+            if not request.user.has_searched:
+                request.user.has_searched = True
+            request.user.save()
+            
+            # Create a Django-style paginator for consistent template rendering
+            filtered_results = Paginator.from_algolia_response(results)
+        else:
+            # Limit results for non-subscribers
+            filtered_results = results['hits'][:10]
+        
+        unfiltered_results_count = results['nbHits']
+        
     else:
-        request.user.searches_count += 1
-        if not request.user.has_searched:
-            request.user.has_searched = True
-        request.user.save()
+        # Start with all journalists
+        results = Journalist.objects.prefetch_related(
+            'sources',
+            Prefetch(
+                'articles',
+                queryset=NewsPage.objects.prefetch_related(
+                    Prefetch(
+                        'categories',
+                        queryset=NewsPageCategory.objects.all(),
+                        to_attr='unique_categories'
+                    )
+                ),
+                to_attr='prefetched_articles'
+            )
+        ).distinct()
+        
+        # Apply filters
+        if query:
+            # Create search vectors for different fields
+            search_vector = (
+                SearchVector('name', weight='A') +
+                SearchVector('description', weight='B') +
+                SearchVector('articles__categories__name', weight='B') +
+                SearchVector('sources__name', weight='B')
+                #SearchVector('articles__content', weight='C')
+            )
+            
+            # Create search query
+            search_query = SearchQuery(query, config='english')
+            
+            # Apply search with ranking
+            results = results.annotate(
+                rank=SearchRank(search_vector, search_query)
+            ).filter(rank__gt=0).order_by('-rank').distinct()
+        if country:
+            results = results.filter(country=country)
+        if source_id:
+            results = results.filter(sources__id=source_id)
+        if category_id:
+            results = results.filter(articles__categories__id=category_id).distinct()
 
-        #request.user.customuser.searches_count += 1
-        print(request.user.searches_count)
-        # Add pagination for subscribers
-        page_number = request.GET.get('page', 1)
-        paginator = Paginator(results, 10)  # Show 10 results per page
-        filtered_results = paginator.get_page(page_number)
+        # debug:
+        #if not settings.PROD:
+        print(f"Query: {query}")
+        
+        # Handle non-subscribers
+        if not is_subscriber:
+            token = request.GET.get('cf-turnstile-response')
+            if not token:
+                return render(request, 'core/search_results.html', 
+                            {'error': 'Please complete the security check',
+                             'reset_turnstile': True})
+            
+            # Verify token with Cloudflare
+            data = {
+                'secret': os.getenv('CLOUDFLARE_TURNSTILE_SECRET_KEY'),
+                'response': token,
+                'remoteip': request.META.get('REMOTE_ADDR'),
+            }
+            response = requests.post('https://challenges.cloudflare.com/turnstile/v0/siteverify', data=data)
+            
+            if not response.json().get('success', False):
+                return render(request, 'core/search_results.html', 
+                            {'error': 'Security check failed',
+                             'reset_turnstile': True})
+            
+            filtered_results = results[:10]  # Limit results for non-subscribers
+        else:
+            request.user.searches_count += 1
+            if not request.user.has_searched:
+                request.user.has_searched = True
+            request.user.save()
 
-    unfiltered_results_count = results.count()
+            #request.user.customuser.searches_count += 1
+            print(request.user.searches_count)
+            # Add pagination for subscribers
+            page_number = request.GET.get('page', 1)
+            paginator = Paginator(results, 10)  # Show 10 results per page
+            filtered_results = paginator.get_page(page_number)
+
+        unfiltered_results_count = results.count()
+
     time_taken = timezone.now() - starttime
     print(f'time taken: {time_taken}')
     return render(

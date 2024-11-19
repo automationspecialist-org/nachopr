@@ -140,12 +140,14 @@ async def fetch_website(url: str, limit: int = 1000_000, depth: int = 3) -> Webs
                         # Skip if page already exists
                         if NewsPage.objects.filter(url=page.url).exists():
                             return None, False
-                            
+
+                        cleaned_content = clean_html(page.content)
+
                         # Create new page only if it doesn't exist
                         news_page = NewsPage.objects.create(
                             url=page.url,
-                            title=page.title,
-                            content=page.content,
+                            title=str(page.title()),  # Convert title to string
+                            content=cleaned_content,
                             source=news_source
                         )
                         return news_page, True
@@ -166,9 +168,13 @@ async def fetch_website(url: str, limit: int = 1000_000, depth: int = 3) -> Webs
 
 
 def clean_html(html: str) -> str:
-    
+    # Convert HTML to markdown
     cleaned_html = markdownify(html)
-
+    
+    # Remove excessive newlines (more than 2 in a row)
+    cleaned_html = '\n'.join([line for line in cleaned_html.splitlines() if line.strip()])
+    cleaned_html = cleaned_html.replace('\n\n\n', '\n\n')
+    
     return cleaned_html
 
 
@@ -354,9 +360,12 @@ async def process_all_pages_journalists(limit: int = 10, re_process: bool = Fals
                             for journalist_dict in journalists_data['journalists']:
                                 if 'name' in journalist_dict:
                                     name = journalist_dict['name']
-                                    profile_url = journalist_dict.get('profile_url')
-                                    image_url = journalist_dict.get('image_url')
+                                    profile_url = journalist_dict.get('profile_url', '')
+                                    image_url = journalist_dict.get('image_url', '')
                                     journalist_slug = slugify(name)
+                                    
+                                    # Log field lengths
+                                    logger.info(f"Field lengths - name: {len(name)}, profile_url: {len(profile_url)}, image_url: {len(image_url)}, slug: {len(journalist_slug)}")
                                     
                                     try:
                                         journalist, created = Journalist.objects.get_or_create(
@@ -368,8 +377,14 @@ async def process_all_pages_journalists(limit: int = 10, re_process: bool = Fals
                                             }
                                         )
                                         page.journalists.add(journalist)
-                                    except IntegrityError:
-                                        logger.error(f"Integrity error for journalist: {name} (usually duplicate name)")
+                                    except IntegrityError as e:
+                                        logger.error(f"Integrity error for journalist: {name}")
+                                        logger.error(f"Field values and lengths:")
+                                        logger.error(f"name ({len(name)}): {name}")
+                                        logger.error(f"slug ({len(journalist_slug)}): {journalist_slug}")
+                                        logger.error(f"profile_url ({len(profile_url)}): {profile_url}")
+                                        logger.error(f"image_url ({len(image_url)}): {image_url}")
+                                        raise e
                         
                         page.processed = True
                         page.save()

@@ -29,10 +29,11 @@ class Journalist(models.Model):
     description = models.TextField(null=True, blank=True)
     sources = models.ManyToManyField(NewsSource, related_name='journalists')
     slug = models.SlugField(unique=True)
-    profile_url = models.URLField(null=True, blank=True, unique=True)
-    image_url = models.URLField(null=True, blank=True, unique=True)
+    # Remove unique=True from URLs since empty values should be allowed
+    profile_url = models.URLField(null=True, blank=True, max_length=500)
+    image_url = models.URLField(null=True, blank=True, max_length=500)
     country = models.CharField(max_length=255, null=True, blank=True)
-    x_profile_url = models.URLField(null=True, blank=True, unique=True)
+    x_profile_url = models.URLField(null=True, blank=True)
     email_address = models.EmailField(blank=True, null=True, unique=True)
     email_status = models.CharField(
         max_length=32,
@@ -65,7 +66,9 @@ class Journalist(models.Model):
             return categories
         else:
             # Fallback if articles aren't prefetched
-            return NewsPageCategory.objects.filter(pages__journalist=self).distinct()
+            return NewsPageCategory.objects.filter(
+                pages__journalists=self
+            ).distinct()
 
 
 class NewsPageCategory(models.Model):
