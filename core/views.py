@@ -12,7 +12,6 @@ from django.http import HttpResponse, JsonResponse
 from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
-from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
@@ -29,7 +28,7 @@ import string
 from .polar import PolarClient
 from django.contrib.postgres.search import SearchQuery, SearchRank, SearchVector
 from algoliasearch_django import raw_search
-
+import resend
 
 load_dotenv()
 
@@ -48,6 +47,15 @@ def home(request):
         'example_journalists': example_journalists
     }
     return render(request, 'core/home.html', context=context)
+
+
+def send_mail(subject, message, from_email, recipient_list, fail_silently=False):
+    r = resend.Emails.send({
+        "from": from_email,
+        "to": recipient_list,
+        "subject": subject,
+        "html": message
+    })
 
 @login_required
 def search(request):
@@ -533,7 +541,7 @@ def send_welcome_email(user):
     send_mail(
         'Welcome to NachoPR',
         message,
-        'support@nachopr.com',
+        'duncan@nachopr.com',
         [user.email],
         fail_silently=False,
     )
