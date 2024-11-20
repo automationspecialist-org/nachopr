@@ -53,7 +53,10 @@ async def crawl_news_sources(domain_limit: int = None, page_limit: int = None, m
             NewsSource.objects.filter(
                 Q(last_crawled__lt=timezone.now() - timezone.timedelta(days=7)) |
                 Q(last_crawled__isnull=True)
-            ).order_by('last_crawled')[:domain_limit]
+            ).order_by(
+                '-priority',  # Priority sources first
+                'last_crawled'  # Then by least recently crawled
+            )[:domain_limit]
         )
         
         logger.info(f"Found {len(news_sources)} news sources to crawl")
