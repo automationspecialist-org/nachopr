@@ -181,19 +181,30 @@ def search_results(request, use_algolia=True):
         # Modify the AlgoliaPaginator class to normalize the results
         class AlgoliaPaginator:
             def __init__(self, results):
-                # Transform Algolia hits to have consistent ID field
-                self.hits = [{
-                    'id': hit.get('objectID') or hit.get('id'),  # Use objectID or fallback to id
-                    'name': hit.get('name'),
-                    'description': hit.get('description'),
-                    'sources': hit.get('sources'),
-                    'categories': hit.get('categories', []),
-                    'country': hit.get('country'),
-                    'image_url': hit.get('imageUrl') or hit.get('image_url'),  # Handle both camelCase and snake_case
-                    'email_address': hit.get('emailAddress') or hit.get('email_address'),
-                    'profile_url': hit.get('profileUrl') or hit.get('profile_url'),
-                    'x_profile_url': hit.get('xProfileUrl') or hit.get('x_profile_url'),
-                } for hit in results['hits']]
+                # Get IDs from Algolia results
+                ids = [hit.get('objectID') or hit.get('id') for hit in results['hits']]
+                
+                # Fetch full journalist objects from database
+                journalists = Journalist.objects.filter(id__in=ids).prefetch_related(
+                    'sources',
+                    'categories',
+                    Prefetch(
+                        'articles',
+                        queryset=NewsPage.objects.prefetch_related(
+                            Prefetch(
+                                'categories',
+                                queryset=NewsPageCategory.objects.all(),
+                                to_attr='unique_categories'
+                            )
+                        ),
+                        to_attr='prefetched_articles'
+                    )
+                )
+                
+                # Preserve Algolia ordering by creating a dictionary and mapping back to list
+                journalist_dict = {str(j.id): j for j in journalists}
+                self.hits = [journalist_dict[str(id)] for id in ids if str(id) in journalist_dict]
+                
                 self.number = results['page'] + 1
                 self.paginator = type('Paginator', (), {
                     'num_pages': results['nbPages'],
