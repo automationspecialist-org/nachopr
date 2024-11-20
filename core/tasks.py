@@ -274,9 +274,9 @@ async def process_all_pages_journalists(limit: int = 10, re_process: bool = Fals
     
     # Get pages to process
     if re_process:
-        pages = await sync_to_async(list)(NewsPage.objects.all()[:limit])
+        pages = await sync_to_async(list)(NewsPage.objects.exclude(content='').all()[:limit])
     else:
-        pages = await sync_to_async(list)(NewsPage.objects.filter(processed=False)[:limit])
+        pages = await sync_to_async(list)(NewsPage.objects.exclude(content='').filter(processed=False)[:limit])
     
     # Add all pages to the GPT queue
     for page in pages:
@@ -546,6 +546,8 @@ def find_digital_pr_examples():
         negative_q  # Must not match negative queries
     ).exclude(
         pr_examples__isnull=False  # Must not already have PR examples
+    ).exclude(
+        is_news_article=False # Has to be a news article, not category or something
     )
 
     # Create PR examples for matching pages
