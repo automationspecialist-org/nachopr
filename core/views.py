@@ -400,6 +400,8 @@ def polar_webhook(request):
             request.headers.get('Polar-Signature')
         )
         
+        logger.info(f"Received Polar webhook event: {event.type}")
+        
         # Handle subscription events
         if event.type.startswith('subscription.'):
             User = get_user_model()
@@ -409,10 +411,17 @@ def polar_webhook(request):
             if user:
                 if event.type == 'subscription.deleted':
                     user.polar_subscription_id = None
+                    user.subscription_status = 'inactive'
                     user.credits = 0
-                elif event.type in ['subscription.created', 'subscription.updated']:
+                elif event.type == 'subscription.created':
+                    user.subscription_status = 'active'
                     user.credits = event.data.get('metadata', {}).get('credits', 0)
+                elif event.type == 'subscription.updated':
+                    user.subscription_status = 'active'
+                    user.credits = event.data.get('metadata', {}).get('credits', 0)
+                
                 user.save()
+                logger.info(f"Updated user {user.email} subscription status to {user.subscription_status}")
                 
         return HttpResponse(status=200)
         

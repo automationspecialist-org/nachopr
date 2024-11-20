@@ -1,23 +1,37 @@
 {% extends "app_base.html" %}
 
 {% block main %}
-
 <h1 class="text-2xl mb-4">Settings</h1>
 
-{{request.user.email}}
+<div class="space-y-4">
+    <div class="p-4 bg-white rounded-lg shadow">
+        <h2 class="text-lg font-semibold mb-2">Account Information</h2>
+        <p class="text-gray-600">Email: {{request.user.email}}</p>
+    </div>
 
-{% if request.user.subscription %}
-{{request.user.subscription}}
-{% else %}
-<p>You currently do not have an active subscription.</p>
-{% endif %}
+    <div class="p-4 bg-white rounded-lg shadow">
+        <h2 class="text-lg font-semibold mb-2">Subscription Status</h2>
+        {% if request.user.subscription_status == 'active' %}
+            <div class="text-green-600">
+                <p>Active Subscription</p>
+                {% if request.user.credits %}
+                    <p class="mt-2">Available Credits: {{ request.user.credits }}</p>
+                {% endif %}
+                <a href="https://polar.sh/purchases" class="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                    Manage Subscription
+                </a>
+            </div>
+        {% else %}
+            <p class="text-gray-600">You currently do not have an active subscription.</p>
+            <a href="{% url 'pricing' %}" class="mt-2 inline-block text-blue-600 hover:text-blue-800">View Pricing Plans</a>
+        {% endif %}
+    </div>
 
-{% if request.user.brand_name %}
-<p>Your brand name: {{request.user.brand_name}}</p>
-<p>We will use this check for media mentions.</p>
-{% else %}
-<p>You do not have a brand name set.</p>
-{% endif %}
-
-
+    {% if request.user.polar_subscription_id %}
+    <div class="p-4 bg-white rounded-lg shadow">
+        <h2 class="text-lg font-semibold mb-2">Subscription Details</h2>
+        <p class="text-gray-600">Subscription ID: {{ request.user.polar_subscription_id }}</p>
+    </div>
+    {% endif %}
+</div>
 {% endblock %}
