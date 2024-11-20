@@ -4,7 +4,7 @@ import os
 import random
 from django.utils import timezone
 from tqdm import tqdm
-from core.models import NewsPage, NewsPageCategory, NewsSource, Journalist
+from core.models import DigitalPRExample, NewsPage, NewsPageCategory, NewsSource, Journalist
 from spider_rs import Website 
 from django.db import close_old_connections, IntegrityError
 from asgiref.sync import sync_to_async
@@ -514,37 +514,50 @@ def create_social_sharing_image():
 
 def find_digital_pr_examples():
     """
-    Todo:
-    - Find digital PR examples
-    - Categorize them
-    - Add them to the DB
+    Find news pages that match digital PR patterns and create DigitalPRExample entries.
     """
     pr_queries = [
-        '"study reveals"',
-        '"new research shows"',
-        '"according to new data"',
-        '"survey of * people found"',
-        '"% of Brits"',
-        '"new study by * reveals"',
-        '"research commissioned by"',
-        '"experts at * say"',
-        '"experts reveal"',
-        '"commented"',
-        '"according to * specialists"',
-        '"analysis of * revealed"',
-        '"data compiled by"',
-        '"research conducted by"',
-        '"findings suggest"',
-        '"new data released today"',
-        '"latest research indicates"',
-        '"in a recent study"'
+        "expert reveals",
     ]
     negative_queries = [
-        'univeristy',
+        'university',
         'professor',
     ]
 
-    search_query = random.choice(pr_queries) + ' -' + random.choice(negative_queries)
+    # Build Q objects for positive and negative queries
+    positive_q = Q()
+    for query in pr_queries:
+        positive_q |= (
+            Q(content__icontains=query) | 
+            Q(title__icontains=query)
+        )
+
+    negative_q = Q()
+    for query in negative_queries:
+        negative_q |= (
+            Q(content__icontains=query) | 
+            Q(title__icontains=query)
+        )
+
+    # Find matching news pages that don't already have PR examples
+    matching_pages = NewsPage.objects.filter(
+        positive_q  # Must match positive queries
+    ).exclude(
+        negative_q  # Must not match negative queries
+    ).exclude(
+        pr_examples__isnull=False  # Must not already have PR examples
+    )
+
+    # Create PR examples for matching pages
+    for page in matching_pages:
+        DigitalPRExample.objects.create(
+            news_page=page,
+            title=page.title,
+            url=page.url,
+            published_date=page.published_date or timezone.now().date(),
+            confirmed=False
+        )
+        logger.info(f"Created digital PR example for: {page.title}")
     
 
 async def process_journalist_descriptions(limit: int = 10):

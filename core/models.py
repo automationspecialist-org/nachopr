@@ -203,6 +203,7 @@ class DigitalPRExample(models.Model):
     published_date = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    confirmed = models.BooleanField(default=False)
 
     def __str__(self):
         return self.title
