@@ -30,6 +30,7 @@ from django.contrib.postgres.search import SearchQuery, SearchRank, SearchVector
 from algoliasearch_django import raw_search
 import resend
 import logging
+from django.urls import reverse
 
 # Get logger instance at the top of the file
 logger = logging.getLogger(__name__)
@@ -445,85 +446,77 @@ def create_new_user(email):
     return user, random_password
 
 def subscription_confirm(request):
+    """Landing page for subscription confirmation"""
+    if not request.GET.get('session_id'):
+        return redirect('home')
+    return render(request, 'core/subscription_confirm.html')
+
+def subscription_confirm_check(request):
+    """HTMX endpoint to check subscription status"""
     session_id = request.GET.get('session_id')
-    logger.info(f"Received session_id: {session_id}")
+    logger.info(f"Checking session_id: {session_id}")
     
     if not session_id:
-        logger.warning("No session_id provided")
-        return redirect('home')
+        return render(request, 'core/partials/subscription_status.html', {
+            'error': 'No session ID provided'
+        })
     
     try:
-        # Get checkout session
         polar = PolarClient.get_client()
-        logger.info(f"Getting checkout using client_get with session_id: {session_id}")
         checkout = polar.checkouts.custom.get(id=session_id)
-        logger.info(f"Checkout retrieved: {checkout}")
         
         if checkout.status != 'succeeded':
-            logger.warning(f"Payment incomplete - status: {checkout.status}")
-            return render(request, 'core/subscription_confirm.html', {
-                'error': 'Payment incomplete'
+            # Still processing - return template that will trigger another check
+            return render(request, 'core/partials/subscription_status.html', {
+                'session_id': session_id
             })
 
-        # Get or create user based on checkout email
+        # Process successful checkout
         customer_email = checkout.customer_email
         if not customer_email:
-            logger.error("No customer email provided in checkout")
-            return render(request, 'core/subscription_confirm.html', {
+            return render(request, 'core/partials/subscription_status.html', {
                 'error': 'No email provided'
             })
             
         User = get_user_model()
         user = User.objects.filter(email=customer_email).first()
-        logger.info(f"Existing user found: {user is not None}")
         
         if not user:
             try:
                 user, password = create_new_user(customer_email)
-                logger.info(f"Created new user: {user.email}")
             except Exception as e:
-                logger.exception(f"Error creating user: {str(e)}")
-                return render(request, 'core/subscription_confirm.html', {
+                return render(request, 'core/partials/subscription_status.html', {
                     'error': f'Error creating user account: {str(e)}'
                 })
             
-        # Update user subscription
         try:
             user.polar_subscription_id = checkout.subscription_id
             user.subscription_status = 'active'
             user.credits = checkout.metadata.get('credits', 0)
             user.save()
-            logger.info(f"Updated subscription for user: {user.email}")
             
-            # If user wasn't logged in, log them in now
             if not request.user.is_authenticated:
                 from allauth.account.utils import perform_login
-                logger.info("Attempting to login user with allauth")
                 perform_login(
                     request, 
                     user,
                     email_verification='optional',
                     redirect_url=None,
-                    signal_kwargs={
-                        "signup": False,
-                    }
+                    signal_kwargs={"signup": False}
                 )
-                logger.info(f"Successfully logged in user with allauth: {user.email}")
+            
+            return render(request, 'core/partials/subscription_status.html', {
+                'success': True,
+                'redirect_url': reverse('dashboard')
+            })
             
         except Exception as e:
-            logger.exception(f"Error updating subscription: {str(e)}")
-            return render(request, 'core/subscription_confirm.html', {
+            return render(request, 'core/partials/subscription_status.html', {
                 'error': f'Error updating subscription: {str(e)}'
             })
         
-        return render(request, 'core/subscription_confirm.html', {
-            'success': True,
-            'is_new_user': user.date_joined > timezone.now() - timezone.timedelta(minutes=5)
-        })
-        
     except Exception as e:
-        logger.exception(f"Unexpected error in subscription_confirm: {str(e)}")
-        return render(request, 'core/subscription_confirm.html', {
+        return render(request, 'core/partials/subscription_status.html', {
             'error': str(e)
         })
 

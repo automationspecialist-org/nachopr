@@ -192,6 +192,8 @@ def extract_journalists_with_gpt(content: str, track_prompt: bool = False) -> di
         api_version="2024-08-01-preview",
         api_key=os.getenv("AZURE_OPENAI_API_KEY")
     )
+    lunary.monitor(client)
+
 
     journalist_json = { 
         "content_is_full_news_article": True,
@@ -228,20 +230,7 @@ def extract_journalists_with_gpt(content: str, track_prompt: bool = False) -> di
     If you cannot extract the publushed article date, return an empty string for 'article_published_date'. 
     """
 
-    if track_prompt:
-        # Track the start of the LLM call
-        lunary.track_event(
-            run_type="llm",
-            event_name="start",
-            run_id=run_id,
-            name="gpt-4o-mini",
-            input=prompt,
-            params={
-                "max_tokens": 2000,
-                "temperature": 0.3,
-                "response_format": {"type": "json_object"}
-                }
-        )
+    
 
     try:
         # Call the GPT-4 API on Azure
@@ -261,18 +250,6 @@ def extract_journalists_with_gpt(content: str, track_prompt: bool = False) -> di
         result = response.choices[0].message.content
         journalists_data = json.loads(result)
 
-        if track_prompt:
-            # Track successful completion with both raw and parsed output
-            lunary.track_event(
-                run_type="llm",
-                event_name="end",
-                run_id=run_id,
-                output={
-                    "raw_response": result,
-                    "parsed_data": journalists_data
-                },
-                token_usage=response.usage.total_tokens if hasattr(response, 'usage') else None
-            )
 
     except (Exception, json.JSONDecodeError) as e:
         # Track error with the raw response if available
@@ -281,12 +258,7 @@ def extract_journalists_with_gpt(content: str, track_prompt: bool = False) -> di
             "error_message": str(e),
             "raw_response": result if 'result' in locals() else None
         }
-        lunary.track_event(
-            run_type="llm",
-            event_name="error",
-            run_id=run_id,
-            error=error_data
-        )
+        
         logger.error(f"Error in extract_journalists_with_gpt: {str(e)}")
         print('error:', result if 'result' in locals() else str(e))
         journalists_data = {}

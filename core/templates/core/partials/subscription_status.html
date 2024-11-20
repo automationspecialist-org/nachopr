@@ -1,0 +1,27 @@
+{% if success %}
+    <div class="text-center"
+         hx-trigger="load delay:1s"
+         hx-get="{% url 'dashboard' %}"
+         hx-target="#main"
+         hx-swap="outerHTML"
+         class="w-full max-w-lg mx-auto p-20">
+        <h1 class="text-2xl font-bold text-gray-800">Subscription confirmed</h1>
+        <p class="text-gray-600">Redirecting to dashboard...</p>
+    </div>
+{% elif error %}
+    <div class="text-center">
+        <h1>Error</h1>
+        <p>{{ error }}</p>
+        <a href="{% url 'home' %}" class="btn btn-primary">Return home</a>
+    </div>
+{% else %}
+    <div id="subscription-status"
+         hx-get="{% url 'subscription_confirm_check' %}?session_id={{ session_id }}"
+         hx-trigger="load delay:2s"
+         hx-swap="outerHTML">
+        <div class="text-center">
+            <h1>Confirming your subscription...</h1>
+            <p>Please wait while we process your payment</p>
+        </div>
+    </div>
+{% endif %}

@@ -1,10 +1,42 @@
-{% extends "app_base.html" %}
+{% load static %}
+{% load tailwind_tags %}
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+    <title>{% block title %}NachoPR: Media Database for Digital PR{% endblock %}</title>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<meta http-equiv="X-UA-Compatible" content="ie=edge">
+		<meta name="description" content="{% block meta_description %}NachoPR: Media Database for Digital PR{% endblock %}">
+		<script src="{% static 'js/htmx.min.js' %}" defer></script>
+		<link rel="preconnect" href="https://fonts.googleapis.com" defer>
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin defer>
+		<!--<link href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@900&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" defer rel="stylesheet">-->
+		<link rel="icon" type="image/x-icon" href="{% static 'img/logo.avif' %}">
+		{% tailwind_preload_css %}
+		{% tailwind_css %}
+		<!-- Open Graph meta tags -->
+		<meta property="og:title" content="NachoPR - Connect with Journalists" />
+		<meta property="og:description" content="Connect with journalists and secure media coverage, high authority backlinks, and more, for your digital PR strategy." />
+		<meta property="og:image" content="{% static 'img/social_share.png' %}" />
+		<meta property="og:type" content="website" />
+	</head>
 
-{% block main %}
+	<body class="bg-gray-50 font-sans-serif leading-normal tracking-normal">        
 
+        <main id="main">
+        <div id="subscription-status"
+            hx-get="{% url 'subscription_confirm_check' %}?session_id={{ request.GET.session_id }}"
+            hx-trigger="load delay:2s"
+            hx-swap="outerHTML"
+            class="w-full max-w-lg mx-auto p-20">
+            <div class="text-center">
+                <h1 class="text-2xl font-bold text-gray-800">Confirming your subscription...</h1>
+                <p class="text-gray-600">Please wait while we process your payment</p>
+                <!-- You can add a spinner here if desired -->
+            </div>
+        </div>
+        </main> 
 
-<h1>Subscription confirmed</h1>
-
-<a href="{% url 'dashboard' %}">Go to dashboard</a>
-
-{% endblock %}
+	</body>
+</html>
