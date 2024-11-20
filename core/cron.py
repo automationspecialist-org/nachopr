@@ -4,7 +4,7 @@ from django.utils import timezone
 from dotenv import load_dotenv
 import requests
 import os
-from core.tasks import categorize_news_pages_with_gpt, crawl_news_sources_sync, guess_journalist_email_addresses, process_all_journalists_sync, process_journalist_descriptions_sync
+from core.tasks import categorize_news_pages_with_gpt, crawl_news_sources_sync, create_social_sharing_image, guess_journalist_email_addresses, process_all_journalists_sync, process_journalist_descriptions_sync
 from core.models import Journalist, NewsPage
 from django.conf import settings
 
@@ -93,3 +93,7 @@ def process_journalist_profiles_job():
 
 def guess_emails_job():
     guess_journalist_email_addresses(limit=100_000)
+
+
+def generate_social_share_image_job():
+    create_social_sharing_image()

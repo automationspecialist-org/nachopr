@@ -124,7 +124,11 @@ def search_results(request, use_algolia=True):
                 'sources',
                 'categories',
                 'country',
-                'id'
+                'id',
+                'imageUrl',
+                'emailAddress',
+                'profileUrl',
+                'xProfileUrl',
             ]
         }
         
@@ -183,9 +187,12 @@ def search_results(request, use_algolia=True):
                     'name': hit.get('name'),
                     'description': hit.get('description'),
                     'sources': hit.get('sources'),
-                    'categories': hit.get('categories'),
+                    'categories': hit.get('categories', []),
                     'country': hit.get('country'),
-                    # Add other fields as needed
+                    'image_url': hit.get('imageUrl') or hit.get('image_url'),  # Handle both camelCase and snake_case
+                    'email_address': hit.get('emailAddress') or hit.get('email_address'),
+                    'profile_url': hit.get('profileUrl') or hit.get('profile_url'),
+                    'x_profile_url': hit.get('xProfileUrl') or hit.get('x_profile_url'),
                 } for hit in results['hits']]
                 self.number = results['page'] + 1
                 self.paginator = type('Paginator', (), {
@@ -538,7 +545,7 @@ def send_welcome_email(user):
     send_mail(
         'Welcome to NachoPR',
         message,
-        'duncan@updates.nachopr.com',
+        'Duncan from NachoPR <duncan@updates.nachopr.com>',
         [user.email],
         fail_silently=False,
     )

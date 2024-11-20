@@ -94,6 +94,16 @@
                 <!-- Initial state or loading message -->
                 <p class="text-gray-500">Enter your search criteria...</p>
 
+                <!-- Add loading spinner (initially hidden) -->
+                <div id="search-loading" class="hidden">
+                    <div class="flex justify-center items-center py-12">
+                        <svg class="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                        </svg>
+                        <span class="ml-2 text-gray-600">Loading results...</span>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -115,27 +125,18 @@
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 {% endif %}
 
-<!-- loading spinner, remove for now
-
-<div id="loading-spinner" class="hidden fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50">
-    <svg class="animate-spin h-10 w-10 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-    </svg>
-</div>
-
+<!-- Add this before the closing </body> tag -->
 <script>
-    const form = document.getElementById('search-form');
-    const spinner = document.getElementById('loading-spinner');
-
-    form.addEventListener('submit', function() {
-        spinner.classList.remove('hidden');
+    document.addEventListener('htmx:beforeRequest', function(evt) {
+        if (evt.detail.target.id === 'results-container') {
+            document.getElementById('search-loading').classList.remove('hidden');
+        }
     });
 
-    // Hide spinner when results are loaded
-    document.addEventListener('DOMContentLoaded', function() {
-        spinner.classList.add('hidden');
+    document.addEventListener('htmx:afterRequest', function(evt) {
+        if (evt.detail.target.id === 'results-container') {
+            document.getElementById('search-loading').classList.add('hidden');
+        }
     });
 </script>
--->
 

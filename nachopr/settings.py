@@ -216,14 +216,6 @@ INTERNAL_IPS = [
 
 #CRON_LOG_FILE = '/persistent/cron.log'
 
-CRONJOBS = [
-    ('*/20 * * * *', 'core.cron.crawl_job', '>> /tmp/cron.log 2>&1'),
-    ('*/30 * * * *', 'core.cron.categorize_job', '>> /tmp/cron_categorize.log 2>&1'),
-    ('*/30 * * * *', 'core.cron.process_journalist_profiles_job', '>> /tmp/cron_process_journalist_profiles.log 2>&1'),
-    ('*/30 * * * *', 'core.cron.guess_emails_job', '>> /tmp/cron_guess_emails.log 2>&1'),
-    ('*/30 * * * *', 'core.cron.clean_db_job', '>> /tmp/cron_clean_db.log 2>&1'),
-    ('*/30 * * * *', 'core.cron.algolia_reindex_job', '>> /tmp/cron_algolia_reindex.log 2>&1'),
-]
 DJSTRIPE_FOREIGN_KEY_TO_FIELD = 'djstripe_id'
 DJSTRIPE_WEBHOOK_VALIDATION='retrieve_event'
 POLAR_SERVER = os.environ.get("POLAR_SERVER")
@@ -253,7 +245,6 @@ DAT_GOOGLE_CLIENT_ID = ''  # google client id , e.g. XXXXXXXXXX39-62ckbbeXXXXXXX
 DAT_BASE_URL = ''  # e.g. http://localhost:8000
 DAT_TOS_MESSAGE = 'By registering, you agree to our <a href="/terms-of-service/">Terms of Service</a> and <a href="/privacy-policy/">Privacy Policy.</a>'  # optional
 
-LOGIN_REDIRECT_URL = '/app/'
 
 
 if PROD:
@@ -272,7 +263,10 @@ if PROD:
 
 AUTH_USER_MODEL = 'core.CustomUser'
 
+LOGIN_REDIRECT_URL = '/app/'
 ACCOUNT_LOGIN_BY_CODE_ENABLED = True
+
+
 
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_USERNAME_REQUIRED = False
@@ -304,3 +298,25 @@ LOGGING = {
         },
     },
 }
+
+
+
+CRONJOBS = [
+    ('*/20 * * * *', 'core.cron.crawl_job', '>> /tmp/cron.log 2>&1'),
+    ('*/30 * * * *', 'core.cron.categorize_job', '>> /tmp/cron_categorize.log 2>&1'),
+    ('*/30 * * * *', 'core.cron.process_journalist_profiles_job', '>> /tmp/cron_process_journalist_profiles.log 2>&1'),
+    ('*/30 * * * *', 'core.cron.guess_emails_job', '>> /tmp/cron_guess_emails.log 2>&1'),
+    ('*/30 * * * *', 'core.cron.clean_db_job', '>> /tmp/cron_clean_db.log 2>&1'),
+    ('*/30 * * * *', 'core.cron.algolia_reindex_job', '>> /tmp/cron_algolia_reindex.log 2>&1'),
+    ('*/30 * * * *', 'core.cron.generate_social_share_image_job', '>> /tmp/cron_generate_social_share_image.log 2>&1'),
+]
+
+EMAIL_HOST_USER = 'support@updates.nachopr.com' 
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.resend.com'
+EMAIL_PORT = 587
+EMAIL_HOST_USER = 'resend'
+EMAIL_HOST_PASSWORD = os.environ.get('RESEND_API_KEY')
+EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = 'NachoPR <support@updates.nachopr.com>'
+SERVER_EMAIL = 'NachoPR <support@updates.nachopr.com>' 
