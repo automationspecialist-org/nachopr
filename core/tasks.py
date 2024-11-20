@@ -23,6 +23,7 @@ from mailscout import Scout
 from functools import lru_cache
 import dns.exception
 from datetime import datetime
+import requests
 
 
 load_dotenv()
@@ -512,7 +513,32 @@ def create_social_sharing_image():
 
 
 
-def find_digital_pr_examples():
+def search_google_for_digital_pr_examples(domain_limit: int = 2, query: str = ''):
+    """Search Google for digital PR examples"""
+
+    url = "https://google.serper.dev/search"
+
+    domain = "timeout.com"
+    query = "expert reveals"
+    negative_queries = ["university", "professor"]
+
+    payload = json.dumps({
+    "q": f"site:{domain} \"{query}\" -{'-'.join(negative_queries)}",
+    "tbs": "qdr:y"
+    })
+    headers = {
+    'X-API-KEY': os.getenv("SERPER_API_KEY"),
+    'Content-Type': 'application/json'
+    }
+
+    response = requests.request("POST", url, headers=headers, data=payload) 
+
+    print(response.text)
+
+    pass
+
+
+def find_digital_pr_examples(search_google: bool = False):
     """
     Find news pages that match digital PR patterns and create DigitalPRExample entries.
     """
@@ -560,6 +586,9 @@ def find_digital_pr_examples():
             confirmed=False
         )
         logger.info(f"Created digital PR example for: {page.title}")
+    
+    if search_google:
+        search_google_for_digital_pr_examples(domain_limit=2)
     
 
 async def process_journalist_descriptions(limit: int = 10):
@@ -770,3 +799,5 @@ def guess_journalist_email_addresses(limit: int = 10):
     journalists = Journalist.objects.filter(email_address__isnull=True)[:limit]
     for journalist in tqdm(journalists, desc="Guessing emails"):
         guess_journalist_email_address(journalist)
+
+
