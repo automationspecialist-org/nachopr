@@ -410,6 +410,7 @@ def polar_webhook(request):
         return HttpResponse(status=200)
         
     except Exception as e:
+        logger.error(f"Error processing Polar webhook: {str(e)}")
         return HttpResponse(status=400)
 
 
@@ -537,7 +538,7 @@ def send_welcome_email(user):
     send_mail(
         'Welcome to NachoPR',
         message,
-        'duncan@nachopr.com',
+        'duncan@updates.nachopr.com',
         [user.email],
         fail_silently=False,
     )
