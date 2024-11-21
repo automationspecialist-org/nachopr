@@ -462,57 +462,75 @@ def categorize_news_pages_with_gpt(limit: int = 1000_000):
 
 
 def create_social_sharing_image():
-    media_outlets_count = NewsSource.objects.count()
-    journalists_count = Journalist.objects.count()
-    
-    # Create gradient background
-    width = 1200
-    height = 630
-    image = Image.new('RGB', (width, height))
-    draw = ImageDraw.Draw(image)
-
-    # Draw gradient from dark green to light green
-    for y in range(height):
-        r = int(22 + (y/height) * 20)  # Slight red variation
-        g = int(163 + (y/height) * 20)  # Green variation from ~163 to ~183
-        b = int(74 + (y/height) * 20)   # Slight blue variation
-        for x in range(width):
-            draw.point((x, y), fill=(r, g, b))
-
-    # Load and paste logo
-    logo_path = os.path.join(settings.STATIC_ROOT, 'img', 'logo.png')
-    logo = Image.open(logo_path)
-    # Resize logo to reasonable size (e.g. 200px height)
-    logo_height = 200
-    aspect_ratio = logo.size[0] / logo.size[1]
-    logo_width = int(logo_height * aspect_ratio)
-    logo = logo.resize((logo_width, logo_height))
-    
-    # Paste logo on left side with padding
-    logo_x = 100
-    logo_y = (height - logo_height) // 2
-    image.paste(logo, (logo_x, logo_y), logo if logo.mode == 'RGBA' else None)
-
-    # Add text on right side
+    logger.info("Starting social sharing image creation")
     try:
-        font_path = os.path.join(settings.STATIC_ROOT, 'fonts', 'SpaceMono-Bold.ttf')
-        font = ImageFont.truetype(font_path, 60)
+        media_outlets_count = NewsSource.objects.count()
+        journalists_count = Journalist.objects.count()
+        logger.info(f"Found {media_outlets_count:,} media outlets and {journalists_count:,} journalists")
+        
+        # Create gradient background
+        width = 1200
+        height = 630
+        image = Image.new('RGB', (width, height))
+        draw = ImageDraw.Draw(image)
+        logger.debug(f"Created new image with dimensions {width}x{height}")
+
+        # Draw gradient from dark green to light green
+        for y in range(height):
+            r = int(22 + (y/height) * 20)  # Slight red variation
+            g = int(163 + (y/height) * 20)  # Green variation from ~163 to ~183
+            b = int(74 + (y/height) * 20)   # Slight blue variation
+            for x in range(width):
+                draw.point((x, y), fill=(r, g, b))
+
+        # Load and paste logo
+        logo_path = os.path.join(settings.STATIC_ROOT, 'img', 'logo.png')
+        logger.debug(f"Loading logo from: {logo_path}")
+        try:
+            logo = Image.open(logo_path)
+            logger.info(f"Successfully loaded logo with dimensions {logo.size}")
+        except Exception as e:
+            logger.error(f"Failed to load logo from {logo_path}: {str(e)}")
+            raise
+
+        # Resize logo to reasonable size (e.g. 200px height)
+        logo_height = 200
+        aspect_ratio = logo.size[0] / logo.size[1]
+        logo_width = int(logo_height * aspect_ratio)
+        logo = logo.resize((logo_width, logo_height))
+        
+        # Paste logo on left side with padding
+        logo_x = 100
+        logo_y = (height - logo_height) // 2
+        image.paste(logo, (logo_x, logo_y), logo if logo.mode == 'RGBA' else None)
+
+        # Add text on right side
+        try:
+            font_path = os.path.join(settings.STATIC_ROOT, 'fonts', 'SpaceMono-Bold.ttf')
+            logger.debug(f"Loading font from: {font_path}")
+            font = ImageFont.truetype(font_path, 60)
+            logger.info("Successfully loaded custom font")
+        except Exception as e:
+            logger.warning(f"Failed to load custom font, falling back to default: {str(e)}")
+            font = ImageFont.load_default()
+
+        text = f"Connect with\n{journalists_count:,} Journalists\nfrom {media_outlets_count:,}\nMedia Outlets"
+        text_x = logo_x + logo_width + 100
+        text_y = height // 2 - 100
+        
+        # Draw text with white color
+        draw.text((text_x, text_y), text, font=font, fill=(255, 255, 255))
+
+        # Save the image
+        output_path = os.path.join(settings.STATIC_ROOT, 'img', 'social_share.png')
+        logger.debug(f"Saving image to: {output_path}")
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        image.save(output_path, 'PNG')
+        logger.info("Successfully created and saved social sharing image")
+
     except Exception as e:
-        logger.error(f"Error loading font: {e}")
-        # Fallback to default font if custom font not found
-        font = ImageFont.load_default()
-
-    text = f"Connect with\n{journalists_count:,} Journalists\nfrom {media_outlets_count:,}\nMedia Outlets"
-    text_x = logo_x + logo_width + 100
-    text_y = height // 2 - 100
-    
-    # Draw text with white color
-    draw.text((text_x, text_y), text, font=font, fill=(255, 255, 255))
-
-    # Save the image
-    output_path = os.path.join(settings.STATIC_ROOT, 'img', 'social_share.png')
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    image.save(output_path, 'PNG')
+        logger.error(f"Failed to create social sharing image: {str(e)}", exc_info=True)
+        raise
 
 
 
