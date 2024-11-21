@@ -20,3 +20,6 @@ class AlgoliaPaginator:
     @classmethod
     def from_algolia_response(cls, response):
         return cls(response)
+    
+
+    

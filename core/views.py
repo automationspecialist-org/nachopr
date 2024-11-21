@@ -441,6 +441,15 @@ def polar_webhook(request):
         return HttpResponse(status=400)
 
 
+def search_v2(request):
+    context = {
+        'ALGOLIA_APP_ID': os.getenv('ALGOLIA_APP_ID'),
+        'ALGOLIA_SEARCH_API_KEY': os.getenv('ALGOLIA_SEARCH_API_KEY'),
+        'ALGOLIA_INDEX_NAME': os.getenv('ALGOLIA_INDEX_NAME'),
+    }
+    return render(request, 'core/search_v2.html', context=context)
+
+
 def generate_random_password(length=12):
     """Generate a random password of given length"""
     characters = string.ascii_letters + string.digits + string.punctuation
