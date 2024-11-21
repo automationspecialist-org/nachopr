@@ -7,6 +7,8 @@ import os
 from core.tasks import categorize_news_pages_with_gpt, crawl_news_sources_sync, create_social_sharing_image, find_digital_pr_examples, guess_journalist_email_addresses, process_all_journalists_sync, process_journalist_descriptions_sync
 from core.models import Journalist, NewsPage
 from django.conf import settings
+from django.core.management import call_command
+
 
 if 'AZURE' not in os.environ:
     load_dotenv()
@@ -97,7 +99,8 @@ def guess_emails_job():
 
 def generate_social_share_image_job():
     create_social_sharing_image()
-
+    call_command('collectstatic', '--noinput')
+    
 
 def find_digital_pr_examples_job():
     find_digital_pr_examples()
