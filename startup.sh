@@ -24,7 +24,9 @@ fi
 uv run manage.py create_admin_user
 uv run manage.py add_news_sources
 uv run manage.py collectstatic --no-input
-#uv run manage.py generate_social_img
+uv run manage.py generate_social_img
+uv run manage.py collectstatic --no-input
+
 
 
 # Send a message to Slack when restarting
