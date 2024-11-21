@@ -21,10 +21,13 @@ class JournalistIndex(AlgoliaIndex):
             'articles.title',
             'articles.snippet',
             'categories.name',
-            'country'
+            'country',
+            'sources.language',
         ],
         'attributesForFaceting': [
-            'country',
+            'searchable(country)',
+            'searchable(sources.name)',
+            'searchable(sources.language)',
             'sources.id',
             'categories.id',
             'searchable(categories.name)'
@@ -37,10 +40,15 @@ class JournalistIndex(AlgoliaIndex):
         """Override get_raw_record to add computed fields"""
         record = super(JournalistIndex, self).get_raw_record(instance)
         
+        # Get unique languages from journalist's sources
+        languages = list(set(source.language for source in instance.sources.all() if source.language))
+        record['languages'] = languages
+        
         # Limit to essential source fields and max 10 sources
         record['sources'] = [{
             'id': source.id,
             'name': source.name,
+            'language': source.language,
         } for source in instance.sources.all().select_related()[:10]]
         
         # Get categories with better optimization
