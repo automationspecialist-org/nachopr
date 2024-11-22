@@ -36,4 +36,5 @@ dependencies = [
     "polar-sdk>=0.8.0",
     "dj-stripe>=2.8.4",
     "resend>=2.4.0",
+    "pgvector>=0.3.6",
 ]

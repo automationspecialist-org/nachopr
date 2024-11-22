@@ -64,7 +64,7 @@
                 <!-- Source Filter -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700">News Source</label>
-                    <select name="source" class="mt-1 w-full rounded-md border-gray-300">
+                    <select name="source" id="source-select" class="mt-1 w-full rounded-md border-gray-300">
                         <option value="">All Sources</option>
                         {% for source in sources %}
                             <option value="{{ source.id }}">{{ source.name }}</option>
@@ -76,11 +76,11 @@
                     <!-- Category Filter -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Category</label>
-                        <select name="category" class="mt-1 w-full rounded-md border-gray-300">
-                        <option value="">All Categories</option>
-                        {% for category in categories %}
-                            <option value="{{ category.id }}">{{ category.name }}</option>
-                        {% endfor %}
+                        <select name="category" id="category-select" class="mt-1 w-full rounded-md border-gray-300">
+                            <option value="">All Categories</option>
+                            {% for category in categories %}
+                                <option value="{{ category.id }}">{{ category.name }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                 {% endif %}

@@ -20,5 +20,6 @@ urlpatterns = [
     path('health/', views.health, name='health'),
     path('subscription-confirm-check/', views.subscription_confirm_check, name='subscription_confirm_check'),
     path('search-v2/', views.search_v2, name='search_v2'),
+    path('app/journalist/<int:id>/', views.journalist_detail, name='journalist_detail'),
 ]
 

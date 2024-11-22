@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     'allauth_theme',
     'algoliasearch_django',
     'djstripe',
+    'pgvector',
 ]
 
 MIDDLEWARE = [

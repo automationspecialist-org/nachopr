@@ -401,6 +401,7 @@ def process_all_journalists_sync(limit: int = 10, re_process: bool = False):
 
 
 def categorize_news_page_with_gpt(page: NewsPage):
+    """Add this transaction wrapper and explicit category sync"""
     available_categories = NewsPageCategory.objects.all()
     client = AzureOpenAI(
         azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
@@ -429,6 +430,7 @@ def categorize_news_page_with_gpt(page: NewsPage):
     ```
     The categories should be specific types of news, not 'news'. 
     For example 'software', 'hardware', 'space' are categories, but 'news' is not.
+    The categories should always be in English, regardless of the original language of the news page.
     """
     response = client.chat.completions.create(
         model="gpt-4o-mini",
@@ -445,13 +447,27 @@ def categorize_news_page_with_gpt(page: NewsPage):
     result = response.choices[0].message.content
     try:
         categories_data = json.loads(result)
-        print('categories:', categories_data)
-        for category_name in categories_data['categories']:
-            category, created = NewsPageCategory.objects.get_or_create(name=category_name)
-            page.categories.add(category)
+        logger.info(f"Categories from GPT: {categories_data}")
+        
+        with transaction.atomic():
+            # First, add categories to the page
+            for category_name in categories_data['categories']:
+                category, created = NewsPageCategory.objects.get_or_create(
+                    name=category_name,
+                    defaults={'slug': slugify(category_name)}
+                )
+                logger.info(f"Adding category {category.name} to page {page.title}")
+                page.categories.add(category)
+            
+            # The signals should handle the rest, but let's force sync just in case
+            page.source.sync_categories()
+            for journalist in page.journalists.all():
+                journalist.sync_categories()
+                
     except json.JSONDecodeError:
-        print('error:', result)
-        categories_data = {}
+        logger.error(f'JSON decode error for result: {result}')
+    except Exception as e:
+        logger.error(f'Error in categorize_news_page_with_gpt: {str(e)}')
 
 
 def categorize_news_pages_with_gpt(limit: int = 1000_000):

@@ -6,6 +6,10 @@ from django.contrib.postgres.indexes import GinIndex
 from django.contrib.postgres.search import SearchVector
 from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
+from pgvector.django import VectorField
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class NewsSource(models.Model):
@@ -58,12 +62,16 @@ class Journalist(models.Model):
     )
     categories = models.ManyToManyField('NewsPageCategory', related_name='journalists', blank=True)
     
+    embedding = VectorField(dimensions=1536, null=True)
+    search_vector = SearchVectorField(null=True)
+
     def __str__(self):
         return self.name
 
     def save(self, *args, **kwargs):
         self.slug = slugify(self.name)
         super().save(*args, **kwargs)
+        self.update_search_vector()
     
 
     def has_articles(self):
@@ -91,16 +99,35 @@ class Journalist(models.Model):
 
     def sync_categories(self):
         """Sync categories based on the journalist's articles"""
+        logger.info(f"Starting category sync for journalist: {self.name}")
         article_categories = NewsPageCategory.objects.filter(
             pages__journalists=self
         ).distinct()
+        logger.info(f"Found categories: {[c.name for c in article_categories]}")
         self.categories.set(article_categories)
+
+    def update_search_vector(self):
+        """Update the search vector field"""
+        try:
+            # First get the related field values
+            source_names = ' '.join(self.sources.values_list('name', flat=True))
+            category_names = ' '.join(self.categories.values_list('name', flat=True))
+            
+            # Create concatenated text fields
+            vector = SearchVector('name', weight='A') + \
+                     SearchVector('description', weight='B') + \
+                     SearchVector(models.Value(source_names), weight='C') + \
+                     SearchVector(models.Value(category_names), weight='D')
+            
+            # Update the search vector
+            Journalist.objects.filter(pk=self.pk).update(search_vector=vector)
+        except Exception as e:
+            logger.error(f"Error updating search vector for journalist {self.pk}: {str(e)}")
 
     class Meta:
         indexes = [
             models.Index(fields=['country']),
             models.Index(fields=['name']),
-            # Add GiST index for full-text search if using PostgreSQL
             models.Index(fields=['description']),
         ]
 
@@ -260,14 +287,26 @@ class DbStat(models.Model):
 @receiver(m2m_changed, sender=NewsPage.journalists.through)
 def sync_journalist_categories(sender, instance, action, **kwargs):
     """Sync categories when articles are added/removed from journalist"""
+    logger.info(f"Signal fired: sync_journalist_categories - Action: {action}")
     if action in ["post_add", "post_remove", "post_clear"]:
         for journalist in instance.journalists.all():
+            logger.info(f"Syncing categories for journalist: {journalist.name}")
             journalist.sync_categories()
-    
 
 @receiver(m2m_changed, sender=NewsPage.categories.through)
 def sync_source_categories(sender, instance, action, **kwargs):
     """Sync categories when categories are added/removed from news pages"""
+    logger.info(f"Signal fired: sync_source_categories - Action: {action}")
     if action in ["post_add", "post_remove", "post_clear"]:
+        logger.info(f"Syncing categories for source: {instance.source.name}")
         instance.source.sync_categories()
-    
+
+@receiver(m2m_changed, sender=NewsPage.journalists.through)
+def sync_journalist_sources_and_categories(sender, instance, action, **kwargs):
+    """Sync sources and categories when journalists are added/removed from a page"""
+    if action in ["post_add", "post_remove", "post_clear"]:
+        for journalist in instance.journalists.all():
+            # Add the source to the journalist
+            journalist.sources.add(instance.source)
+            # Sync categories
+            journalist.sync_categories()

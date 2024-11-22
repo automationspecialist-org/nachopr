@@ -66,8 +66,13 @@ def send_mail(subject, message, from_email, recipient_list, fail_silently=False)
 def search(request):
     # Get unique countries and sources for filters
     countries = Journalist.objects.exclude(country__isnull=True).values_list('country', flat=True).distinct()
-    sources = NewsSource.objects.all()
-    categories = NewsPageCategory.objects.all().order_by('name')
+    
+    # Get sources with their categories prefetched
+    sources = NewsSource.objects.prefetch_related('categories').all()
+    
+    # Get all categories with their sources prefetched
+    categories = NewsPageCategory.objects.prefetch_related('sources').order_by('name')
+    
     # Get languages through the sources relationship
     languages = NewsSource.objects.exclude(language__isnull=True).values_list('language', flat=True).distinct()
     
@@ -77,6 +82,11 @@ def search(request):
         'categories': categories,
         'languages': languages,
         'turnstile_site_key': os.getenv('CLOUDFLARE_TURNSTILE_SITE_KEY'),
+        # Add source-category mapping
+        'source_categories': {
+            source.id: list(source.categories.values_list('id', flat=True))
+            for source in sources
+        }
     }
     return render(request, 'core/app_search.html', context=context)
 
@@ -117,25 +127,12 @@ def search_results(request):
 
     # Optimize search query
     if query:
-        search_vector = SearchVector(
-            'name', weight='A'
-        ) + SearchVector(
-            'description', weight='B'
-        ) + SearchVector(
-            'sources__name', weight='B'
-        ) + SearchVector(
-            'categories__name', weight='B'
-        )
-        
-        search_query = SearchQuery(query, config='english')
-        
-        results = results.annotate(
-            rank=SearchRank(search_vector, search_query)
-        ).filter(
-            Q(rank__gt=0.1) |
-            Q(sources__name__icontains=query) |  # Direct source name search
-            Q(categories__name__icontains=query)  # Direct category name search
-        ).order_by('-rank').distinct()
+        results = results.filter(
+            Q(name__icontains=query) |
+            Q(description__icontains=query) |
+            Q(sources__name__icontains=query) |
+            Q(categories__name__icontains=query)
+        ).distinct()
 
     # Cache the results count before pagination
     total_count = None
@@ -525,4 +522,9 @@ def health(request):
         f"OK - {journalist_email_count} journalists with email, {news_article_count} news articles", 
         status=200
     )
-    
+
+
+def journalist_detail(request, id):
+    journalist = get_object_or_404(Journalist, id=id)
+    context = {'journalist': journalist}
+    return render(request, 'core/journalist_detail.html', context=context)
