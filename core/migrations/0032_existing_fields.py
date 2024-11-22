@@ -10,11 +10,7 @@ class Migration(migrations.Migration):
     operations = [
         # These operations won't actually create the fields (they already exist),
         # but will tell Django that they're supposed to be there
-        migrations.AddField(
-            model_name='journalist',
-            name='embedding',
-            field=pgvector.django.VectorField(dimensions=1536, null=True),
-        ),
+        
         migrations.AddField(
             model_name='journalist',
             name='search_vector',

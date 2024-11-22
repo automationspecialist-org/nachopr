@@ -24,6 +24,9 @@ from functools import lru_cache
 import dns.exception
 from datetime import datetime
 import requests
+from typing import List, Dict
+import numpy as np
+import tiktoken  # Add this import for token counting
 
 
 load_dotenv()
@@ -836,5 +839,98 @@ def guess_journalist_email_addresses(limit: int = 10):
     journalists = Journalist.objects.filter(email_address__isnull=True)[:limit]
     for journalist in tqdm(journalists, desc="Guessing emails"):
         guess_journalist_email_address(journalist)
+
+
+async def generate_embeddings(texts: List[str]) -> List[List[float]]:
+    """Generate embeddings for a list of texts using Azure OpenAI"""
+    try:
+        client = AzureOpenAI(
+            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+            api_version="2023-05-15",
+            api_key=os.getenv("AZURE_OPENAI_API_KEY")
+        )
+
+        response = client.embeddings.create(
+            model="text-embedding-3-large",  # or your deployed embedding model name
+            input=texts
+        )
+        
+        # Extract embeddings from response
+        embeddings = [item.embedding for item in response.data]
+        return embeddings
+
+    except Exception as e:
+        logger.error(f"Error generating embeddings: {str(e)}")
+        raise
+
+def truncate_text_for_embeddings(text: str, max_tokens: int = 8000) -> str:
+    """Truncate text to fit within token limit for embeddings"""
+    try:
+        # Initialize tokenizer for text-embedding-3-small
+        encoding = tiktoken.get_encoding("cl100k_base")
+        tokens = encoding.encode(text)
+        
+        if len(tokens) > max_tokens:
+            # Truncate tokens and decode back to text
+            truncated_tokens = tokens[:max_tokens]
+            return encoding.decode(truncated_tokens)
+        
+        return text
+    except Exception as e:
+        logger.error(f"Error truncating text: {str(e)}")
+        return text[:32000]  # Fallback to character-based truncation
+
+async def update_page_embeddings(limit: int = 100):
+    """Update embeddings for NewsPages that don't have them"""
+    try:
+        # Get pages without embeddings
+        pages = await sync_to_async(list)(
+            NewsPage.objects.filter(
+                embedding__isnull=True,
+                content__isnull=False
+            )[:limit]
+        )
+
+        if not pages:
+            logger.info("No pages found needing embeddings")
+            return
+
+        # Prepare texts for embedding with truncation
+        texts = [
+            truncate_text_for_embeddings(
+                f"{page.title}\n\n{page.content}",
+                max_tokens=8000
+            ) 
+            for page in pages
+        ]
+        
+        # Generate embeddings in batches of 20
+        batch_size = 20
+        all_embeddings = []
+        
+        for i in range(0, len(texts), batch_size):
+            batch_texts = texts[i:i + batch_size]
+            batch_embeddings = await generate_embeddings(batch_texts)
+            all_embeddings.extend(batch_embeddings)
+
+        # Update pages with embeddings
+        @sync_to_async
+        def save_embeddings():
+            with transaction.atomic():
+                for page, embedding in zip(pages, all_embeddings):
+                    page.embedding = embedding
+                    page.save(update_fields=['embedding'])
+        
+        await save_embeddings()
+        logger.info(f"Updated embeddings for {len(pages)} pages")
+
+    except Exception as e:
+        logger.error(f"Error updating page embeddings: {str(e)}")
+        raise
+
+def update_page_embeddings_sync(limit: int = 100):
+    """Sync wrapper for updating page embeddings"""
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(update_page_embeddings(limit))
 
 

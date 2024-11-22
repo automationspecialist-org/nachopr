@@ -7,9 +7,12 @@ from django.contrib.postgres.search import SearchVector
 from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
 from pgvector.django import VectorField
+from django.contrib.postgres.fields import ArrayField
 import logging
 
 logger = logging.getLogger(__name__)
+
+EMBEDDING_DIMENSIONS = 1536  # text-embedding-3-small dimensions
 
 
 class NewsSource(models.Model):
@@ -62,7 +65,6 @@ class Journalist(models.Model):
     )
     categories = models.ManyToManyField('NewsPageCategory', related_name='journalists', blank=True)
     
-    embedding = VectorField(dimensions=1536, null=True)
     search_vector = SearchVectorField(null=True)
 
     def __str__(self):
@@ -155,7 +157,6 @@ class NewsPage(models.Model):
     is_news_article = models.BooleanField(default=False)
     search_vector = SearchVectorField(null=True, blank=True)
     published_date = models.DateField(null=True, blank=True)
-
 
     def __str__(self):
         return self.title

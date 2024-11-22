@@ -31,6 +31,8 @@ from algoliasearch_django import raw_search
 import resend
 import logging
 from django.urls import reverse
+import asyncio
+from pgvector.django import L2Distance, CosineDistance
 
 # Get logger instance at the top of the file
 logger = logging.getLogger(__name__)
@@ -125,14 +127,32 @@ def search_results(request):
         'email_status'
     ).order_by('id')
 
-    # Optimize search query
+    # Get embeddings for the search query if it exists
     if query:
+        # Generate embedding for search query
+        from core.tasks import generate_embeddings
+        
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        query_embedding = loop.run_until_complete(
+            generate_embeddings([query])
+        )[0]
+        loop.close()
+
+        # Combine traditional search with vector similarity
         results = results.filter(
             Q(name__icontains=query) |
             Q(description__icontains=query) |
             Q(sources__name__icontains=query) |
-            Q(categories__name__icontains=query)
-        ).distinct()
+            Q(categories__name__icontains=query) |
+            Q(embedding__cosine_distance=query_embedding) |  # Journalist similarity
+            Q(articles__embedding__cosine_distance=query_embedding)  # Article content similarity
+        ).distinct().order_by(
+            CosineDistance('embedding', query_embedding),
+            'id'
+        )
+    else:
+        results = results.order_by('id')
 
     # Cache the results count before pagination
     total_count = None
