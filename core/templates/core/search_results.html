@@ -57,13 +57,13 @@
               </div>
               {% if journalist.image_url %}
                 <img src="{{ journalist.image_url }}" alt="{{ journalist.name }}" 
-                     class="w-32 h-32 object-cover rounded-lg flex-shrink-0">
+                     class="w-24 h-24 object-cover rounded-lg flex-shrink-0">
               {% elif journalist.imageUrl %}
                 <img src="{{ journalist.imageUrl }}" alt="{{ journalist.name }}" 
-                     class="w-32 h-32 object-cover rounded-lg flex-shrink-0">
+                     class="w-24 h-24 object-cover rounded-lg flex-shrink-0">
               {% endif %}
               <div class="flex-1 text-left">
-                <h3 class="font-bold text-lg mb-2">
+                <h3 class="font-bold text-lg mb-1">
                   {% if user.is_staff %}
                     <a href="{% url 'admin:core_journalist_change' journalist.id %}" class="hover:text-blue-600">
                       {{ journalist.name }}
@@ -72,6 +72,9 @@
                     {{ journalist.name }}
                   {% endif %}
                 </h3>
+                {% if journalist.news_source %}
+                  <p class="text-gray-500 text-sm mb-2">{{ journalist.news_source }}</p>
+                {% endif %}
                 {% if journalist.country %}
                   <p class="text-gray-600 text-sm mb-2">{{ journalist.country }}</p>
                 {% endif %}
@@ -99,40 +102,44 @@
                 <p class="text-gray-600 text-sm mb-2">
                   <span class="font-medium">Categories:</span>
                   {% if journalist.categories.all %}
-                    {% for category in journalist.categories.all %}
-                      {{ category.name }}{% if not forloop.last %}, {% endif %}
-                    {% endfor %}
+                    <span class="inline-flex flex-wrap gap-2">
+                      {% for category in journalist.categories.all|slice:":10" %}
+                        <span class="px-2 py-1 bg-gray-100 rounded-full text-xs">{{ category.name }}</span>
+                      {% endfor %}
+                      {% if journalist.categories.all|length > 10 %}
+                        <span class="text-gray-500 text-xs">({{ journalist.categories.all|length|add:"-10" }} more...)</span>
+                      {% endif %}
+                    </span>
                   {% endif %}
                 </p>
 
-                <div class="flex space-x-2">
-                  {% if journalist.email_address %}
-                    {% if user.is_authenticated %}
-                      <a href="mailto:{{ journalist.email_address }}" class="text-blue-600 hover:underline text-sm">Email</a>
-                    {% else %}
-                      <a href="{% url 'pricing' %}" 
-                         class="text-blue-600 hover:underline text-sm relative group">
-                        <span>{{ journalist.email_address|slice:":3" }}***@***</span>
-                        <span class="invisible group-hover:visible absolute left-0 -top-8 bg-gray-800 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
-                          Sign up to view email
-                        </span>
-                      </a>
+                <div class="flex justify-between items-center mt-4">
+                  <div class="flex space-x-2">
+                    {% if journalist.email_address %}
+                      {% if user.is_authenticated %}
+                        <a href="mailto:{{ journalist.email_address }}" 
+                           class="inline-flex items-center px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50">
+                          <span>Email</span>
+                        </a>
+                      {% else %}
+                        <a href="{% url 'pricing' %}" 
+                           class="inline-flex items-center px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50 relative group">
+                          <span>{{ journalist.email_address|slice:":3" }}***@***</span>
+                          <span class="invisible group-hover:visible absolute left-0 -top-8 bg-gray-800 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
+                            Sign up to view email
+                          </span>
+                        </a>
+                      {% endif %}
                     {% endif %}
-                  {% else %}
-                  <a href="{% url 'pricing' %}" 
-
-                    <span>Get Email</span>
-                    <span class="invisible group-hover:visible absolute left-0 -top-8 bg-gray-800 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
-                      Sign up to view email
-                    </span>
-                  </a>
-                  {% endif %}
-                  {% if journalist.profile_url %}
-                    <a href="{{ journalist.profile_url }}" target="_blank" class="text-blue-600 hover:underline text-sm">Profile</a>
-                  {% endif %}
-                  {% if journalist.x_profile_url %}
-                    <a href="{{ journalist.x_profile_url }}" target="_blank" class="text-blue-600 hover:underline text-sm">Twitter/X</a>
-                  {% endif %}
+                    
+                    <button class="inline-flex items-center px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50">
+                      More Info
+                    </button>
+                  </div>
+                  
+                  <button class="inline-flex items-center px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    Add to List
+                  </button>
                 </div>
               </div>
             </div>
