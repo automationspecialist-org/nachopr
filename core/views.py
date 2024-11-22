@@ -121,22 +121,17 @@ def search_results(request):
             'name', weight='A'
         ) + SearchVector(
             'description', weight='B'
+        ) + SearchVector(
+            'sources__name', weight='B'  # Changed from news_source__name to sources__name
         )
-        # Move expensive JOINs to subqueries only when needed
-        if any(term in query.lower() for term in ['category', 'source']):
-            search_vector += (
-                SearchVector('categories__name', weight='B') +
-                SearchVector('sources__name', weight='B')
-            )
         
         search_query = SearchQuery(query, config='english')
         
-        # Add index hint for search
         results = results.annotate(
             rank=SearchRank(search_vector, search_query)
         ).filter(
-            Q(rank__gt=0.1) |  # Add threshold to improve relevance
-            Q(categories__name__icontains=query)
+            Q(rank__gt=0.1) |
+            Q(sources__name__icontains=query)  # Direct source name search
         ).order_by('-rank').distinct()
 
     # Cache the results count before pagination
@@ -187,9 +182,18 @@ def search_results(request):
     unfiltered_results_count = results.count()
     time_taken = timezone.now() - starttime
 
+    sources = NewsSource.objects.values('id', 'name').order_by('name')
     return render(
-        request, 'core/search_results.html',
-        {'results': filtered_results, 'time_taken': time_taken, 'unfiltered_results_count': unfiltered_results_count})
+        request, 
+        'core/search_results.html',
+        {
+            'results': filtered_results, 
+            'time_taken': time_taken, 
+            'unfiltered_results_count': unfiltered_results_count,
+            'sources': sources,
+            'source_id': source_id
+        }
+    )
 
 
 def free_media_list(request):

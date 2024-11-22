@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from core.models import Journalist
+from core.models import Journalist, NewsSource
 
 class Command(BaseCommand):
     help = 'Syncs categories for all journalists based on their articles'
@@ -16,3 +16,6 @@ class Command(BaseCommand):
                 self.stdout.write(f"Processed {i}/{total} journalists")
         
         self.stdout.write(self.style.SUCCESS('Successfully synced all journalist categories'))
+
+        for source in NewsSource.objects.all():
+            source.sync_categories()

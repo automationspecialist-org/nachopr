@@ -6,7 +6,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         # List of partial strings to check for
-        unwanted_terms = ['.com', 'staff', 'team', 'reporters', 'Associated Press']
+        unwanted_terms = ['.com', 'staff', 'team', 'reporters', 'press']
         
         # Keep track of how many journalists are removed
         removed_count = 0

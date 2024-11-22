@@ -55,13 +55,17 @@
                        data-id="{{ journalist.id }}" 
                        data-name="{{ journalist.name }}">
               </div>
-              {% if journalist.image_url %}
-                <img src="{{ journalist.image_url }}" alt="{{ journalist.name }}" 
-                     class="w-24 h-24 object-cover rounded-lg flex-shrink-0">
-              {% elif journalist.imageUrl %}
-                <img src="{{ journalist.imageUrl }}" alt="{{ journalist.name }}" 
-                     class="w-24 h-24 object-cover rounded-lg flex-shrink-0">
-              {% endif %}
+              <div class="w-12 h-12 flex-shrink-0">
+                {% if journalist.image_url %}
+                  <img src="{{ journalist.image_url }}"
+                       class="w-full h-full object-cover rounded-lg bg-gray-200">
+                {% elif journalist.imageUrl %}
+                  <img src="{{ journalist.imageUrl }}"
+                       class="w-full h-full object-cover rounded-lg bg-gray-200">
+                {% else %}
+                  <div class="w-full h-full rounded-lg bg-gray-200"></div>
+                {% endif %}
+              </div>
               <div class="flex-1 text-left">
                 <h3 class="font-bold text-lg mb-1">
                   {% if user.is_staff %}
@@ -73,7 +77,19 @@
                   {% endif %}
                 </h3>
                 {% if journalist.news_source %}
-                  <p class="text-gray-500 text-sm mb-2">{{ journalist.news_source }}</p>
+                  <p class="text-gray-500 text-sm mb-2">
+                    <span class="font-medium">Primary Source:</span> {{ journalist.news_source }}
+                  </p>
+                {% endif %}
+                {% if journalist.sources.all %}
+                  <p class="text-gray-500 text-sm mb-2">
+                    <span class="font-medium">Writes for:</span>
+                    <span class="inline-flex flex-wrap gap-2">
+                      {% for source in journalist.sources.all %}
+                        <span class="px-2 py-1 bg-gray-100 rounded-full text-xs">{{ source.name }}</span>
+                      {% endfor %}
+                    </span>
+                  </p>
                 {% endif %}
                 {% if journalist.country %}
                   <p class="text-gray-600 text-sm mb-2">{{ journalist.country }}</p>
@@ -88,15 +104,6 @@
                 {% endif %}
                 {% if user.is_staff %}
                   <p>Id: {{ journalist.id }}</p>
-                {% endif %}
-                
-                {% if journalist.sources.all %}
-                  <p class="text-gray-600 text-sm mb-2">
-                    <span class="font-medium">Sources:</span>
-                    {% for source in journalist.sources.all %}
-                      {{ source.name }}{% if not forloop.last %}, {% endif %}
-                    {% endfor %}
-                  </p>
                 {% endif %}
                 
                 <p class="text-gray-600 text-sm mb-2">

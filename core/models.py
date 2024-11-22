@@ -18,6 +18,7 @@ class NewsSource(models.Model):
     country = models.CharField(max_length=255, null=True, blank=True)
     language = models.CharField(max_length=255, null=True, blank=True)
     priority = models.BooleanField(default=False)
+    categories = models.ManyToManyField('NewsPageCategory', related_name='sources', blank=True)
 
     def __str__(self):
         return self.name
@@ -26,6 +27,14 @@ class NewsSource(models.Model):
         self.slug = slugify(self.name)
         super().save(*args, **kwargs)
     
+
+    def sync_categories(self):
+        """Sync categories based on the source's news pages"""
+        page_categories = NewsPageCategory.objects.filter(
+            pages__source=self
+        ).distinct()
+        self.categories.set(page_categories)
+
 
 class Journalist(models.Model):
     name = models.CharField(max_length=255)
@@ -254,4 +263,11 @@ def sync_journalist_categories(sender, instance, action, **kwargs):
     if action in ["post_add", "post_remove", "post_clear"]:
         for journalist in instance.journalists.all():
             journalist.sync_categories()
+    
+
+@receiver(m2m_changed, sender=NewsPage.categories.through)
+def sync_source_categories(sender, instance, action, **kwargs):
+    """Sync categories when categories are added/removed from news pages"""
+    if action in ["post_add", "post_remove", "post_clear"]:
+        instance.source.sync_categories()
     
