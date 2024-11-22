@@ -52,6 +52,12 @@ class Journalist(models.Model):
     def save(self, *args, **kwargs):
         self.slug = slugify(self.name)
         super().save(*args, **kwargs)
+    
+
+    def has_articles(self):
+        """Method to determine if journalist should be indexed"""
+        return self.articles.exists()
+    
 
     def get_unique_categories(self):
         """Return unique categories across all articles for this journalist."""

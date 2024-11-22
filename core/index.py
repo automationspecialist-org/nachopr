@@ -36,9 +36,7 @@ class JournalistIndex(AlgoliaIndex):
 
     custom_ranking = ['desc(articles_count)']
     
-    def should_index(self, instance):
-        """Only index journalists that have articles"""
-        return instance.articles.exists()
+    should_index = 'has_articles'
     
     def get_raw_record(self, instance):
         """Override get_raw_record to add computed fields"""
