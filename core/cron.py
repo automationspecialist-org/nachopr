@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 import requests
 import os
 from core.tasks import categorize_news_pages_with_gpt, crawl_news_sources_sync, create_social_sharing_image, find_digital_pr_examples, guess_journalist_email_addresses, process_all_journalists_sync, process_journalist_descriptions_sync
-from core.models import Journalist, NewsPage
+from core.models import Journalist, NewsPage, sync_journalist_categories
 from django.conf import settings
 from django.core.management import call_command
 
@@ -104,3 +104,9 @@ def generate_social_share_image_job():
 
 def find_digital_pr_examples_job():
     find_digital_pr_examples()
+
+
+def sync_journalist_categories_job():
+    """Bulk sync categories for all journalists"""
+    for journalist in Journalist.objects.all():
+        journalist.sync_categories()
