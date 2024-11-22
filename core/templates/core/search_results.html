@@ -48,7 +48,7 @@
       <div class="space-y-6">
         {% for journalist in results %}
           <div class="flex gap-6 border rounded-lg p-4 hover:shadow-lg transition-shadow group">
-            <div class="flex items-start gap-4">
+            <div class="flex items-start gap-4 flex-1">
               <div class="pt-1">
                 <input type="checkbox" 
                        class="journalist-checkbox w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
@@ -117,7 +117,7 @@
                   {% endif %}
                 </p>
 
-                <div class="flex justify-between items-center mt-4">
+                <div class="flex items-center mt-4">
                   <div class="flex space-x-2">
                     {% if journalist.email_address %}
                       {% if user.is_authenticated %}
@@ -147,17 +147,6 @@
                       </a>
                     {% endif %}
                   </div>
-                  
-                  {% if user.is_authenticated %}
-                    <button class="inline-flex items-center px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                      Add to List
-                    </button>
-                  {% else %}
-                    <a href="{% url 'pricing' %}?source=add_list" 
-                       class="inline-flex items-center px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                      Add to List
-                    </a>
-                  {% endif %}
                 </div>
 
                 {% if user.is_staff %}
@@ -166,6 +155,61 @@
                     Semantic Similarity: {{ journalist.semantic_similarity|floatformat:3 }}
                     Article Similarity: {{ journalist.article_similarity|floatformat:3 }}
                   </div>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="w-80 flex flex-col border-l pl-4 text-right">
+              {% if journalist.prefetched_articles %}
+                <div class="flex-1">
+                  <span class="font-medium text-sm">Articles</span>
+                  <div class="space-y-2 mt-1">
+                    {% for article in journalist.prefetched_articles|slice:":3" %}
+                      <div class="border-l-2 border-gray-200 pl-3">
+                        <div class="text-sm">
+                          <a href="{{ article.url }}" 
+                             target="_blank" 
+                             class="text-blue-600 hover:text-blue-800 font-medium">
+                            {{ article.title }}
+                          </a>
+                          {% if article.published_date %}
+                            <span class="text-gray-500 text-xs ml-2">
+                              {{ article.published_date|date:"M d, Y" }}
+                            </span>
+                          {% endif %}
+                          {% if user.is_staff and article.article_similarity %}
+                            <span class="text-xs text-gray-500 ml-2">
+                              (Similarity: {{ article.article_similarity|floatformat:3 }})
+                            </span>
+                          {% endif %}
+                        </div>
+                        {% if article.source %}
+                          <div class="text-xs text-gray-500 mt-0.5">
+                            {{ article.source.name }}
+                          </div>
+                        {% endif %}
+                      </div>
+                    {% endfor %}
+                    {% if journalist.prefetched_articles|length > 3 %}
+                      <div class="text-xs text-gray-500 pl-3">
+                        + {{ journalist.prefetched_articles|length|add:"-3" }} more articles
+                      </div>
+                    {% endif %}
+                  </div>
+                </div>
+              {% endif %}
+              
+              <!-- Fixed position Add to List button -->
+              <div class="mt-auto pt-4">
+                {% if user.is_authenticated %}
+                  <button class="w-full inline-flex items-center justify-center px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    Add to List
+                  </button>
+                {% else %}
+                  <a href="{% url 'pricing' %}?source=add_list" 
+                     class="w-full inline-flex items-center justify-center px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    Add to List
+                  </a>
                 {% endif %}
               </div>
             </div>

@@ -110,6 +110,7 @@ def search_results(request):
         Prefetch(
             'articles',
             queryset=NewsPage.objects.select_related('source')
+                          .filter(is_news_article=True)
                           .prefetch_related('categories')
                           .only(
                               'id', 
