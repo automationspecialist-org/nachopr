@@ -36,22 +36,15 @@ class JournalistIndex(AlgoliaIndex):
 
     custom_ranking = ['desc(articles_count)']
     
+    def should_index(self, instance):
+        """Only index journalists that have articles"""
+        return instance.articles.exists()
+    
     def get_raw_record(self, instance):
         """Override get_raw_record to add computed fields"""
         record = super(JournalistIndex, self).get_raw_record(instance)
         
-        # Get unique languages from journalist's sources
-        languages = list(set(source.language for source in instance.sources.all() if source.language))
-        record['languages'] = languages
-        
-        # Limit to essential source fields and max 10 sources
-        record['sources'] = [{
-            'id': source.id,
-            'name': source.name,
-            'language': source.language,
-        } for source in instance.sources.all().select_related()[:10]]
-        
-        # Get categories with better optimization
+        # Get categories with better optimization - moved up since we need it for articles too
         categories = instance.get_unique_categories()[:10]
         record['categories'] = [{
             'id': category.id,
@@ -67,6 +60,17 @@ class JournalistIndex(AlgoliaIndex):
             'published_date': article.published_date.isoformat() if article.published_date else None,
             'categories': [{'id': cat.id, 'name': cat.name} for cat in article.categories.all()]
         } for article in instance.articles.all().select_related()[:3]]
+        
+        # Get unique languages from journalist's sources
+        languages = list(set(source.language for source in instance.sources.all() if source.language))
+        record['languages'] = languages
+        
+        # Limit to essential source fields and max 10 sources
+        record['sources'] = [{
+            'id': source.id,
+            'name': source.name,
+            'language': source.language,
+        } for source in instance.sources.all().select_related()[:10]]
         
         record['articles_count'] = instance.articles.count()
         
