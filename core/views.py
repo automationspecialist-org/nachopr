@@ -200,7 +200,24 @@ def refund_policy(request):
 
 def pricing(request):
     pricing_plans = PricingPlan.objects.filter(is_archived=False)
-    return render(request, 'core/pricing.html', {'pricing_plans': pricing_plans})
+    
+    # Get the source of the redirect
+    source = request.GET.get('source')
+    message = None
+    
+    # Set appropriate message based on source
+    if source == 'more_info':
+        message = "Sign up to view detailed journalist information"
+    elif source == 'add_list':
+        message = "Sign up to create and manage journalist lists"
+    elif source == 'email':
+        message = "Sign up to access journalist contact information"
+        
+    context = {
+        'pricing_plans': pricing_plans,
+        'message': message
+    }
+    return render(request, 'core/pricing.html', context=context)
 
 
 @login_required
