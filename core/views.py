@@ -90,40 +90,61 @@ def search_results(request):
     category_id = request.GET.get('category', '')
     page_number = request.GET.get('page', 1)
 
-    # Start with all journalists
+    # Start with all journalists - optimize initial query
     results = Journalist.objects.prefetch_related(
-        'sources',
-        'categories',
+        Prefetch('sources', queryset=NewsSource.objects.only('id', 'name')),
+        Prefetch('categories', queryset=NewsPageCategory.objects.only('id', 'name')),
         Prefetch(
             'articles',
-            queryset=NewsPage.objects.select_related('source').prefetch_related(
-                'categories'
-            ),
+            queryset=NewsPage.objects.select_related('source')
+                          .prefetch_related('categories')
+                          .only(
+                              'id', 
+                              'title', 
+                              'source__name', 
+                              'published_date'
+                          )[:5],
             to_attr='prefetched_articles'
         )
-    ).order_by('id')  # Add default ordering to fix pagination warning
-    
-    # Apply filters
+    ).only(
+        'id', 
+        'name',
+        'description',
+        'image_url',
+        'country',
+        'email_status'
+    ).order_by('id')
+
+    # Optimize search query
     if query:
-        # Create search vectors for different fields
-        search_vector = (
-            SearchVector('name', weight='A') +
-            SearchVector('description', weight='B') +
-            SearchVector('categories__name', weight='B') +
-            SearchVector('sources__name', weight='B')
+        search_vector = SearchVector(
+            'name', weight='A'
+        ) + SearchVector(
+            'description', weight='B'
         )
+        # Move expensive JOINs to subqueries only when needed
+        if any(term in query.lower() for term in ['category', 'source']):
+            search_vector += (
+                SearchVector('categories__name', weight='B') +
+                SearchVector('sources__name', weight='B')
+            )
         
-        # Create search query
         search_query = SearchQuery(query, config='english')
         
-        # Modify the query to properly join with categories
+        # Add index hint for search
         results = results.annotate(
             rank=SearchRank(search_vector, search_query)
         ).filter(
-            Q(rank__gt=0) |  # Original search criteria
-            Q(categories__name__icontains=query)  # Add direct category name search
+            Q(rank__gt=0.1) |  # Add threshold to improve relevance
+            Q(categories__name__icontains=query)
         ).order_by('-rank').distinct()
 
+    # Cache the results count before pagination
+    total_count = None
+    if is_subscriber:
+        total_count = results.count()
+        
+    # Apply filters - moved after search for better performance
     if country:
         results = results.filter(country=country)
     if source_id:

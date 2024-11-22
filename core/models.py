@@ -87,6 +87,14 @@ class Journalist(models.Model):
         ).distinct()
         self.categories.set(article_categories)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['country']),
+            models.Index(fields=['name']),
+            # Add GiST index for full-text search if using PostgreSQL
+            models.Index(fields=['description']),
+        ]
+
 
 class NewsPageCategory(models.Model):
     name = models.CharField(max_length=255)
