@@ -131,41 +131,56 @@ def search_results(request):
 
     # Get embeddings for the search query if it exists
     if query:
-        # Generate embedding for search query
-        from core.tasks import generate_embeddings
-        
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        query_embedding = loop.run_until_complete(
-            generate_embeddings([query])
-        )[0]
-        loop.close()
-
-        # Combine traditional search with vector similarity
-        # Use weighted combination of text and semantic search
-        results = results.annotate(
-            text_similarity=SearchRank(
-                'search_vector',
-                SearchQuery(query, config='english')
-            ),
-            semantic_similarity=CosineDistance('embedding', query_embedding),
-            article_similarity=CosineDistance('articles__embedding', query_embedding)
-        ).filter(
-            # Broader text search
-            Q(name__icontains=query) |
-            Q(description__icontains=query) |
-            Q(sources__name__icontains=query) |
-            Q(categories__name__icontains=query) |
-            # Semantic search with thresholds
-            Q(semantic_similarity__lte=0.8) |  # Cosine distance threshold
-            Q(article_similarity__lte=0.8)     # Article content similarity threshold
-        ).distinct().order_by(
-            # Combine rankings with weights
-            (F('text_similarity') * 0.3 +  # Text search weight
-             (1 - F('semantic_similarity')) * 0.4 +  # Journalist embedding weight
-             (1 - F('article_similarity')) * 0.3),  # Article embedding weight
-            'id'
-        )
+        try:
+            # Generate embedding for search query
+            from core.tasks import generate_embeddings
+            
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                query_embedding = loop.run_until_complete(
+                    generate_embeddings([query])
+                )[0]
+                
+                # Combine traditional search with vector similarity
+                results = results.annotate(
+                    text_similarity=SearchRank(
+                        'search_vector',
+                        SearchQuery(query, config='english')
+                    ),
+                    semantic_similarity=CosineDistance('embedding', query_embedding),
+                    article_similarity=CosineDistance('articles__embedding', query_embedding)
+                ).filter(
+                    # Broader text search
+                    Q(name__icontains=query) |
+                    Q(description__icontains=query) |
+                    Q(sources__name__icontains=query) |
+                    Q(categories__name__icontains=query) |
+                    # Semantic search with thresholds
+                    Q(semantic_similarity__lte=0.8) |
+                    Q(article_similarity__lte=0.8)
+                ).distinct().order_by(
+                    # Combine rankings with weights
+                    (F('text_similarity') * 0.3 +
+                     (1 - F('semantic_similarity')) * 0.4 +
+                     (1 - F('article_similarity')) * 0.3),
+                    'id'
+                )
+            except Exception as e:
+                logger.error(f"Error generating embeddings: {str(e)}")
+                # Fallback to basic text search if embeddings fail
+                results = results.filter(
+                    Q(name__icontains=query) |
+                    Q(description__icontains=query) |
+                    Q(sources__name__icontains=query) |
+                    Q(categories__name__icontains=query)
+                ).distinct()
+            finally:
+                loop.close()
+        except Exception as e:
+            logger.error(f"Search error: {str(e)}")
+            # Fallback to basic ordering if all else fails
+            results = results.order_by('id')
     else:
         results = results.order_by('id')
 
