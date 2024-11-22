@@ -96,16 +96,12 @@ def search_results(request):
         'categories',
         Prefetch(
             'articles',
-            queryset=NewsPage.objects.prefetch_related(
-                Prefetch(
-                    'categories',
-                    queryset=NewsPageCategory.objects.all(),
-                    to_attr='unique_categories'
-                )
+            queryset=NewsPage.objects.select_related('source').prefetch_related(
+                'categories'
             ),
             to_attr='prefetched_articles'
         )
-    )
+    ).order_by('id')  # Add default ordering to fix pagination warning
     
     # Apply filters
     if query:
@@ -113,7 +109,7 @@ def search_results(request):
         search_vector = (
             SearchVector('name', weight='A') +
             SearchVector('description', weight='B') +
-            SearchVector('articles__categories__name', weight='B') +
+            SearchVector('categories__name', weight='B') +
             SearchVector('sources__name', weight='B')
         )
         
@@ -125,7 +121,7 @@ def search_results(request):
             rank=SearchRank(search_vector, search_query)
         ).filter(
             Q(rank__gt=0) |  # Original search criteria
-            Q(articles__categories__name__icontains=query)  # Add direct category name search
+            Q(categories__name__icontains=query)  # Add direct category name search
         ).order_by('-rank').distinct()
 
     if country:
@@ -133,7 +129,7 @@ def search_results(request):
     if source_id:
         results = results.filter(sources__id=source_id)
     if category_id:
-        results = results.filter(articles__categories__id=category_id).distinct()
+        results = results.filter(categories__id=category_id).distinct()
 
     # Handle non-subscribers
     if not is_subscriber:

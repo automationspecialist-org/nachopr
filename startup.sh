@@ -15,6 +15,7 @@ fi
 uv run manage.py migrate
 uv run manage.py clean_db
 uv run manage.py crontab remove
+uv run manage.py sync_journalist_categories
 
 if [ -n "$AZURE" ]; then
     uv run manage.py crontab add

@@ -4,6 +4,8 @@ from django.contrib.auth.models import AbstractUser
 from django.contrib.postgres.search import SearchVectorField
 from django.contrib.postgres.indexes import GinIndex
 from django.contrib.postgres.search import SearchVector
+from django.db.models.signals import m2m_changed
+from django.dispatch import receiver
 
 
 class NewsSource(models.Model):
@@ -45,6 +47,7 @@ class Journalist(models.Model):
         ],
         default='guessed'
     )
+    categories = models.ManyToManyField('NewsPageCategory', related_name='journalists', blank=True)
     
     def __str__(self):
         return self.name
@@ -76,6 +79,13 @@ class Journalist(models.Model):
             return NewsPageCategory.objects.filter(
                 pages__journalists=self
             ).distinct()
+
+    def sync_categories(self):
+        """Sync categories based on the journalist's articles"""
+        article_categories = NewsPageCategory.objects.filter(
+            pages__journalists=self
+        ).distinct()
+        self.categories.set(article_categories)
 
 
 class NewsPageCategory(models.Model):
@@ -228,4 +238,12 @@ class DbStat(models.Model):
 
     def __str__(self):
         return f"{self.date} - {self.num_journalists_added_today} journalists added"
+    
+
+@receiver(m2m_changed, sender=NewsPage.journalists.through)
+def sync_journalist_categories(sender, instance, action, **kwargs):
+    """Sync categories when articles are added/removed from journalist"""
+    if action in ["post_add", "post_remove", "post_clear"]:
+        for journalist in instance.journalists.all():
+            journalist.sync_categories()
     
