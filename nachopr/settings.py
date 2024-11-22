@@ -312,6 +312,7 @@ CRONJOBS = [
     ('*/30 * * * *', 'core.cron.generate_social_share_image_job', '>> /tmp/cron_generate_social_share_image.log 2>&1'),
     ('*/30 * * * *', 'core.cron.find_digital_pr_examples_job', '>> /tmp/cron_find_digital_pr_examples.log 2>&1'),
     ('*/30 * * * *', 'core.cron.sync_journalist_categories_job', '>> /tmp/cron_sync_journalist_categories.log 2>&1'),
+    ('*/15 * * * *', 'core.cron.update_embeddings_job', '>> /tmp/cron_update_embeddings.log 2>&1'),
 ]
 
 EMAIL_HOST_USER = 'support@updates.nachopr.com' 

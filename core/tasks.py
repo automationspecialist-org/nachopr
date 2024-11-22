@@ -27,6 +27,8 @@ import requests
 from typing import List, Dict
 import numpy as np
 import tiktoken  # Add this import for token counting
+from django.db.models.signals import post_save, m2m_changed
+from django.dispatch import receiver
 
 
 load_dotenv()
@@ -845,13 +847,13 @@ async def generate_embeddings(texts: List[str]) -> List[List[float]]:
     """Generate embeddings for a list of texts using Azure OpenAI"""
     try:
         client = AzureOpenAI(
-            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+            azure_endpoint=os.getenv("AZURE_OPENAI_EMBEDDING_ENDPOINT"),
             api_version="2023-05-15",
-            api_key=os.getenv("AZURE_OPENAI_API_KEY")
+            api_key=os.getenv("AZURE_OPENAI_EMBEDDING_API_KEY")
         )
 
         response = client.embeddings.create(
-            model="text-embedding-3-large",  # or your deployed embedding model name
+            model="text-embedding-3-small",  # or your deployed embedding model name
             input=texts
         )
         
@@ -932,5 +934,134 @@ def update_page_embeddings_sync(limit: int = 100):
     """Sync wrapper for updating page embeddings"""
     loop = asyncio.get_event_loop()
     loop.run_until_complete(update_page_embeddings(limit))
+
+async def update_journalist_embeddings(limit: int = 100):
+    """Update embeddings for Journalists that don't have them"""
+    try:
+        # Get journalists without embeddings
+        journalists = await sync_to_async(list)(
+            Journalist.objects.filter(
+                embedding__isnull=True
+            ).prefetch_related('categories')[:limit]
+        )
+
+        if not journalists:
+            logger.info("No journalists found needing embeddings")
+            return
+
+        # Prepare texts for embedding
+        texts = [
+            truncate_text_for_embeddings(
+                journalist.get_text_for_embedding(),
+                max_tokens=8000
+            ) 
+            for journalist in journalists
+        ]
+        
+        # Generate embeddings in batches of 20
+        batch_size = 20
+        all_embeddings = []
+        
+        for i in range(0, len(texts), batch_size):
+            batch_texts = texts[i:i + batch_size]
+            batch_embeddings = await generate_embeddings(batch_texts)
+            all_embeddings.extend(batch_embeddings)
+
+        # Update journalists with embeddings
+        @sync_to_async
+        def save_embeddings():
+            with transaction.atomic():
+                for journalist, embedding in zip(journalists, all_embeddings):
+                    journalist.embedding = embedding
+                    journalist.save(update_fields=['embedding'])
+        
+        await save_embeddings()
+        logger.info(f"Updated embeddings for {len(journalists)} journalists")
+
+    except Exception as e:
+        logger.error(f"Error updating journalist embeddings: {str(e)}")
+        raise
+
+def update_journalist_embeddings_sync(limit: int = 100):
+    """Sync wrapper for updating journalist embeddings"""
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(update_journalist_embeddings(limit))
+
+# Replace the signal handlers at the bottom of the file
+@receiver(post_save, sender=NewsPage)
+def update_newspage_embedding_on_change(sender, instance, **kwargs):
+    """Update embedding when NewsPage content changes"""
+    if instance.content and instance.title:
+        # Skip if this save was triggered by an embedding update
+        if kwargs.get('update_fields') == {'embedding'}:
+            return
+            
+        # Prepare text for embedding
+        text = truncate_text_for_embeddings(
+            f"{instance.title}\n\n{instance.content}",
+            max_tokens=8000
+        )
+        
+        try:
+            # Generate embedding synchronously
+            client = AzureOpenAI(
+                azure_endpoint=os.getenv("AZURE_OPENAI_EMBEDDING_ENDPOINT"),
+                api_version="2023-05-15",
+                api_key=os.getenv("AZURE_OPENAI_EMBEDDING_API_KEY")
+            )
+            
+            response = client.embeddings.create(
+                model="text-embedding-3-small",
+                input=[text]
+            )
+            
+            # Update the embedding directly
+            instance.embedding = response.data[0].embedding
+            instance.save(update_fields=['embedding'])
+            
+        except Exception as e:
+            logger.error(f"Error updating embedding for NewsPage {instance.id}: {str(e)}")
+
+@receiver(post_save, sender=Journalist)
+def update_journalist_embedding_on_change(sender, instance, **kwargs):
+    """Update embedding when Journalist data changes"""
+    # Skip if this save was triggered by an embedding update
+    if kwargs.get('update_fields') == {'embedding'}:
+        return
+        
+    # Prepare text for embedding
+    text = truncate_text_for_embeddings(
+        instance.get_text_for_embedding(),
+        max_tokens=8000
+    )
+    
+    try:
+        # Generate embedding synchronously
+        client = AzureOpenAI(
+            azure_endpoint=os.getenv("AZURE_OPENAI_EMBEDDING_ENDPOINT"),
+            api_version="2023-05-15",
+            api_key=os.getenv("AZURE_OPENAI_EMBEDDING_API_KEY")
+        )
+        
+        response = client.embeddings.create(
+            model="text-embedding-3-small",
+            input=[text]
+        )
+        
+        # Update the embedding directly
+        instance.embedding = response.data[0].embedding
+        instance.save(update_fields=['embedding'])
+        
+    except Exception as e:
+        logger.error(f"Error updating embedding for Journalist {instance.id}: {str(e)}")
+
+@receiver(m2m_changed, sender=Journalist.categories.through)
+def update_journalist_embedding_on_categories_change(sender, instance, **kwargs):
+    """Update embedding when Journalist categories change"""
+    # Only update on post_add and post_remove actions
+    if kwargs['action'] not in ("post_add", "post_remove"):
+        return
+    
+    update_journalist_embedding_on_change(sender, instance)
 
 

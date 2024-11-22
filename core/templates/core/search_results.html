@@ -159,6 +159,14 @@
                     </a>
                   {% endif %}
                 </div>
+
+                {% if user.is_staff %}
+                  <div class="text-xs text-gray-500">
+                    Text Similarity: {{ journalist.text_similarity|floatformat:3 }}
+                    Semantic Similarity: {{ journalist.semantic_similarity|floatformat:3 }}
+                    Article Similarity: {{ journalist.article_similarity|floatformat:3 }}
+                  </div>
+                {% endif %}
               </div>
             </div>
           </div>

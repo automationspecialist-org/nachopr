@@ -33,6 +33,7 @@ import logging
 from django.urls import reverse
 import asyncio
 from pgvector.django import L2Distance, CosineDistance
+from django.db.models import F
 
 # Get logger instance at the top of the file
 logger = logging.getLogger(__name__)
@@ -140,15 +141,28 @@ def search_results(request):
         loop.close()
 
         # Combine traditional search with vector similarity
-        results = results.filter(
+        # Use weighted combination of text and semantic search
+        results = results.annotate(
+            text_similarity=SearchRank(
+                'search_vector',
+                SearchQuery(query, config='english')
+            ),
+            semantic_similarity=CosineDistance('embedding', query_embedding),
+            article_similarity=CosineDistance('articles__embedding', query_embedding)
+        ).filter(
+            # Broader text search
             Q(name__icontains=query) |
             Q(description__icontains=query) |
             Q(sources__name__icontains=query) |
             Q(categories__name__icontains=query) |
-            Q(embedding__cosine_distance=query_embedding) |  # Journalist similarity
-            Q(articles__embedding__cosine_distance=query_embedding)  # Article content similarity
+            # Semantic search with thresholds
+            Q(semantic_similarity__lte=0.8) |  # Cosine distance threshold
+            Q(article_similarity__lte=0.8)     # Article content similarity threshold
         ).distinct().order_by(
-            CosineDistance('embedding', query_embedding),
+            # Combine rankings with weights
+            (F('text_similarity') * 0.3 +  # Text search weight
+             (1 - F('semantic_similarity')) * 0.4 +  # Journalist embedding weight
+             (1 - F('article_similarity')) * 0.3),  # Article embedding weight
             'id'
         )
     else:

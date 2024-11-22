@@ -66,6 +66,7 @@ class Journalist(models.Model):
     categories = models.ManyToManyField('NewsPageCategory', related_name='journalists', blank=True)
     
     search_vector = SearchVectorField(null=True)
+    embedding = VectorField(dimensions=EMBEDDING_DIMENSIONS, null=True)
 
     def __str__(self):
         return self.name
@@ -126,6 +127,10 @@ class Journalist(models.Model):
         except Exception as e:
             logger.error(f"Error updating search vector for journalist {self.pk}: {str(e)}")
 
+    def get_text_for_embedding(self):
+        """Get concatenated text for embedding"""
+        return f"{self.name}\n{self.description or ''}\n{' '.join(self.categories.values_list('name', flat=True))}"
+
     class Meta:
         indexes = [
             models.Index(fields=['country']),
@@ -157,6 +162,7 @@ class NewsPage(models.Model):
     is_news_article = models.BooleanField(default=False)
     search_vector = SearchVectorField(null=True, blank=True)
     published_date = models.DateField(null=True, blank=True)
+    embedding = VectorField(dimensions=EMBEDDING_DIMENSIONS, null=True)
 
     def __str__(self):
         return self.title
@@ -168,6 +174,10 @@ class NewsPage(models.Model):
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         self.update_search_vector()
+    
+    def get_text_for_embedding(self):
+        """Get concatenated text for embedding"""
+        return f"{self.title}\n\n{self.content}"
     
     class Meta:
         indexes = [
