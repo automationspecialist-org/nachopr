@@ -117,3 +117,7 @@ def sync_journalist_categories_job():
 
 def update_embeddings_job():
     update_page_embeddings_sync(limit=100)
+
+
+def clean_db_job():
+    call_command('clean_db')

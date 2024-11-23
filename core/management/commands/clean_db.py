@@ -1,8 +1,9 @@
 from django.core.management.base import BaseCommand
-from core.models import Journalist, NewsPageCategory
+from core.models import Journalist, NewsPageCategory, NewsPage
+from urllib.parse import urlparse
 
 class Command(BaseCommand):
-    help = 'Remove journalists with unwanted terms in their names'
+    help = 'Clean database: remove unwanted journalists and mark root domain pages'
 
     def handle(self, *args, **options):
         # List of partial strings to check for
@@ -29,3 +30,17 @@ class Command(BaseCommand):
             self.stdout.write(f'Removed NewsPageCategory "New Categories Needed"')
         except NewsPageCategory.DoesNotExist:
             self.stdout.write('NewsPageCategory "New Categories Needed" not found')
+
+        # Update root domain pages
+        updated_count = 0
+        for page in NewsPage.objects.all():
+            parsed_url = urlparse(page.url)
+            path = parsed_url.path.rstrip('/')
+            
+            if path == '' or path == '/':
+                page.is_news_article = False
+                page.save(update_fields=['is_news_article'])
+                updated_count += 1
+        
+        self.stdout.write(self.style.SUCCESS(f'Updated {updated_count} root domain pages'))
+
