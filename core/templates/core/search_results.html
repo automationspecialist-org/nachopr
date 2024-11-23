@@ -170,11 +170,19 @@
                     {% for article in journalist.prefetched_articles|slice:":3" %}
                       <div class="border-l-2 border-gray-200 pl-3">
                         <div class="text-sm">
-                          <a href="{{ article.url }}" 
-                             target="_blank" 
-                             class="text-blue-600 hover:text-blue-800 font-medium">
-                            {{ article.title }}
-                          </a>
+                          {% if user.is_staff %}
+                            <a href="{% url 'admin:core_newspage_change' article.id %}" 
+                               target="_blank" 
+                               class="text-blue-600 hover:text-blue-800 font-medium">
+                              {{ article.title }}
+                            </a>
+                          {% else %}
+                            <a href="{{ article.url }}" 
+                               target="_blank" 
+                               class="text-blue-600 hover:text-blue-800 font-medium">
+                              {{ article.title }}
+                            </a>
+                          {% endif %}
                           {% if article.published_date %}
                             <span class="text-gray-500 text-xs ml-2">
                               {{ article.published_date|date:"M d, Y" }}

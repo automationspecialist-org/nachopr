@@ -237,6 +237,8 @@ def extract_journalists_with_gpt(content: str, track_prompt: bool = False) -> di
     ```
     If you cannot find any valid journalists, return an empty JSON object. Never output the example JSON objects such as 'John Doe' and 'Jane Smith'.
     If you cannot extract the publushed article date, return an empty string for 'article_published_date'. 
+    The value of content_is_full_news_article should be true if the page is a full news article, and false otherwise.
+    If the page is a category page or list of multiple stories, set content_is_full_news_article to false.
     """
 
     
