@@ -296,7 +296,7 @@ class DbStat(models.Model):
         return f"{self.date} - {self.num_journalists_added_today} journalists added"
     
 
-@receiver(m2m_changed, sender=NewsPage.journalists.through)
+#@receiver(m2m_changed, sender=NewsPage.journalists.through)
 def sync_journalist_categories(sender, instance, action, **kwargs):
     """Sync categories when articles are added/removed from journalist"""
     logger.info(f"Signal fired: sync_journalist_categories - Action: {action}")
@@ -305,7 +305,7 @@ def sync_journalist_categories(sender, instance, action, **kwargs):
             logger.info(f"Syncing categories for journalist: {journalist.name}")
             journalist.sync_categories()
 
-@receiver(m2m_changed, sender=NewsPage.categories.through)
+#@receiver(m2m_changed, sender=NewsPage.categories.through)
 def sync_source_categories(sender, instance, action, **kwargs):
     """Sync categories when categories are added/removed from news pages"""
     logger.info(f"Signal fired: sync_source_categories - Action: {action}")
@@ -313,7 +313,7 @@ def sync_source_categories(sender, instance, action, **kwargs):
         logger.info(f"Syncing categories for source: {instance.source.name}")
         instance.source.sync_categories()
 
-@receiver(m2m_changed, sender=NewsPage.journalists.through)
+#@receiver(m2m_changed, sender=NewsPage.journalists.through)
 def sync_journalist_sources_and_categories(sender, instance, action, **kwargs):
     """Sync sources and categories when journalists are added/removed from a page"""
     if action in ["post_add", "post_remove", "post_clear"]:
@@ -322,3 +322,19 @@ def sync_journalist_sources_and_categories(sender, instance, action, **kwargs):
             journalist.sources.add(instance.source)
             # Sync categories
             journalist.sync_categories()
+
+
+class EmailDiscovery(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='email_discoveries')
+    journalist = models.ForeignKey(Journalist, on_delete=models.CASCADE, related_name='email_discoveries')
+    email = models.EmailField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    source_domain = models.CharField(max_length=255)  # Store which domain was used to find the email
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Email Discovery'
+        verbose_name_plural = 'Email Discoveries'
+        
+    def __str__(self):
+        return f"{self.journalist.name} - {self.email}"

@@ -3,7 +3,7 @@ from core.tasks import find_single_email_with_hunter_io
 from dotenv import load_dotenv
 from django.shortcuts import get_object_or_404, render
 import requests
-from core.models import CustomUser, NewsSource, NewsPage, Journalist, NewsPageCategory, PricingPlan, SavedSearch, SavedList
+from core.models import CustomUser, NewsSource, NewsPage, Journalist, NewsPageCategory, PricingPlan, SavedSearch, SavedList, EmailDiscovery
 from django.db.models import Prefetch
 from django.core.paginator import Paginator
 from django.contrib.auth.decorators import login_required
@@ -640,6 +640,14 @@ def find_journalist_email(request, journalist_id):
                 email_search_with_hunter_tried=True
             )
             
+            # Record the email discovery
+            EmailDiscovery.objects.create(
+                user=request.user,
+                journalist=journalist,
+                email=email,
+                source_domain=domain
+            )
+            
             # Deduct credit using direct update
             CustomUser.objects.filter(id=request.user.id).update(
                 credits=F('credits') - 1,
@@ -666,3 +674,20 @@ def find_journalist_email(request, journalist_id):
             '<span class="text-red-600">Error finding email</span>',
             status=200
         )
+
+@login_required
+def email_discoveries(request):
+    discoveries = EmailDiscovery.objects.filter(user=request.user).select_related('journalist')
+    
+    # Group by date for better organization
+    discoveries_by_date = {}
+    for discovery in discoveries:
+        date = discovery.created_at.date()
+        if date not in discoveries_by_date:
+            discoveries_by_date[date] = []
+        discoveries_by_date[date].append(discovery)
+    
+    context = {
+        'discoveries_by_date': discoveries_by_date
+    }
+    return render(request, 'core/email_discoveries.html', context)
