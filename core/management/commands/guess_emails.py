@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from core.tasks import guess_journalist_email_addresses, find_emails_with_hunter_io
+from core.tasks import find_emails_with_hunter_io
 
 class Command(BaseCommand):
     help = 'Guess email addresses for journalists without emails'

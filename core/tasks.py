@@ -1,7 +1,6 @@
 import asyncio
 import json
 import os
-import random
 from django.utils import timezone
 from tqdm import tqdm
 from core.models import DigitalPRExample, NewsPage, NewsPageCategory, NewsSource, Journalist
@@ -21,11 +20,9 @@ from markdownify import markdownify
 from django.db import transaction
 from mailscout import Scout
 from functools import lru_cache
-import dns.exception
 from datetime import datetime
 import requests
-from typing import List, Dict, Optional
-import numpy as np
+from typing import List, Optional
 import tiktoken  # Add this import for token counting
 from django.db.models.signals import post_save, m2m_changed
 from django.dispatch import receiver
@@ -363,7 +360,7 @@ async def process_all_pages_journalists(limit: int = 10, re_process: bool = Fals
                                         page.journalists.add(journalist)
                                     except IntegrityError as e:
                                         logger.error(f"Integrity error for journalist: {name}")
-                                        logger.error(f"Field values and lengths:")
+                                        logger.error("Field values and lengths:")
                                         logger.error(f"name ({len(name)}): {name}")
                                         logger.error(f"slug ({len(journalist_slug)}): {journalist_slug}")
                                         logger.error(f"profile_url ({len(profile_url)}): {profile_url}")

@@ -4,10 +4,7 @@ from django.contrib.auth.models import AbstractUser
 from django.contrib.postgres.search import SearchVectorField
 from django.contrib.postgres.indexes import GinIndex
 from django.contrib.postgres.search import SearchVector
-from django.db.models.signals import m2m_changed
-from django.dispatch import receiver
 from pgvector.django import VectorField
-from django.contrib.postgres.fields import ArrayField
 import logging
 
 logger = logging.getLogger(__name__)
@@ -263,9 +260,13 @@ class SavedList(models.Model):
     name = models.CharField(max_length=255)
     journalists = models.ManyToManyField(Journalist, related_name='saved_lists')
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-updated_at']
     
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.journalists.count()} journalists)"
 
 
 class DigitalPRExample(models.Model):

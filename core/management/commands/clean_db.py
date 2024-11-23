@@ -27,7 +27,7 @@ class Command(BaseCommand):
         try:
             category = NewsPageCategory.objects.get(name='New Categories Needed')
             category.delete()
-            self.stdout.write(f'Removed NewsPageCategory "New Categories Needed"')
+            self.stdout.write('Removed NewsPageCategory "New Categories Needed"')
         except NewsPageCategory.DoesNotExist:
             self.stdout.write('NewsPageCategory "New Categories Needed" not found')
 

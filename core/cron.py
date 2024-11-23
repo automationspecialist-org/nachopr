@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 import requests
 import os
 from core.tasks import categorize_news_pages_with_gpt, crawl_news_sources_sync, create_social_sharing_image, find_digital_pr_examples, guess_journalist_email_addresses, process_all_journalists_sync, process_journalist_descriptions_sync, update_page_embeddings_sync
-from core.models import Journalist, NewsPage, NewsSource, sync_journalist_categories
+from core.models import Journalist, NewsPage, NewsSource
 from django.conf import settings
 from django.core.management import call_command
 

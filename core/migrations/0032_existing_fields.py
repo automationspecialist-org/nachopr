@@ -1,5 +1,4 @@
 from django.db import migrations
-import pgvector.django
 from django.contrib.postgres.search import SearchVectorField
 
 class Migration(migrations.Migration):

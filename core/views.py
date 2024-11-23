@@ -11,29 +11,24 @@ from django.shortcuts import redirect
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth import get_user_model
-from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
 from django.template.loader import render_to_string
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 from django.db.models import Q
 from django.utils import timezone
-from django.contrib.auth import login
 # Create a session for the user
-from django.contrib.auth import get_user_model
-from django.contrib.auth.models import update_last_login
 import json
 from django.db import transaction
 import random
 import string
 from .polar import PolarClient
-from django.contrib.postgres.search import SearchQuery, SearchRank, SearchVector
-from algoliasearch_django import raw_search
+from django.contrib.postgres.search import SearchQuery, SearchRank
 import resend
 import logging
 from django.urls import reverse
 import asyncio
-from pgvector.django import L2Distance, CosineDistance
+from pgvector.django import CosineDistance
 from django.db.models import F
 
 # Get logger instance at the top of the file
@@ -523,35 +518,68 @@ def saved_lists(request):
 @login_required
 def save_to_list(request):
     if request.method == 'POST':
-        data = json.loads(request.body)
-        list_id = data.get('list_id')
-        new_list_name = data.get('new_list_name')
-        journalists = data.get('journalists', [])
+        try:
+            data = json.loads(request.body)
+            list_id = data.get('list_id')
+            new_list_name = data.get('new_list_name')
+            journalists = data.get('journalists', [])
 
-        if not list_id:
-            # New list being created
-            request.user.has_created_list = True
-        
-        if journalists:
-            request.user.has_saved_journalist = True
-        
-        request.user.save()
-        
-        if list_id:
-            saved_list = SavedList.objects.get(id=list_id, user=request.user)
-        else:
-            saved_list = SavedList.objects.create(
-                user=request.user,
-                name=new_list_name
-            )
+            with transaction.atomic():
+                # Create or get the list
+                if list_id:
+                    saved_list = get_object_or_404(SavedList, id=list_id, user=request.user)
+                else:
+                    # Validate new list name
+                    if not new_list_name or new_list_name.strip() == '':
+                        return JsonResponse({
+                            'status': 'error',
+                            'message': 'List name is required'
+                        }, status=400)
+                    
+                    saved_list = SavedList.objects.create(
+                        user=request.user,
+                        name=new_list_name.strip()
+                    )
 
-        # Add journalists to the list
-        journalist_ids = [j['id'] for j in journalists]
-        saved_list.journalists.add(*journalist_ids)
+                # Update user activity flags
+                if not list_id:
+                    request.user.has_created_list = True
+                if journalists:
+                    request.user.has_saved_journalist = True
+                request.user.save()
 
-        return JsonResponse({'status': 'success'})
+                # Add journalists to the list
+                journalist_ids = [j['id'] for j in journalists]
+                saved_list.journalists.add(*journalist_ids)
+                
+                # Update the list's updated_at timestamp
+                saved_list.save()
 
-    return JsonResponse({'status': 'error'}, status=400)
+                return JsonResponse({
+                    'status': 'success',
+                    'list': {
+                        'id': saved_list.id,
+                        'name': saved_list.name,
+                        'journalist_count': saved_list.journalists.count()
+                    }
+                })
+
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid JSON data'
+            }, status=400)
+        except Exception as e:
+            logger.error(f"Error saving to list: {str(e)}")
+            return JsonResponse({
+                'status': 'error',
+                'message': 'An error occurred while saving the list'
+            }, status=500)
+
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Method not allowed'
+    }, status=405)
 
 
 @login_required
