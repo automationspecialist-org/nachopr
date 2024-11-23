@@ -885,16 +885,17 @@ def truncate_text_for_embeddings(text: str, max_tokens: int = 8000) -> str:
 async def update_page_embeddings(limit: int = 100):
     """Update embeddings for NewsPages that don't have them"""
     try:
-        # Get pages without embeddings
+        # Get pages without embeddings and is_news_article=True
         pages = await sync_to_async(list)(
             NewsPage.objects.filter(
                 embedding__isnull=True,
-                content__isnull=False
+                content__isnull=False,
+                is_news_article=True  # Added this condition
             )[:limit]
         )
 
         if not pages:
-            logger.info("No pages found needing embeddings")
+            logger.info("No news article pages found needing embeddings")
             return
 
         # Prepare texts for embedding with truncation
@@ -991,6 +992,10 @@ def update_journalist_embeddings_sync(limit: int = 100):
 @receiver(post_save, sender=NewsPage)
 def update_newspage_embedding_on_change(sender, instance, **kwargs):
     """Update embedding when NewsPage content changes"""
+    # Only proceed if this is a news article
+    if not instance.is_news_article:
+        return
+        
     if instance.content and instance.title:
         # Skip if this save was triggered by an embedding update
         if kwargs.get('update_fields') == {'embedding'}:
