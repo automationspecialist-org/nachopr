@@ -520,24 +520,39 @@ def create_social_sharing_image():
         logo_width = int(logo_height * aspect_ratio)
         logo = logo.resize((logo_width, logo_height))
         
-        # Paste logo on left side with padding
-        logo_x = 100
-        logo_y = (height - logo_height) // 2
-        image.paste(logo, (logo_x, logo_y), logo if logo.mode == 'RGBA' else None)
-
         # Add text on right side
         try:
             font_path = os.path.join(settings.STATIC_ROOT, 'fonts', 'SpaceMono-Bold.ttf')
             logger.debug(f"Loading font from: {font_path}")
             font = ImageFont.truetype(font_path, 60)
-            logger.info("Successfully loaded custom font")
+            # Create larger font for NachoPR
+            nacho_font = ImageFont.truetype(font_path, 120)
+            logger.info("Successfully loaded custom fonts")
         except Exception as e:
             logger.warning(f"Failed to load custom font, falling back to default: {str(e)}")
             font = ImageFont.load_default()
+            nacho_font = font
 
+        # Calculate vertical position for logo and text to be aligned
+        content_y = 200  # Common starting position for logo and text
+        
+        # Add NachoPR text centered at top
+        nacho_text = "NachoPR"
+        nacho_bbox = draw.textbbox((0, 0), nacho_text, font=nacho_font)
+        nacho_width = nacho_bbox[2] - nacho_bbox[0]
+        nacho_x = (width - nacho_width) // 2
+        nacho_y = 40  # Padding from top
+        draw.text((nacho_x, nacho_y), nacho_text, font=nacho_font, fill=(255, 255, 255))
+
+        # Paste logo on left side with padding
+        logo_x = 100
+        logo_y = content_y - 20
+        image.paste(logo, (logo_x, logo_y), logo if logo.mode == 'RGBA' else None)
+
+        # Add main text aligned with logo
         text = f"Connect with\n{journalists_count:,} Journalists\nfrom {media_outlets_count:,}\nMedia Outlets"
         text_x = logo_x + logo_width + 100
-        text_y = height // 2 - 100
+        text_y = content_y
         
         # Draw text with white color
         draw.text((text_x, text_y), text, font=font, fill=(255, 255, 255))
