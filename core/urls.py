@@ -2,6 +2,11 @@ from django.urls import path
 from django.views.generic import RedirectView
 from . import views
 
+
+def trigger_error(request):
+    division_by_zero = 1 / 0
+
+
 urlpatterns = [
     path('', views.home, name='home'),
     path('app/search/', views.search, name='search'),
@@ -23,5 +28,8 @@ urlpatterns = [
     path('app/journalist/<int:id>/', views.journalist_detail, name='journalist_detail'),
     path('journalist/<int:journalist_id>/find-email/', views.find_journalist_email, name='find_journalist_email'),
     path('app/email-discoveries/', views.email_discoveries, name='email_discoveries'),
+    path('api/lists/', views.get_user_lists, name='get_user_lists'),
+    path('save-to-list/', views.save_to_list, name='save_to_list'),
+    path('sentry-debug/', trigger_error),
 ]
 

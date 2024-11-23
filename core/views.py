@@ -30,6 +30,7 @@ from django.urls import reverse
 import asyncio
 from pgvector.django import CosineDistance
 from django.db.models import F
+from django.db.models import Count
 
 # Get logger instance at the top of the file
 logger = logging.getLogger(__name__)
@@ -719,3 +720,15 @@ def email_discoveries(request):
         'discoveries_by_date': discoveries_by_date
     }
     return render(request, 'core/email_discoveries.html', context)
+
+@login_required
+def get_user_lists(request):
+    """API endpoint to get user's saved lists with journalist counts"""
+    lists = SavedList.objects.filter(user=request.user).values(
+        'id', 
+        'name'
+    ).annotate(
+        journalist_count=Count('journalists')
+    ).order_by('-updated_at')
+    
+    return JsonResponse(list(lists), safe=False)

@@ -38,4 +38,5 @@ dependencies = [
     "resend>=2.4.0",
     "pgvector>=0.3.6",
     "tiktoken>=0.8.0",
+    "sentry-sdk[django]>=2.19.0",
 ]

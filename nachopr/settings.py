@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+import sentry_sdk
 
 load_dotenv()
 
@@ -21,6 +22,20 @@ if 'AZURE' in os.environ:
     print("Running on Azure")
 else:
     PROD = False
+
+if PROD:
+    sentry_sdk.init(
+        dsn="https://88a3438a82d94bd107685fc631757884@o4508348122464256.ingest.us.sentry.io/4508348123709441",
+        # Set traces_sample_rate to 1.0 to capture 100%
+        # of transactions for tracing.
+        traces_sample_rate=1.0,
+        _experiments={
+            # Set continuous_profiling_auto_start to True
+            # to automatically start the profiler on when
+            # possible.
+            "continuous_profiling_auto_start": True,
+        },
+    )
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
