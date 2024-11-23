@@ -64,6 +64,7 @@ class Journalist(models.Model):
         default='guessed'
     )
     categories = models.ManyToManyField('NewsPageCategory', related_name='journalists', blank=True)
+    email_search_with_hunter_tried = models.BooleanField(default=False)
     
     search_vector = SearchVectorField(null=True)
     embedding = VectorField(dimensions=EMBEDDING_DIMENSIONS, null=True)

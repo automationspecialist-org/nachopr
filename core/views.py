@@ -1,8 +1,9 @@
 import os
+from core.tasks import find_single_email_with_hunter_io
 from dotenv import load_dotenv
 from django.shortcuts import get_object_or_404, render
 import requests
-from core.models import NewsSource, NewsPage, Journalist, NewsPageCategory, PricingPlan, SavedSearch, SavedList
+from core.models import CustomUser, NewsSource, NewsPage, Journalist, NewsPageCategory, PricingPlan, SavedSearch, SavedList
 from django.db.models import Prefetch
 from django.core.paginator import Paginator
 from django.contrib.auth.decorators import login_required
@@ -578,3 +579,90 @@ def journalist_detail(request, id):
     journalist = get_object_or_404(Journalist, id=id)
     context = {'journalist': journalist}
     return render(request, 'core/journalist_detail.html', context=context)
+
+@login_required
+def find_journalist_email(request, journalist_id):
+    """HTMX endpoint to find and save journalist email"""
+    logger.info(f"Finding email for journalist {journalist_id}")
+    
+    if request.method != 'POST':
+        logger.warning(f"Invalid method {request.method} for find_journalist_email")
+        return HttpResponse(status=405)  # Method not allowed
+        
+    if request.user.credits <= 0:
+        logger.warning(f"User {request.user.email} has no credits remaining")
+        return HttpResponse(
+            '<span class="text-red-600">No credits remaining</span>',
+            status=200
+        )
+        
+    journalist = get_object_or_404(Journalist, id=journalist_id)
+    logger.info(f"Found journalist: {journalist.name}")
+    
+    # Don't search if we already have an email
+    if journalist.email_address:
+        logger.info(f"Email already exists for {journalist.name}: {journalist.email_address}")
+        return HttpResponse(
+            f'<span class="text-green-600">{journalist.email_address}</span>',
+            status=200
+        )
+        
+    # Get the first source's domain to try
+    first_source = journalist.sources.first()
+    if not first_source:
+        logger.warning(f"No source found for journalist {journalist.name}")
+        return HttpResponse(
+            '<span class="text-red-600">No source domain available</span>',
+            status=200
+        )
+        
+    # Extract domain from source URL
+    try:
+        domain = first_source.url.split('//')[1].split('/')[0]
+        logger.info(f"Trying domain {domain} for {journalist.name}")
+    except Exception as e:
+        logger.error(f"Error extracting domain from {first_source.url}: {str(e)}")
+        return HttpResponse(
+            '<span class="text-red-600">Invalid source URL</span>',
+            status=200
+        )
+    
+    # Try to find email
+    try:
+        email = find_single_email_with_hunter_io(journalist.name, domain)
+        
+        if email:
+            logger.info(f"Found email {email} for {journalist.name}")
+            # Use direct update to avoid triggering signals
+            Journalist.objects.filter(id=journalist.id).update(
+                email_address=email,
+                email_status='guessed_by_third_party',
+                email_search_with_hunter_tried=True
+            )
+            
+            # Deduct credit using direct update
+            CustomUser.objects.filter(id=request.user.id).update(
+                credits=F('credits') - 1,
+                has_retrieved_email=True
+            )
+            
+            return HttpResponse(
+                f'<span class="text-green-600">{email}</span>',
+                status=200
+            )
+        else:
+            logger.info(f"No email found for {journalist.name} at {domain}")
+            # Use direct update to avoid triggering signals
+            Journalist.objects.filter(id=journalist.id).update(
+                email_search_with_hunter_tried=True
+            )
+            return HttpResponse(
+                '<span class="text-red-600">No email found</span>',
+                status=200
+            )
+    except Exception as e:
+        logger.error(f"Error finding email for {journalist.name}: {str(e)}")
+        return HttpResponse(
+            '<span class="text-red-600">Error finding email</span>',
+            status=200
+        )

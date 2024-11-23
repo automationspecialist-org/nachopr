@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from core.tasks import guess_journalist_email_addresses
+from core.tasks import guess_journalist_email_addresses, find_emails_with_hunter_io
 
 class Command(BaseCommand):
     help = 'Guess email addresses for journalists without emails'
@@ -8,7 +8,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--limit',
             type=int,
-            default=100_000,
+            default=1,
             help='Maximum number of journalists to process'
         )
 
@@ -16,6 +16,6 @@ class Command(BaseCommand):
         limit = options['limit']
         self.stdout.write(f'Guessing email addresses for up to {limit} journalists...')
         
-        guess_journalist_email_addresses(limit=limit)
+        find_emails_with_hunter_io(limit=limit)
         
         self.stdout.write(self.style.SUCCESS('Successfully completed email guessing'))

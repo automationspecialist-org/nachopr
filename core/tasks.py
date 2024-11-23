@@ -24,11 +24,12 @@ from functools import lru_cache
 import dns.exception
 from datetime import datetime
 import requests
-from typing import List, Dict
+from typing import List, Dict, Optional
 import numpy as np
 import tiktoken  # Add this import for token counting
 from django.db.models.signals import post_save, m2m_changed
 from django.dispatch import receiver
+import requests_cache
 
 
 load_dotenv()
@@ -924,7 +925,7 @@ async def update_page_embeddings(limit: int = 100):
             with transaction.atomic():
                 for page, embedding in zip(pages, all_embeddings):
                     page.embedding = embedding
-                    page.save(update_fields=['embedding'])
+                    page.save()
         
         await save_embeddings()
         logger.info(f"Updated embeddings for {len(pages)} pages")
@@ -976,7 +977,7 @@ async def update_journalist_embeddings(limit: int = 100):
             with transaction.atomic():
                 for journalist, embedding in zip(journalists, all_embeddings):
                     journalist.embedding = embedding
-                    journalist.save(update_fields=['embedding'])
+                    journalist.save()
         
         await save_embeddings()
         logger.info(f"Updated embeddings for {len(journalists)} journalists")
@@ -1024,7 +1025,7 @@ def update_newspage_embedding_on_change(sender, instance, **kwargs):
             
             # Update the embedding directly
             instance.embedding = response.data[0].embedding
-            instance.save(update_fields=['embedding'])
+            instance.save()
             
         except Exception as e:
             logger.error(f"Error updating embedding for NewsPage {instance.id}: {str(e)}")
@@ -1057,7 +1058,7 @@ def update_journalist_embedding_on_change(sender, instance, **kwargs):
         
         # Update the embedding directly
         instance.embedding = response.data[0].embedding
-        instance.save(update_fields=['embedding'])
+        instance.save()
         
     except Exception as e:
         logger.error(f"Error updating embedding for Journalist {instance.id}: {str(e)}")
@@ -1072,3 +1073,112 @@ def update_journalist_embedding_on_categories_change(sender, instance, **kwargs)
     update_journalist_embedding_on_change(sender, instance)
 
 
+
+def find_single_email_with_hunter_io(name: str, domain: str) -> Optional[str]:
+    """Find a single email with Hunter.io"""
+    try:
+        # Initialize cached session (expires after 1 week)
+        session = requests_cache.CachedSession(
+            'hunter_cache',
+            expire_after=604800  # 7 days in seconds
+        )
+
+        # Split name into first and last
+        name_parts = name.strip().split()
+        if len(name_parts) < 2:
+            logger.warning(f"Name '{name}' doesn't contain both first and last name")
+            return None
+
+        first_name = name_parts[0]
+        last_name = ' '.join(name_parts[1:])  # Handle multi-word last names
+
+        # Clean domain (remove www. and any paths)
+        domain = domain.replace('www.', '').split('/')[0]
+
+        # Make request to Hunter.io
+        response = session.get(
+            'https://api.hunter.io/v2/email-finder',
+            params={
+                'domain': domain,
+                'first_name': first_name,
+                'last_name': last_name,
+                'api_key': os.getenv('HUNTER_API_KEY')
+            }
+        )
+
+        # Log raw response for debugging
+        logger.info(f"Raw Hunter.io response for {name} at {domain}: {response.text}")
+
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('data', {}).get('email'):
+                return data['data']['email']
+            else:
+                return None
+        else:
+            logger.error(f"Hunter.io API error: {response.status_code} - {response.text}")
+            return None
+
+    except Exception as e:
+        logger.error(f"Error finding email for {name} at {domain}: {str(e)}")
+        return None
+
+
+def find_emails_with_hunter_io(limit: int = 1):
+    """Find emails for journalists using Hunter.io until we find the requested number of emails"""
+    try:
+        emails_found = 0
+        batch_size = 10  # Process journalists in batches to avoid loading too many at once
+        
+        while emails_found < limit:
+            # Get next batch of journalists without email addresses
+            journalists = Journalist.objects.filter(
+                email_address__isnull=True,  # No email yet
+                email_search_with_hunter_tried=False,  # Haven't tried Hunter.io yet
+                sources__isnull=False  # Must have at least one source
+            ).prefetch_related('sources')[:batch_size]
+            
+            # Break if no more journalists to process
+            if not journalists:
+                logger.info("No more journalists to process")
+                break
+                
+            logger.info(f"Processing batch of {len(journalists)} journalists. Found {emails_found}/{limit} emails so far")
+
+            for journalist in journalists:
+                # Get the first source's domain to try
+                first_source = journalist.sources.first()
+                if not first_source:
+                    continue
+
+                # Extract domain from source URL
+                domain = first_source.url.split('//')[1].split('/')[0]
+                
+                # Try to find email
+                email = find_single_email_with_hunter_io(journalist.name, domain)
+                
+                if email:
+                    logger.info(f"Found email {email} for {journalist.name}")
+                    # Use update() to avoid triggering signals
+                    Journalist.objects.filter(id=journalist.id).update(
+                        email_address=email,
+                        email_status='guessed_by_third_party',
+                        email_search_with_hunter_tried=True
+                    )
+                    emails_found += 1
+                    if emails_found >= limit:
+                        logger.info(f"Found requested number of emails ({limit})")
+                        return
+                else:
+                    logger.info(f"No email found for {journalist.name} at {domain}")
+                    # Use update() to avoid triggering signals
+                    Journalist.objects.filter(id=journalist.id).update(
+                        email_search_with_hunter_tried=True
+                    )
+
+        logger.info(f"Finished processing. Found {emails_found} emails (requested: {limit})")
+
+    except Exception as e:
+        logger.error(f"Error in find_emails_with_hunter_io: {str(e)}")
+        raise
+    

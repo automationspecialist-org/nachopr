@@ -306,7 +306,7 @@ CRONJOBS = [
     ('*/20 * * * *', 'core.cron.crawl_job', '>> /tmp/cron.log 2>&1'),
     ('*/30 * * * *', 'core.cron.categorize_job', '>> /tmp/cron_categorize.log 2>&1'),
     ('*/30 * * * *', 'core.cron.process_journalist_profiles_job', '>> /tmp/cron_process_journalist_profiles.log 2>&1'),
-    ('*/30 * * * *', 'core.cron.guess_emails_job', '>> /tmp/cron_guess_emails.log 2>&1'),
+    #('*/30 * * * *', 'core.cron.guess_emails_job', '>> /tmp/cron_guess_emails.log 2>&1'),
     ('*/30 * * * *', 'core.cron.clean_db_job', '>> /tmp/cron_clean_db.log 2>&1'),
     ('*/30 * * * *', 'core.cron.algolia_reindex_job', '>> /tmp/cron_algolia_reindex.log 2>&1'),
     ('*/30 * * * *', 'core.cron.generate_social_share_image_job', '>> /tmp/cron_generate_social_share_image.log 2>&1'),
