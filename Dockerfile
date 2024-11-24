@@ -47,7 +47,9 @@ RUN apt-get update && apt-get install -y supervisor \
 # Copy supervisor configuration
 COPY supervisor/celery.conf /etc/supervisor/conf.d/
 
-
+RUN apt-get install -y --no-install-recommends dialog openssh-server \
+    && echo "root:Docker!" | chpasswd \
+    && mkdir -p /run/sshd   
 # Now copy and set permissions for SSH config
 COPY sshd_config /etc/ssh/
 RUN chmod 755 /etc/ssh/sshd_config

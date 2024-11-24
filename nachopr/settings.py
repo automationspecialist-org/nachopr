@@ -122,7 +122,7 @@ ALLOWED_HOSTS = [
     '0.0.0.0', '127.0.0.1', 'nachopr.apps.innermaps.org',
     'nachoapp-ekewd4f3gdbwcxcu.eastus-01.azurewebsites.net',
     'nachopr.com',
-    '169.254.130.3'
+    '169.254.*.*'
 ]
 
 # Add CSRF trusted origins for your domains
