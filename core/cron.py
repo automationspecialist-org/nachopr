@@ -121,3 +121,6 @@ def update_embeddings_job():
 
 def clean_db_job():
     call_command('clean_db')
+
+def algolia_reindex_job():
+    call_command('algolia_reindex')
