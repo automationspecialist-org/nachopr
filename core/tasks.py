@@ -27,6 +27,8 @@ import tiktoken  # Add this import for token counting
 from django.db.models.signals import post_save, m2m_changed
 from django.dispatch import receiver
 import requests_cache
+from urllib.parse import urlparse, urlunparse
+
 
 
 load_dotenv()
@@ -341,8 +343,8 @@ async def process_all_pages_journalists(limit: int = 10, re_process: bool = Fals
                             for journalist_dict in journalists_data['journalists']:
                                 if 'name' in journalist_dict:
                                     name = journalist_dict['name']
-                                    profile_url = journalist_dict.get('profile_url', '')
-                                    image_url = journalist_dict.get('image_url', '')
+                                    profile_url = clean_url(journalist_dict.get('profile_url', ''))
+                                    image_url = clean_url(journalist_dict.get('image_url', ''))
                                     journalist_slug = slugify(name)
                                     
                                     try:
@@ -1191,4 +1193,20 @@ def find_emails_with_hunter_io(limit: int = 1):
     except Exception as e:
         logger.error(f"Error in find_emails_with_hunter_io: {str(e)}")
         raise
-    
+
+
+def clean_url(url: str) -> str:
+    """Remove query parameters and fragments from URL"""
+    if not url:
+        return url
+    parsed = urlparse(url)
+    # Reconstruct URL without query parameters or fragments
+    clean = urlunparse((
+        parsed.scheme,
+        parsed.netloc,
+        parsed.path,
+        '',  # params
+        '',  # query
+        ''   # fragment
+    ))
+    return clean 
