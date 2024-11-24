@@ -35,7 +35,8 @@ from tenacity import (
     retry_if_exception_type
 )
 from openai import APIError, APIConnectionError, RateLimitError
-
+from celery import shared_task
+from celery.signals import task_success
 
 
 load_dotenv()
@@ -1259,3 +1260,29 @@ async def generate_embeddings(texts: List[str]) -> List[List[float]]:
     except Exception as e:
         logger.error(f"Error generating embeddings: {str(e)}")
         raise
+
+
+@shared_task(bind=True)
+def continuous_crawl_task(self):
+    """Continuous crawling task that triggers another run upon completion"""
+    try:
+        # Run the crawl
+        newspage_count_before = NewsPage.objects.count()
+        journalist_count_before = Journalist.objects.count()
+        
+        crawl_news_sources_sync(domain_limit=1, page_limit=2000, max_concurrent_tasks=20)
+        process_all_journalists_sync(limit=1000)
+        
+        newspage_count_after = NewsPage.objects.count()
+        journalist_count_after = Journalist.objects.count()
+        
+        message = f"Crawl completed. {newspage_count_after - newspage_count_before} pages, {journalist_count_after - journalist_count_before} journalists added."
+        logger.info(message)
+        
+        # Chain the next task
+        continuous_crawl_task.delay()
+        
+    except Exception as e:
+        logger.error(f"Error in continuous crawl: {str(e)}")
+        # Retry after 5 minutes on failure
+        self.retry(countdown=300)

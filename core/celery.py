@@ -1,6 +1,7 @@
 import os
 from celery import Celery
 from dotenv import load_dotenv
+from celery.signals import celeryd_after_setup
 
 load_dotenv()
 
@@ -31,3 +32,13 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 
 # Auto-discover tasks in all installed apps
 app.autodiscover_tasks()
+
+@celeryd_after_setup.connect
+def setup_periodic_tasks(sender, instance, **kwargs):
+    """Start continuous tasks when Celery worker starts"""
+    from core.tasks import (
+        continuous_crawl_task,
+    )
+    
+    # Start continuous tasks
+    continuous_crawl_task.delay()
