@@ -28,6 +28,13 @@ from django.db.models.signals import post_save, m2m_changed
 from django.dispatch import receiver
 import requests_cache
 from urllib.parse import urlparse, urlunparse
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type
+)
+from openai import APIError, APIConnectionError, RateLimitError
 
 
 
@@ -858,62 +865,41 @@ def guess_journalist_email_addresses(limit: int = 10):
         guess_journalist_email_address(journalist)
 
 
-async def generate_embeddings(texts: List[str]) -> List[List[float]]:
-    """Generate embeddings for a list of texts using Azure OpenAI"""
-    try:
-        client = AzureOpenAI(
-            azure_endpoint=os.getenv("AZURE_OPENAI_EMBEDDING_ENDPOINT"),
-            api_version="2023-05-15",
-            api_key=os.getenv("AZURE_OPENAI_EMBEDDING_API_KEY")
-        )
-
-        response = client.embeddings.create(
-            model="text-embedding-3-small",  # or your deployed embedding model name
-            input=texts
-        )
-        
-        # Extract embeddings from response
-        embeddings = [item.embedding for item in response.data]
-        return embeddings
-
-    except Exception as e:
-        logger.error(f"Error generating embeddings: {str(e)}")
-        raise
-
-def truncate_text_for_embeddings(text: str, max_tokens: int = 8000) -> str:
-    """Truncate text to fit within token limit for embeddings"""
-    try:
-        # Initialize tokenizer for text-embedding-3-small
-        encoding = tiktoken.get_encoding("cl100k_base")
-        tokens = encoding.encode(text)
-        
-        if len(tokens) > max_tokens:
-            # Truncate tokens and decode back to text
-            truncated_tokens = tokens[:max_tokens]
-            return encoding.decode(truncated_tokens)
-        
-        return text
-    except Exception as e:
-        logger.error(f"Error truncating text: {str(e)}")
-        return text[:32000]  # Fallback to character-based truncation
+@retry(
+    retry=retry_if_exception_type((APIError, APIConnectionError, RateLimitError)),
+    wait=wait_exponential(multiplier=1, min=4, max=60),
+    stop=stop_after_attempt(5)
+)
+def generate_embedding(text: str) -> List[float]:
+    """Generate embedding with retry logic"""
+    client = AzureOpenAI(
+        azure_endpoint=os.getenv("AZURE_OPENAI_EMBEDDING_ENDPOINT"),
+        api_version="2023-05-15",
+        api_key=os.getenv("AZURE_OPENAI_EMBEDDING_API_KEY")
+    )
+    
+    response = client.embeddings.create(
+        input=text,
+        model="text-embedding-3-small"
+    )
+    return response.data[0].embedding
 
 async def update_page_embeddings(limit: int = 100):
     """Update embeddings for NewsPages that don't have them"""
     try:
-        # Get pages without embeddings and is_news_article=True
         pages = await sync_to_async(list)(
             NewsPage.objects.filter(
                 embedding__isnull=True,
                 content__isnull=False,
-                is_news_article=True  # Added this condition
+                is_news_article=True
             )[:limit]
         )
 
         if not pages:
-            logger.info("No news article pages found needing embeddings")
+            logger.info("No pages found needing embeddings")
             return
 
-        # Prepare texts for embedding with truncation
+        # Prepare texts for embedding
         texts = [
             truncate_text_for_embeddings(
                 f"{page.title}\n\n{page.content}",
@@ -937,7 +923,7 @@ async def update_page_embeddings(limit: int = 100):
             with transaction.atomic():
                 for page, embedding in zip(pages, all_embeddings):
                     page.embedding = embedding
-                    page.save()
+                    page.save(update_fields=['embedding'])
         
         await save_embeddings()
         logger.info(f"Updated embeddings for {len(pages)} pages")
@@ -954,7 +940,6 @@ def update_page_embeddings_sync(limit: int = 100):
 async def update_journalist_embeddings(limit: int = 100):
     """Update embeddings for Journalists that don't have them"""
     try:
-        # Get journalists without embeddings
         journalists = await sync_to_async(list)(
             Journalist.objects.filter(
                 embedding__isnull=True
@@ -968,10 +953,10 @@ async def update_journalist_embeddings(limit: int = 100):
         # Prepare texts for embedding
         texts = [
             truncate_text_for_embeddings(
-                journalist.get_text_for_embedding(),
+                f"{j.name}\n{j.description or ''}\n{' '.join(j.categories.values_list('name', flat=True))}",
                 max_tokens=8000
             ) 
-            for journalist in journalists
+            for j in journalists
         ]
         
         # Generate embeddings in batches of 20
@@ -989,7 +974,7 @@ async def update_journalist_embeddings(limit: int = 100):
             with transaction.atomic():
                 for journalist, embedding in zip(journalists, all_embeddings):
                     journalist.embedding = embedding
-                    journalist.save()
+                    journalist.save(update_fields=['embedding'])
         
         await save_embeddings()
         logger.info(f"Updated embeddings for {len(journalists)} journalists")
@@ -1210,3 +1195,65 @@ def clean_url(url: str) -> str:
         ''   # fragment
     ))
     return clean 
+
+def truncate_text_for_embeddings(text: str, max_tokens: int = 8000) -> str:
+    """
+    Truncate text to fit within token limit for embeddings.
+    Uses tiktoken for accurate token counting.
+    """
+    try:
+        # Initialize tokenizer for text-embedding-3-small
+        encoding = tiktoken.get_encoding("cl100k_base")
+        
+        # Get token count
+        tokens = encoding.encode(text)
+        
+        if len(tokens) <= max_tokens:
+            return text
+            
+        # If text is too long, truncate tokens and decode back to text
+        truncated_tokens = tokens[:max_tokens]
+        truncated_text = encoding.decode(truncated_tokens)
+        
+        return truncated_text
+        
+    except Exception as e:
+        logger.error(f"Error truncating text: {str(e)}")
+        # If tokenization fails, do a rough character-based truncation
+        # Assuming average of 4 characters per token
+        char_limit = max_tokens * 4
+        return text[:char_limit]
+
+async def generate_embeddings(texts: List[str]) -> List[List[float]]:
+    """
+    Generate embeddings for a batch of texts.
+    Uses retry logic and handles rate limits.
+    """
+    try:
+        # Create Azure OpenAI client
+        client = AzureOpenAI(
+            azure_endpoint=os.getenv("AZURE_OPENAI_EMBEDDING_ENDPOINT"),
+            api_version="2023-05-15",
+            api_key=os.getenv("AZURE_OPENAI_EMBEDDING_API_KEY")
+        )
+        
+        # Use the retry decorator for the actual API call
+        @retry(
+            retry=retry_if_exception_type((APIError, APIConnectionError, RateLimitError)),
+            wait=wait_exponential(multiplier=1, min=4, max=60),
+            stop=stop_after_attempt(5)
+        )
+        async def _generate_batch_embeddings(batch_texts):
+            response = client.embeddings.create(
+                model="text-embedding-3-small",
+                input=batch_texts
+            )
+            return [data.embedding for data in response.data]
+        
+        # Generate embeddings
+        embeddings = await _generate_batch_embeddings(texts)
+        return embeddings
+        
+    except Exception as e:
+        logger.error(f"Error generating embeddings: {str(e)}")
+        raise
