@@ -36,7 +36,7 @@ else
     echo "SLACK_WEBHOOK_URL is not set. Skipping Slack notification."
 fi
 
-
+# start celery worker - in dev: uv run celery -A core worker --queues=celery
 supervisord
 
 uv run granian --interface asginl \
