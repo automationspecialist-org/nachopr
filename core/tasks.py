@@ -49,6 +49,8 @@ logger = logging.getLogger(__name__)
 
 lunary.config(app_id=os.getenv('LUNARY_PUBLIC_KEY'))
 
+
+
 # Cache failed domains to avoid rechecking
 failed_domains = set()
 

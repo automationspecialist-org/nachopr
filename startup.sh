@@ -36,7 +36,9 @@ else
     echo "SLACK_WEBHOOK_URL is not set. Skipping Slack notification."
 fi
 
-# Use asginl interface for Django (ASGI without lifespan protocol)
+
+supervisord
+
 uv run granian --interface asginl \
     --host 0.0.0.0 \
     --port 80 \

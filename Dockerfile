@@ -39,21 +39,15 @@ RUN apt-get update && apt-get install -y \
     #&& apt-get install -y nodejs \
     #&& npm install -g npm@latest
 
-# Move SQLite installation into its own layer for better caching
-RUN wget https://www.sqlite.org/2024/sqlite-autoconf-3470000.tar.gz \
-    && tar xvfz sqlite-autoconf-3470000.tar.gz \
-    && cd sqlite-autoconf-3470000 \
-    && ./configure --prefix=/usr/local \
-    && make \
-    && make install \
-    && cd .. \
-    && rm -rf sqlite-autoconf-3470000* \
-    # cleaning up unused files
-    && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get install -y --no-install-recommends dialog openssh-server \
-    && echo "root:Docker!" | chpasswd \
-    && mkdir -p /run/sshd
+# Setup Supervisor and Celery
+RUN apt-get update && apt-get install -y supervisor \
+    && mkdir -p /var/log/celery \
+    && mkdir -p /etc/supervisor/conf.d
+
+# Copy supervisor configuration
+COPY supervisor/celery.conf /etc/supervisor/conf.d/
+
+
 
 # Now copy and set permissions for SSH config
 COPY sshd_config /etc/ssh/
@@ -90,4 +84,5 @@ EXPOSE 80 2222
 
 # Ensure proper initialization
 ENTRYPOINT ["/usr/src/app/startup.sh"]
+
  
