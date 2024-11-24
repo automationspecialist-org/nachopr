@@ -6,6 +6,13 @@ from django.contrib.postgres.indexes import GinIndex
 from django.contrib.postgres.search import SearchVector
 from pgvector.django import VectorField
 import logging
+from tenacity import (
+    retry,
+    stop_after_attempt, 
+    wait_exponential,
+    retry_if_exception_type
+)
+from openai.types.error import APIError, APIConnectionError, RateLimitError
 
 logger = logging.getLogger(__name__)
 
@@ -149,6 +156,21 @@ class NewsPageCategory(models.Model):
         super().save(*args, **kwargs)
 
 
+# Add retry decorator for embedding generation
+@retry(
+    retry=retry_if_exception_type((APIError, APIConnectionError, RateLimitError)),
+    wait=wait_exponential(multiplier=1, min=4, max=60),
+    stop=stop_after_attempt(5)
+)
+def generate_embedding(text):
+    """Generate embedding with retry logic"""
+    client = get_openai_client()  # However you're getting your client
+    response = client.embeddings.create(
+        input=text,
+        model="text-embedding-3-small"  
+    )
+    return response.data[0].embedding
+
 class NewsPage(models.Model):
     url = models.URLField(unique=True)
     title = models.CharField(max_length=500)
@@ -177,6 +199,16 @@ class NewsPage(models.Model):
         """Get concatenated text for embedding"""
         return f"{self.title}\n\n{self.content}"
     
+    def update_embedding(self):
+        """Update embedding with retry logic"""
+        try:
+            if self.title:  # or whatever field you're embedding
+                self.embedding = generate_embedding(self.title)
+                self.save(update_fields=['embedding'])
+        except Exception as e:
+            logger.error(f"Failed to update embedding for NewsPage {self.id}: {str(e)}")
+            raise
+
     class Meta:
         indexes = [
             GinIndex(fields=['search_vector'])

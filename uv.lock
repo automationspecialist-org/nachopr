@@ -946,6 +946,7 @@ dependencies = [
     { name = "sentry-sdk", extra = ["django"] },
     { name = "slugify" },
     { name = "spider-rs" },
+    { name = "tenacity" },
     { name = "tiktoken" },
     { name = "whitenoise" },
 ]
@@ -986,6 +987,7 @@ requires-dist = [
     { name = "sentry-sdk", extras = ["django"], specifier = ">=2.19.0" },
     { name = "slugify" },
     { name = "spider-rs" },
+    { name = "tenacity", specifier = ">=8.5.0" },
     { name = "tiktoken", specifier = ">=0.8.0" },
     { name = "whitenoise" },
 ]

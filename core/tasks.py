@@ -345,9 +345,6 @@ async def process_all_pages_journalists(limit: int = 10, re_process: bool = Fals
                                     image_url = journalist_dict.get('image_url', '')
                                     journalist_slug = slugify(name)
                                     
-                                    # Log field lengths
-                                    logger.info(f"Field lengths - name: {len(name)}, profile_url: {len(profile_url)}, image_url: {len(image_url)}, slug: {len(journalist_slug)}")
-                                    
                                     try:
                                         journalist, created = Journalist.objects.get_or_create(
                                             name=name,
@@ -358,14 +355,15 @@ async def process_all_pages_journalists(limit: int = 10, re_process: bool = Fals
                                             }
                                         )
                                         page.journalists.add(journalist)
-                                    except IntegrityError as e:
-                                        logger.error(f"Integrity error for journalist: {name}")
-                                        logger.error("Field values and lengths:")
-                                        logger.error(f"name ({len(name)}): {name}")
-                                        logger.error(f"slug ({len(journalist_slug)}): {journalist_slug}")
-                                        logger.error(f"profile_url ({len(profile_url)}): {profile_url}")
-                                        logger.error(f"image_url ({len(image_url)}): {image_url}")
-                                        raise e
+                                    except IntegrityError:
+                                        # Log duplicate journalist as info instead of error
+                                        logger.info(f"Duplicate journalist found: {name}")
+                                        # Try to get existing journalist and add to page
+                                        try:
+                                            journalist = Journalist.objects.get(slug=journalist_slug)
+                                            page.journalists.add(journalist)
+                                        except Journalist.DoesNotExist:
+                                            logger.warning(f"Could not find existing journalist with slug: {journalist_slug}")
                         
                         page.processed = True
                         page.save()

@@ -39,4 +39,5 @@ dependencies = [
     "pgvector>=0.3.6",
     "tiktoken>=0.8.0",
     "sentry-sdk[django]>=2.19.0",
+    "tenacity>=8.5.0",
 ]
