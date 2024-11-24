@@ -20,7 +20,7 @@ EMBEDDING_DIMENSIONS = 1536  # text-embedding-3-small dimensions
 
 
 class NewsSource(models.Model):
-    url = models.URLField(unique=True)
+    url = models.URLField(unique=True, max_length=500)
     name = models.CharField(max_length=255)
     slug = models.SlugField(unique=True)
     last_crawled = models.DateTimeField(null=True, blank=True)
@@ -131,6 +131,22 @@ class Journalist(models.Model):
             Journalist.objects.filter(pk=self.pk).update(search_vector=vector)
         except Exception as e:
             logger.error(f"Error updating search vector for journalist {self.pk}: {str(e)}")
+
+    def get_text_for_embedding(self):
+        """Get text representation of journalist for embedding generation"""
+        text_parts = []
+        
+        if self.name:
+            text_parts.append(f"Name: {self.name}")
+        
+        if self.description:
+            text_parts.append(f"Description: {self.description}")
+            
+        if self.country:
+            text_parts.append(f"Country: {self.country}")
+            
+        # Join all parts with newlines
+        return "\n".join(text_parts)
 
     class Meta:
         indexes = [

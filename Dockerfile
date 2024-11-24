@@ -48,7 +48,6 @@ RUN apt-get update && apt-get install -y supervisor \
 COPY supervisor/celery.conf /etc/supervisor/conf.d/
 
 
-
 # Now copy and set permissions for SSH config
 COPY sshd_config /etc/ssh/
 RUN chmod 755 /etc/ssh/sshd_config

@@ -8,10 +8,16 @@ class PolarClient:
     @classmethod
     def get_client(cls):
         if cls._instance is None:
-            cls._instance = Polar(
-                access_token=settings.POLAR_ACCESS_TOKEN,
-                server=settings.POLAR_SERVER,
-            )
+            # Base arguments for Polar client
+            polar_args = {
+                'access_token': settings.POLAR_ACCESS_TOKEN,
+            }
+            
+            # Only include server argument if it's set to sandbox
+            if settings.POLAR_SERVER == 'sandbox':
+                polar_args['server'] = settings.POLAR_SERVER
+                
+            cls._instance = Polar(**polar_args)
         return cls._instance
 
 
