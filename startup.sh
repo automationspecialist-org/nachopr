@@ -1,7 +1,12 @@
 #!/bin/sh
 set -e
+
+# Debug logging
+echo "Starting startup script..."
+
 if [ -n "$AZURE" ]; then
-    service ssh start
+    echo "Starting SSH service..."
+    service ssh start || echo "Failed to start SSH"
     mkdir -p /home/persistent
     chmod 755 /home/persistent
     service memcached start
@@ -37,9 +42,11 @@ else
 fi
 
 # start celery worker - in dev: uv run celery -A core worker --queues=celery
-supervisord
+echo "Starting supervisor..."
+supervisord -c /etc/supervisor/supervisord.conf
 
-uv run granian --interface asginl \
+echo "Starting Granian..."
+exec uv run granian --interface asginl \
     --host 0.0.0.0 \
     --port 80 \
     --workers 4 \
