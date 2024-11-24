@@ -12,7 +12,7 @@ from tenacity import (
     wait_exponential,
     retry_if_exception_type
 )
-from openai.types.error import APIError, APIConnectionError, RateLimitError
+from openai import APIError, APIConnectionError, RateLimitError
 
 logger = logging.getLogger(__name__)
 

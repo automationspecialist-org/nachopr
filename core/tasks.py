@@ -27,7 +27,6 @@ import tiktoken  # Add this import for token counting
 from django.db.models.signals import post_save, m2m_changed
 from django.dispatch import receiver
 import requests_cache
-import unicodedata
 
 
 load_dotenv()
@@ -1192,53 +1191,4 @@ def find_emails_with_hunter_io(limit: int = 1):
     except Exception as e:
         logger.error(f"Error in find_emails_with_hunter_io: {str(e)}")
         raise
-    
-def generate_unique_slug(name, model_class):
-    """
-    Generate a unique slug from the given name.
-    If the base slug exists, append a number until finding a unique one.
-    """
-    # Normalize unicode characters
-    name = unicodedata.normalize('NFKD', name).encode('ascii', 'ignore').decode('ascii')
-    
-    # Generate base slug
-    base_slug = slugify(name)
-    if not base_slug:
-        base_slug = 'unnamed'  # Fallback for empty slugs
-        
-    # Check for uniqueness
-    slug = base_slug
-    counter = 1
-    while model_class.objects.filter(slug=slug).exists():
-        slug = f"{base_slug}-{counter}"
-        counter += 1
-    
-    return slug
-
-# In your journalist creation code:
-try:
-    # ... existing code ...
-    
-    # Generate unique slug before creating journalist
-    unique_slug = generate_unique_slug(journalist.name, Journalist)
-    
-    # Use update() to avoid triggering signals
-    Journalist.objects.filter(id=journalist.id).update(
-        slug=unique_slug,
-        email_address=email,
-        email_status='guessed_by_third_party',
-        email_search_with_hunter_tried=True
-    )
-    
-    # ... rest of the code ...
-
-except Exception as e:
-    logger.error(f"Error in DB worker: {str(e)}")
-    # Log additional context
-    logger.error(f"Field values and lengths:")
-    logger.error(f"name ({len(name)}): {name}")
-    logger.error(f"slug ({len(unique_slug)}): {unique_slug}")
-    logger.error(f"profile_url ({len(profile_url)}): {profile_url}")
-    logger.error(f"image_url ({len(image_url)}): {image_url}")
-    raise
     
