@@ -80,6 +80,7 @@ INSTALLED_APPS = [
     'algoliasearch_django',
     'djstripe',
     'pgvector',
+    'django_celery_results',
 ]
 
 MIDDLEWARE = [
@@ -339,3 +340,5 @@ EMAIL_HOST_PASSWORD = os.environ.get('RESEND_API_KEY')
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = 'NachoPR <support@updates.nachopr.com>'
 SERVER_EMAIL = 'NachoPR <support@updates.nachopr.com>' 
+
+CELERY_RESULT_BACKEND = 'django-db'

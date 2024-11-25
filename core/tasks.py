@@ -64,19 +64,21 @@ async def crawl_news_sources(domain_limit: int = None, page_limit: int = None, m
     try:
         logger.info(f"Starting crawl at {timezone.now()}")
         
-        news_sources = await sync_to_async(list)(
+        # Use sync_to_async with thread_sensitive=False to avoid holding connections
+        news_sources = await sync_to_async(list, thread_sensitive=False)(
             NewsSource.objects.filter(
                 Q(last_crawled__lt=timezone.now() - timezone.timedelta(days=7)) |
                 Q(last_crawled__isnull=True)
             ).order_by(
-                '-priority',  # Priority sources first
-                'last_crawled'  # Then by least recently crawled
+                '-priority',
+                'last_crawled'
             )[:domain_limit]
         )
         
         logger.info(f"Found {len(news_sources)} news sources to crawl")
         
-        semaphore = asyncio.Semaphore(max_concurrent_tasks)
+        # Limit concurrent tasks to avoid too many DB connections
+        semaphore = asyncio.Semaphore(min(max_concurrent_tasks, 5))
         
         tasks = []
         for news_source in news_sources:
@@ -87,6 +89,9 @@ async def crawl_news_sources(domain_limit: int = None, page_limit: int = None, m
     except Exception as e:
         logger.error(f"Critical error in crawl_news_sources: {str(e)}")
         raise
+    finally:
+        # Ensure connections are closed
+        close_old_connections()
 
 async def crawl_single_news_source(news_source, limit, semaphore):
     async with semaphore:
@@ -95,12 +100,13 @@ async def crawl_single_news_source(news_source, limit, semaphore):
             
             await fetch_website(news_source.url, limit=limit)
             
-            # Move database operation inside sync_to_async wrapper
-            @sync_to_async
+            # Move database operation inside sync_to_async wrapper with thread_sensitive=False
+            @sync_to_async(thread_sensitive=False)
             def update_news_source():
-                news_source.refresh_from_db()
-                news_source.last_crawled = timezone.now()
-                news_source.save()
+                with transaction.atomic():
+                    news_source.refresh_from_db()
+                    news_source.last_crawled = timezone.now()
+                    news_source.save()
                 
             await update_news_source()
             
