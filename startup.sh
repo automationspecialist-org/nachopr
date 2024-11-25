@@ -41,11 +41,10 @@ else
     echo "SLACK_WEBHOOK_URL is not set. Skipping Slack notification."
 fi
 
-# Export all environment variables to a file that Supervisor can read
-printenv | grep -Ev 'BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID|LANG|PWD|GPG_KEY|_=' > /etc/supervisor/conf.d/environment.conf
-
-# Convert the environment variables to Supervisor format
-sed -i 's/^/environment=/g' /etc/supervisor/conf.d/environment.conf
+# Append environment variables to the Celery Supervisor config
+printenv | grep -Ev 'BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID|LANG|PWD|GPG_KEY|_=' | while read -r line; do
+    echo "environment=$line" >> /etc/supervisor/conf.d/celery.conf
+done
 
 # start celery worker - in dev: uv run celery -A core worker --queues=celery
 echo "Starting supervisor..."
