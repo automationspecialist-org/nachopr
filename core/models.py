@@ -76,10 +76,10 @@ class Journalist(models.Model):
     def __str__(self):
         return self.name
 
-    def save(self, *args, **kwargs):
-        self.slug = slugify(self.name)
-        super().save(*args, **kwargs)
-        self.update_search_vector()
+    #def save(self, *args, **kwargs):
+    #    self.slug = slugify(self.name)
+    #    super().save(*args, **kwargs)
+    #    self.update_search_vector()
     
 
     def has_articles(self):
@@ -188,9 +188,9 @@ class NewsPage(models.Model):
         vector = SearchVector('title', weight='A') + SearchVector('content', weight='B')
         NewsPage.objects.filter(pk=self.pk).update(search_vector=vector)
 
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        self.update_search_vector()
+    #def save(self, *args, **kwargs):
+    #    super().save(*args, **kwargs)
+    #    self.update_search_vector()
     
     class Meta:
         indexes = [
