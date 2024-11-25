@@ -169,7 +169,7 @@ class NewsPageCategory(models.Model):
 
 
 class NewsPage(models.Model):
-    url = models.URLField(unique=True)
+    url = models.URLField(unique=True, max_length=500)
     title = models.CharField(max_length=500)
     content = models.TextField()
     source = models.ForeignKey(NewsSource, on_delete=models.CASCADE, related_name='pages')
