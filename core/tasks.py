@@ -1416,43 +1416,42 @@ def continuous_crawl_task(self):
     """Orchestrate the continuous crawling process"""
     try:
         # Validate OpenAI connection first
-        endpoint = os.getenv('AZURE_OPENAI_ENDPOINT').rstrip('/')  # Remove trailing slash if present
         client = AzureOpenAI(
-            azure_endpoint=endpoint,
-            api_key=os.getenv('AZURE_OPENAI_API_KEY'),
+            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT", "").rstrip('/'),  # Remove trailing slash
+            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
             api_version="2024-02-15-preview"
         )
         
         # Test the connection with a simple completion
         try:
             test_response = client.chat.completions.create(
-                model="gpt-4o-mini",  # Changed from deployment_name back to model
+                model="gpt-4",  # Use exact deployment name
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant."},
                     {"role": "user", "content": "test"}
                 ],
-                max_tokens=5
+                max_tokens=5,
+                temperature=0.3
             )
             logger.info("OpenAI connection test successful")
         except Exception as e:
             logger.error(f"OpenAI connection test failed: {str(e)}")
-            logger.error(f"OpenAI Configuration: endpoint={endpoint}, "
-                        f"version=2024-02-15-preview, "
-                        f"model=gpt-4")
+            logger.error(f"OpenAI Configuration: endpoint={client.base_url}, "
+                        f"version={client.api_version}")
             raise
 
         # Continue with regular task if connection test passes
         newspage_count_before = NewsPage.objects.count()
         journalist_count_before = Journalist.objects.count()
         
-        # Chain the crawling tasks
+        # Chain the crawling tasks with error handling
         chain(
             crawl_news_sources_task.s(domain_limit=1, page_limit=2000),
             process_journalists_task.s(limit=1000),
             categorize_pages_task.s(limit=1000),
             update_page_embeddings_task.s(limit=1000),
             update_journalist_embeddings_task.s(limit=500)
-        ).delay()
+        ).apply_async(link_error=handle_chain_error.s())
         
         # Log results
         newspage_count_after = NewsPage.objects.count()
@@ -1462,9 +1461,14 @@ def continuous_crawl_task(self):
         logger.info(message)
         
     except Exception as e:
-        logger.error(f"Error in continuous crawl: {str(e)}")
-        self.retry(countdown=300)
+        logger.error(f"Error in continuous crawl: {str(e)}", exc_info=True)
+        raise self.retry(countdown=300)
 
+@app.task
+def handle_chain_error(request, exc, traceback):
+    """Handle errors in the task chain"""
+    logger.error(f"Task chain error: {exc}", exc_info=True)
+    # Notify admins or take other error handling actions as needed
 
 @app.task(bind=True, name='process_journalist_task')
 def process_journalist_task(self, page_id):
