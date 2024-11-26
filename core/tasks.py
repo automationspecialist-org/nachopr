@@ -1407,16 +1407,16 @@ def continuous_crawl_task(self):
     """Orchestrate the continuous crawling process"""
     try:
         # Validate OpenAI connection first
-        client = openai.AzureOpenAI(
-            azure_endpoint=os.getenv('OPENAI_API_BASE'),
-            api_key=os.getenv('OPENAI_API_KEY'),
-            api_version=os.getenv('OPENAI_API_VERSION')
+        client = AzureOpenAI(
+            azure_endpoint=os.getenv('AZURE_OPENAI_ENDPOINT'),  # Changed from OPENAI_API_BASE
+            api_version="2024-02-15-preview",  # Explicitly set API version
+            api_key=os.getenv('AZURE_OPENAI_API_KEY')  # Changed from OPENAI_API_KEY
         )
         
         # Test the connection with a simple completion
         try:
             test_response = client.chat.completions.create(
-                model=os.getenv('OPENAI_MODEL_NAME'),
+                model="gpt-4",  # Changed from os.getenv('OPENAI_MODEL_NAME')
                 messages=[{"role": "user", "content": "test"}],
                 max_tokens=5
             )
@@ -1424,9 +1424,9 @@ def continuous_crawl_task(self):
         except Exception as e:
             logger.error(f"OpenAI connection test failed: {str(e)}")
             # Log detailed configuration (without sensitive data)
-            logger.error(f"OpenAI Configuration: endpoint={os.getenv('OPENAI_API_BASE')}, "
-                        f"version={os.getenv('OPENAI_API_VERSION')}, "
-                        f"model={os.getenv('OPENAI_MODEL_NAME')}")
+            logger.error(f"OpenAI Configuration: endpoint={os.getenv('AZURE_OPENAI_ENDPOINT')}, "
+                        f"version=2024-02-15-preview, "
+                        f"model=gpt-4")
             raise
 
         # Continue with regular task if connection test passes
