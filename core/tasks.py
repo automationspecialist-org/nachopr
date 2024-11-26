@@ -1407,24 +1407,27 @@ def continuous_crawl_task(self):
     """Orchestrate the continuous crawling process"""
     try:
         # Validate OpenAI connection first
+        endpoint = os.getenv('AZURE_OPENAI_ENDPOINT').rstrip('/')  # Remove trailing slash if present
         client = AzureOpenAI(
-            azure_endpoint=os.getenv('AZURE_OPENAI_ENDPOINT'),  # Changed from OPENAI_API_BASE
-            api_version="2024-02-15-preview",  # Explicitly set API version
-            api_key=os.getenv('AZURE_OPENAI_API_KEY')  # Changed from OPENAI_API_KEY
+            azure_endpoint=endpoint,
+            api_key=os.getenv('AZURE_OPENAI_API_KEY'),
+            api_version="2024-02-15-preview"
         )
         
         # Test the connection with a simple completion
         try:
             test_response = client.chat.completions.create(
-                model="gpt-4",  # Changed from os.getenv('OPENAI_MODEL_NAME')
-                messages=[{"role": "user", "content": "test"}],
+                model="gpt-4o-mini",  # Changed from deployment_name back to model
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "user", "content": "test"}
+                ],
                 max_tokens=5
             )
             logger.info("OpenAI connection test successful")
         except Exception as e:
             logger.error(f"OpenAI connection test failed: {str(e)}")
-            # Log detailed configuration (without sensitive data)
-            logger.error(f"OpenAI Configuration: endpoint={os.getenv('AZURE_OPENAI_ENDPOINT')}, "
+            logger.error(f"OpenAI Configuration: endpoint={endpoint}, "
                         f"version=2024-02-15-preview, "
                         f"model=gpt-4")
             raise
