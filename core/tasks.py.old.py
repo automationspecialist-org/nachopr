@@ -35,7 +35,7 @@ from tenacity import (
     retry_if_exception_type
 )
 from openai import APIError, APIConnectionError, RateLimitError
-from celery import shared_task, chain
+from celery import shared_task
 from celery.signals import task_success
 
 
@@ -1288,291 +1288,26 @@ async def generate_embeddings(texts: List[str]) -> List[List[float]]:
 
 
 @shared_task(bind=True)
-def crawl_single_page_task(self, url, source_id):
-    """Process a single page from a crawl"""
-    try:
-        news_source = NewsSource.objects.get(id=source_id)
-        
-        # Skip if page already exists
-        if NewsPage.objects.filter(url=url).exists():
-            return
-            
-        # Create website instance for single page
-        website = (
-            Website(url)
-            .with_user_agent("Mozilla/5.0")
-            .with_request_timeout(30000)
-            .with_respect_robots_txt(False)
-            .with_depth(0)  # Only this page
-        )
-        
-        website.scrape()
-        pages = website.get_pages()
-        
-        if not pages:
-            logger.warning(f"No content found for {url}")
-            return
-            
-        page = pages[0]
-        cleaned_content = clean_html(page.content)
-        
-        with transaction.atomic():
-            news_page = NewsPage.objects.create(
-                url=url,
-                title=str(page.title()),
-                content=cleaned_content,
-                source=news_source
-            )
-            
-        # Trigger journalist processing for this page
-        process_journalist_task.delay(news_page.id)
-        
-    except Exception as e:
-        logger.error(f"Error processing page {url}: {str(e)}")
-        raise
-
-@shared_task(bind=True)
-def crawl_single_source_task(self, source_id, page_limit=None):
-    """Crawl a single news source"""
-    try:
-        news_source = NewsSource.objects.get(id=source_id)
-        logger.info(f"Starting crawl for {news_source.url}")
-        
-        # Configure website crawler
-        website = (
-            Website(news_source.url)
-            .with_user_agent("Mozilla/5.0")
-            .with_request_timeout(30000)
-            .with_respect_robots_txt(False)
-            .with_depth(3)
-        )
-        
-        if page_limit:
-            website = website.with_budget({"*": page_limit})
-        
-        # Get list of URLs
-        website.scrape()
-        pages = website.get_pages()
-        
-        # Create tasks for each page
-        for page in pages[:page_limit] if page_limit else pages:
-            crawl_single_page_task.delay(page.url, source_id)
-            
-        # Update source last crawled time
-        with transaction.atomic():
-            news_source.last_crawled = timezone.now()
-            news_source.save()
-            
-    except Exception as e:
-        logger.error(f"Error crawling source {source_id}: {str(e)}")
-        raise
-
-@shared_task
-def crawl_news_sources_task(domain_limit=None, page_limit=None):
-    """Distribute crawling tasks across workers"""
-    try:
-        # Get sources to crawl
-        news_sources = NewsSource.objects.filter(
-            Q(last_crawled__lt=timezone.now() - timezone.timedelta(days=7)) |
-            Q(last_crawled__isnull=True)
-        ).order_by(
-            '-priority',
-            'last_crawled'
-        )[:domain_limit]
-        
-        # Log start of crawl
-        message = f"[{timezone.now()}] Starting crawl of {len(news_sources)} sources..."
-        logger.info(message)
-        slack_webhook_url = os.getenv("SLACK_WEBHOOK_URL")
-        if slack_webhook_url:
-            requests.post(slack_webhook_url, json={"text": message})
-        
-        # Create tasks for each source
-        for source in news_sources:
-            crawl_single_source_task.delay(source.id, page_limit)
-            
-    except Exception as e:
-        logger.error(f"Error starting crawl: {str(e)}")
-        raise
-
-@shared_task(bind=True)
 def continuous_crawl_task(self):
-    """Orchestrate the continuous crawling process"""
+    """Continuous crawling task that triggers another run upon completion"""
     try:
+        # Run the crawl
         newspage_count_before = NewsPage.objects.count()
         journalist_count_before = Journalist.objects.count()
         
-        # Chain the crawling tasks
-        chain(
-            crawl_news_sources_task.s(domain_limit=1, page_limit=2000),
-            process_journalists_task.s(limit=1000),
-            categorize_pages_task.s(limit=1000),
-            update_page_embeddings_task.s(limit=1000),
-            update_journalist_embeddings_task.s(limit=500)
-        ).delay()
+        crawl_news_sources_sync(domain_limit=1, page_limit=2000, max_concurrent_tasks=20)
+        process_all_journalists_sync(limit=1000)
         
-        # Log results
         newspage_count_after = NewsPage.objects.count()
         journalist_count_after = Journalist.objects.count()
         
         message = f"Crawl completed. {newspage_count_after - newspage_count_before} pages, {journalist_count_after - journalist_count_before} journalists added."
         logger.info(message)
         
+        # Chain the next task
+        continuous_crawl_task.delay()
+        
     except Exception as e:
         logger.error(f"Error in continuous crawl: {str(e)}")
+        # Retry after 5 minutes on failure
         self.retry(countdown=300)
-@shared_task(bind=True)
-def process_journalist_task(self, page_id):
-    """Process journalists for a single page"""
-    try:
-        page = NewsPage.objects.get(id=page_id)
-        journalists_data = extract_journalists_with_gpt(page.content)
-        
-        with transaction.atomic():
-            page.is_news_article = journalists_data.get('content_is_full_news_article', False)
-            
-            published_date_str = journalists_data.get('article_published_date')
-            if published_date_str:
-                try:
-                    published_date = datetime.strptime(published_date_str, '%Y-%m-%d').date()
-                    page.published_date = published_date
-                except ValueError:
-                    pass
-            
-            if journalists_data and 'journalists' in journalists_data:
-                for journalist_dict in journalists_data['journalists']:
-                    if 'name' in journalist_dict:
-                        name = journalist_dict['name']
-                        profile_url = clean_url(journalist_dict.get('profile_url', ''))
-                        image_url = clean_url(journalist_dict.get('image_url', ''))
-                        journalist_slug = slugify(name)
-                        
-                        journalist, _ = Journalist.objects.get_or_create(
-                            name=name,
-                            slug=journalist_slug,
-                            defaults={
-                                'profile_url': profile_url,
-                                'image_url': image_url
-                            }
-                        )
-                        page.journalists.add(journalist)
-            
-            page.processed = True
-            page.save()
-            
-    except Exception as e:
-        logger.error(f"Error processing page {page_id}: {str(e)}")
-        raise
-
-@shared_task
-def process_journalists_task(limit=10):
-    """Distribute journalist processing tasks"""
-    pages = NewsPage.objects.exclude(content='').filter(processed=False)[:limit]
-    
-    for page in pages:
-        process_journalist_task.delay(page.id)
-
-@shared_task(bind=True)
-def categorize_page_task(self, page_id):
-    """Categorize a single news page"""
-    try:
-        page = NewsPage.objects.get(id=page_id)
-        categorize_news_page_with_gpt(page)
-    except Exception as e:
-        logger.error(f"Error categorizing page {page_id}: {str(e)}")
-        raise
-
-@shared_task
-def categorize_pages_task(limit=1000):
-    """Distribute categorization tasks"""
-    pages = NewsPage.objects.filter(
-        categories__isnull=True, 
-        journalists__isnull=False,
-        is_news_article=True
-    ).distinct()[:limit]
-    
-    for page in pages:
-        categorize_page_task.delay(page.id)
-
-@shared_task(bind=True)
-def update_single_page_embedding_task(self, page_id):
-    """Update embedding for a single page"""
-    try:
-        page = NewsPage.objects.get(id=page_id)
-        if not page.is_news_article:
-            return
-            
-        text = truncate_text_for_embeddings(
-            f"{page.title}\n\n{page.content}",
-            max_tokens=8000
-        )
-        
-        client = AzureOpenAI(
-            azure_endpoint=os.getenv("AZURE_OPENAI_EMBEDDING_ENDPOINT"),
-            api_version="2023-05-15",
-            api_key=os.getenv("AZURE_OPENAI_EMBEDDING_API_KEY")
-        )
-        
-        response = client.embeddings.create(
-            model="text-embedding-3-small",
-            input=[text]
-        )
-        
-        with transaction.atomic():
-            page.embedding = response.data[0].embedding
-            page.save(update_fields=['embedding'])
-            
-    except Exception as e:
-        logger.error(f"Error updating page embedding {page_id}: {str(e)}")
-        raise
-
-@shared_task
-def update_page_embeddings_task(limit=100):
-    """Distribute page embedding updates"""
-    pages = NewsPage.objects.filter(
-        embedding__isnull=True,
-        content__isnull=False,
-        is_news_article=True
-    )[:limit]
-    
-    for page in pages:
-        update_single_page_embedding_task.delay(page.id)
-
-@shared_task(bind=True)
-def update_single_journalist_embedding_task(self, journalist_id):
-    """Update embedding for a single journalist"""
-    try:
-        journalist = Journalist.objects.get(id=journalist_id)
-        text = truncate_text_for_embeddings(
-            journalist.get_text_for_embedding(),
-            max_tokens=8000
-        )
-        
-        client = AzureOpenAI(
-            azure_endpoint=os.getenv("AZURE_OPENAI_EMBEDDING_ENDPOINT"),
-            api_version="2023-05-15",
-            api_key=os.getenv("AZURE_OPENAI_EMBEDDING_API_KEY")
-        )
-        
-        response = client.embeddings.create(
-            model="text-embedding-3-small",
-            input=[text]
-        )
-        
-        with transaction.atomic():
-            journalist.embedding = response.data[0].embedding
-            journalist.save(update_fields=['embedding'])
-            
-    except Exception as e:
-        logger.error(f"Error updating journalist embedding {journalist_id}: {str(e)}")
-        raise
-
-@shared_task
-def update_journalist_embeddings_task(limit=100):
-    """Distribute journalist embedding updates"""
-    journalists = Journalist.objects.filter(
-        embedding__isnull=True
-    )[:limit]
-    
-    for journalist in journalists:
-        update_single_journalist_embedding_task.delay(journalist.id)

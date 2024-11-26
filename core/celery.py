@@ -3,6 +3,7 @@ from celery import Celery
 from dotenv import load_dotenv
 from celery.signals import celeryd_after_setup
 import logging
+from datetime import timedelta
 
 load_dotenv()
 
@@ -36,12 +37,18 @@ app = Celery(
 # Load task modules from all registered Django app configs
 app.config_from_object('django.conf:settings', namespace='CELERY')
 
+# Configure the Celery beat schedule
+app.conf.beat_schedule = {
+    'continuous-crawl': {
+        'task': 'core.tasks.continuous_crawl_task',
+        'schedule': timedelta(minutes=5),
+        'options': {'queue': 'celery'}
+    },
+}
+
 # Auto-discover tasks in all installed apps
 app.autodiscover_tasks()
 
-@celeryd_after_setup.connect
-def setup_periodic_tasks(sender, instance, **kwargs):
-    """Start continuous tasks when Celery worker starts"""
-    # Import tasks here to avoid circular imports
-    from core.tasks import continuous_crawl_task
-    continuous_crawl_task.delay()
+@app.task(bind=True)
+def debug_task(self):
+    print(f'Request: {self.request!r}')

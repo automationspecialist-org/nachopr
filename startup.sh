@@ -42,8 +42,10 @@ else
 fi
 
 # Append environment variables to the Celery Supervisor config
+# Append environment variables to both Celery Supervisor configs
 printenv | grep -Ev 'BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID|LANG|PWD|GPG_KEY|_=' | while read -r line; do
-    echo "environment=$line" >> /etc/supervisor/conf.d/celery.conf
+    echo "environment=$line" >> /etc/supervisor/conf.d/celeryworker.conf
+    echo "environment=$line" >> /etc/supervisor/conf.d/celerybeat.conf
 done
 
 # start celery worker - in dev: uv run celery -A core worker --queues=celery

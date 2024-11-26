@@ -44,8 +44,9 @@ RUN apt-get update && apt-get install -y supervisor \
     && mkdir -p /var/log/celery \
     && mkdir -p /etc/supervisor/conf.d
 
-# Copy supervisor configuration
-COPY supervisor/celery.conf /etc/supervisor/conf.d/
+# Copy supervisor configurations
+COPY supervisor/celeryworker.conf /etc/supervisor/conf.d/
+COPY supervisor/celerybeat.conf /etc/supervisor/conf.d/
 
 RUN apt-get install -y --no-install-recommends dialog openssh-server \
     && echo "root:Docker!" | chpasswd \
