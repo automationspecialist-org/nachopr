@@ -3,6 +3,7 @@ from celery import Celery
 from dotenv import load_dotenv
 import logging
 from datetime import timedelta
+from celery.schedules import crontab
 
 load_dotenv()
 
@@ -68,8 +69,8 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 # Update beat schedule with queue routing
 app.conf.beat_schedule = {
     'continuous-crawl': {
-        'task': 'core.tasks.continuous_crawl_task',
-        'schedule': timedelta(minutes=15),  # Increased interval
+        'task': 'continuous_crawl',
+        'schedule': timedelta(minutes=15),
         'options': {'queue': 'crawl'}
     },
 }
@@ -80,3 +81,6 @@ app.autodiscover_tasks()
 @app.task(bind=True)
 def debug_task(self):
     print(f'Request: {self.request!r}')
+
+# Make sure tasks are imported when Celery starts
+import core.tasks  # Add this import at the bottom
