@@ -21,6 +21,8 @@ import requests
 from celery import shared_task, chain
 from urllib.parse import urlparse, urlunparse
 import tiktoken
+import requests_cache
+from typing import Optional
 
 
 load_dotenv()
@@ -814,3 +816,52 @@ def truncate_text_for_embeddings(text: str, max_tokens: int = 8000) -> str:
         # Assuming average of 4 characters per token
         char_limit = max_tokens * 4
         return text[:char_limit]
+
+def find_single_email_with_hunter_io(name: str, domain: str) -> Optional[str]:
+    """Find a single email with Hunter.io"""
+    try:
+        # Initialize cached session (expires after 1 week)
+        session = requests_cache.CachedSession(
+            'hunter_cache',
+            expire_after=604800  # 7 days in seconds
+        )
+
+        # Split name into first and last
+        name_parts = name.strip().split()
+        if len(name_parts) < 2:
+            logger.warning(f"Name '{name}' doesn't contain both first and last name")
+            return None
+
+        first_name = name_parts[0]
+        last_name = ' '.join(name_parts[1:])  # Handle multi-word last names
+
+        # Clean domain (remove www. and any paths)
+        domain = domain.replace('www.', '').split('/')[0]
+
+        # Make request to Hunter.io
+        response = session.get(
+            'https://api.hunter.io/v2/email-finder',
+            params={
+                'domain': domain,
+                'first_name': first_name,
+                'last_name': last_name,
+                'api_key': os.getenv('HUNTER_API_KEY')
+            }
+        )
+
+        # Log raw response for debugging
+        logger.info(f"Raw Hunter.io response for {name} at {domain}: {response.text}")
+
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('data', {}).get('email'):
+                return data['data']['email']
+            else:
+                return None
+        else:
+            logger.error(f"Hunter.io API error: {response.status_code} - {response.text}")
+            return None
+
+    except Exception as e:
+        logger.error(f"Error finding email for {name} at {domain}: {str(e)}")
+        return None
