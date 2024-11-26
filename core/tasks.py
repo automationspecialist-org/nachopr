@@ -1432,25 +1432,26 @@ def continuous_crawl_task(self):
         # Validate OpenAI connection first
         client = AzureOpenAI(
             azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-            azure_deployment="gpt-4o-mini",
-            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-            api_version="2024-02-15-preview"
+            azure_deployment="gpt-4o-mini",  # Move deployment to constructor
+            api_version="2024-02-15-preview",
+            api_key=os.getenv("AZURE_OPENAI_API_KEY")
         )
         
         # Test the connection with a simple completion
         try:
             test_response = client.chat.completions.create(
-                messages=[
+                messages=[  # Remove model parameter since it's set in constructor
                     {"role": "system", "content": "You are a helpful assistant."},
                     {"role": "user", "content": "test"}
                 ],
                 max_tokens=5,
-                temperature=0.3
+                temperature=0.3,
+                model="gpt-4o-mini"
             )
             logger.info("OpenAI connection test successful")
         except Exception as e:
             logger.error(f"OpenAI connection test failed: {str(e)}")
-            logger.error(f"OpenAI Configuration: endpoint={client.base_url}")
+            logger.error(f"OpenAI Configuration: endpoint={os.getenv('AZURE_OPENAI_ENDPOINT')}")
             raise
 
         # Continue with regular task if connection test passes
