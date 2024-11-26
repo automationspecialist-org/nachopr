@@ -1354,6 +1354,8 @@ def crawl_single_source_task(self, source_id, page_limit=None):
         # Get list of URLs
         website.scrape()
         pages = website.get_pages()
+
+        logger.info(f"Found {len(pages)} pages for {news_source.url}")
         
         # Create tasks for each page
         for page in pages[:page_limit] if page_limit else pages:
@@ -1374,13 +1376,15 @@ def crawl_news_sources_task(domain_limit=None, page_limit=None):
     try:
         # Get sources to crawl
         news_sources = NewsSource.objects.filter(
-            Q(last_crawled__lt=timezone.now() - timezone.timedelta(days=7)) |
+            #Q(last_crawled__lt=timezone.now() - timezone.timedelta(days=7)) |
             Q(last_crawled__isnull=True)
         ).order_by(
             '-priority',
             'last_crawled'
         )[:domain_limit]
         
+        pages_before = NewsPage.objects.count()
+
         # Log start of crawl
         message = f"[{timezone.now()}] Starting crawl of {len(news_sources)} sources..."
         logger.info(message)
@@ -1391,6 +1395,11 @@ def crawl_news_sources_task(domain_limit=None, page_limit=None):
         # Create tasks for each source
         for source in news_sources:
             crawl_single_source_task.delay(source.id, page_limit)
+
+        message = f"[{timezone.now()}] Finished crawl of {len(news_sources)} sources. Found {NewsPage.objects.count() - pages_before} new pages"
+        logger.info(message)
+        if slack_webhook_url:
+            requests.post(slack_webhook_url, json={"text": message})
             
     except Exception as e:
         logger.error(f"Error starting crawl: {str(e)}")
