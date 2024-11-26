@@ -33,6 +33,16 @@ app = Celery(
     }
 )
 
+# Add memory and task management configurations
+app.conf.update(
+    worker_max_memory_per_child=350000,  # 350MB memory limit
+    worker_max_tasks_per_child=50,       # Restart worker after 50 tasks
+    task_time_limit=1800,                # 30 minute timeout
+    task_soft_time_limit=1500,           # Soft timeout 25 minutes
+    worker_prefetch_multiplier=1,        # Process one task at a time
+    task_acks_late=True                  # Acknowledge tasks after completion
+)
+
 # Load task modules from all registered Django app configs
 app.config_from_object('django.conf:settings', namespace='CELERY')
 

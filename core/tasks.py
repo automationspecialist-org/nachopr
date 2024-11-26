@@ -496,7 +496,13 @@ def categorize_news_page_with_gpt(page: NewsPage):
         logger.error(f'Error in categorize_news_page_with_gpt: {str(e)}')
 
 
-@shared_task(bind=True)
+@shared_task(
+    bind=True,
+    time_limit=900,  # 15 minute timeout
+    soft_time_limit=800,  # ~13 minute soft timeout
+    max_retries=3,
+    default_retry_delay=300  # 5 minutes between retries
+)
 def categorize_page_task(self, page_id):
     """Categorize a single news page"""
     try:
@@ -504,14 +510,19 @@ def categorize_page_task(self, page_id):
         categorize_news_page_with_gpt(page)
     except Exception as e:
         logger.error(f"Error categorizing page {page_id}: {str(e)}")
-        raise
+        raise self.retry(exc=e)
 
-@shared_task
+@shared_task(
+    time_limit=3600,  # 1 hour timeout
+    soft_time_limit=3300,  # 55 minute soft timeout
+    rate_limit='2/m'  # Max 2 tasks per minute
+)
 def categorize_pages_task(limit=1000):
     """Distribute categorization tasks"""
     pages = NewsPage.objects.filter(
         categories__isnull=True, 
-        journalists__isnull=False
+        journalists__isnull=False,
+        is_news_article=True
     ).distinct()[:limit]
     
     for page in pages:
