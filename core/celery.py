@@ -69,7 +69,7 @@ app.conf.update(
 # Update beat schedule with queue routing
 app.conf.beat_schedule = {
     'continuous-crawl': {
-        'task': 'continuous_crawl',
+        'task': 'core.tasks.continuous_crawl_task',
         'schedule': timedelta(minutes=15),
         'options': {'queue': 'crawl'}
     },

@@ -1398,9 +1398,9 @@ def crawl_news_sources_task(domain_limit=None, page_limit=None):
 
 @app.task(
     bind=True,
-    name='continuous_crawl',
+    name='core.tasks.continuous_crawl_task',
     max_retries=3,
-    default_retry_delay=300,  # 5 minutes
+    default_retry_delay=300,
     autoretry_for=(openai.APIConnectionError,)
 )
 def continuous_crawl_task(self):
