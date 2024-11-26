@@ -1422,7 +1422,9 @@ def crawl_news_sources_task(domain_limit=None, page_limit=None):
     name='core.tasks.continuous_crawl_task',
     max_retries=3,
     default_retry_delay=300,
-    autoretry_for=(openai.APIConnectionError,)
+    retry_backoff=True,
+    retry_backoff_max=3600,
+    retry_jitter=True
 )
 def continuous_crawl_task(self):
     """Orchestrate the continuous crawling process"""
@@ -1473,7 +1475,22 @@ def continuous_crawl_task(self):
         
     except Exception as e:
         logger.error(f"Error in continuous crawl: {str(e)}", exc_info=True)
-        raise self.retry(countdown=300)
+        
+        # Only retry for specific exceptions that might be temporary
+        if isinstance(e, (openai.APIConnectionError, requests.exceptions.RequestException)):
+            # Use countdown instead of retry_delay for immediate retries
+            try:
+                self.retry(
+                    exc=e,
+                    countdown=self.default_retry_delay * (2 ** self.request.retries)
+                )
+            except self.MaxRetriesExceededError:
+                logger.error("Max retries exceeded for continuous crawl task")
+                raise
+        else:
+            # For other exceptions, log and fail permanently
+            logger.critical(f"Fatal error in continuous crawl: {str(e)}")
+            raise
 
 @app.task
 def handle_chain_error(request, exc, traceback):
