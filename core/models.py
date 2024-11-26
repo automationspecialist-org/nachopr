@@ -6,13 +6,6 @@ from django.contrib.postgres.indexes import GinIndex
 from django.contrib.postgres.search import SearchVector
 from pgvector.django import VectorField
 import logging
-from tenacity import (
-    retry,
-    stop_after_attempt, 
-    wait_exponential,
-    retry_if_exception_type
-)
-from openai import APIError, APIConnectionError, RateLimitError
 
 logger = logging.getLogger(__name__)
 
@@ -321,7 +314,7 @@ def sync_journalist_categories(sender, instance, action, **kwargs):
             logger.info(f"Syncing categories for journalist: {journalist.name}")
             journalist.sync_categories()
 
-#@receiver(m2m_changed, sender=NewsPage.categories.through)
+#@receiver(arm2m_changed, sender=NewsPage.categories.through)
 def sync_source_categories(sender, instance, action, **kwargs):
     """Sync categories when categories are added/removed from news pages"""
     logger.info(f"Signal fired: sync_source_categories - Action: {action}")

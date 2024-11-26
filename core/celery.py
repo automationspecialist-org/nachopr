@@ -1,7 +1,6 @@
 import os
 from celery import Celery
 from dotenv import load_dotenv
-from celery.signals import celeryd_after_setup
 import logging
 from datetime import timedelta
 
