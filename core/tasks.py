@@ -1429,7 +1429,8 @@ def continuous_crawl_task(self):
     try:
         # Validate OpenAI connection first
         client = AzureOpenAI(
-            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT", "").rstrip('/'),  # Remove trailing slash
+            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+            azure_deployment="gpt-4o-mini",
             api_key=os.getenv("AZURE_OPENAI_API_KEY"),
             api_version="2024-02-15-preview"
         )
@@ -1437,7 +1438,6 @@ def continuous_crawl_task(self):
         # Test the connection with a simple completion
         try:
             test_response = client.chat.completions.create(
-                model="gpt-4o-mini",  # Use exact deployment name
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant."},
                     {"role": "user", "content": "test"}

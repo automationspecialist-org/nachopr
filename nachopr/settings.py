@@ -361,8 +361,8 @@ SERVER_EMAIL = 'NachoPR <support@updates.nachopr.com>'
 
 
 # Add Celery settings
-CELERY_BROKER_URL = f"azureservicebus://{os.environ.get('AZURE_QUEUE_POLICY_NAME')}:{os.environ.get('AZURE_QUEUE_POLICY_KEY')}@{os.environ.get('AZURE_QUEUE_HOST')}"
-CELERY_RESULT_BACKEND = 'django-db'
+CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
 
 # Celery Configuration
 CELERY_TASK_TRACK_STARTED = True

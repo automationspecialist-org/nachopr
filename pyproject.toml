@@ -42,6 +42,8 @@ dependencies = [
     "tenacity>=8.5.0",
     "azure-servicebus>=7.13.0",
     "azure-identity>=1.19.0",
-    "celery>=5.4.0",
+    "celery[redis]>=5.4.0",
     "django-celery-results>=2.5.1",
+    "colorama>=0.4.6",
+    "redis>=5.2.0",
 ]

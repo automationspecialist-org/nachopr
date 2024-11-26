@@ -156,6 +156,15 @@ wheels = [
 ]
 
 [[package]]
+name = "async-timeout"
+version = "5.0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a5/ae/136395dfbfe00dfc94da3f3e136d0b13f394cba8f4841120e34226265780/async_timeout-5.0.1.tar.gz", hash = "sha256:d9321a7a3d5a6a5e187e824d2fa0793ce379a202935782d555d6e9d2735677d3", size = 9274 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fe/ba/e2081de779ca30d473f21f5b30e0e737c438205440784c7dfc81efc2b029/async_timeout-5.0.1-py3-none-any.whl", hash = "sha256:39e3809566ff85354557ec2398b55e096c8364bacac9405a7a1fa429e77fe76c", size = 6233 },
+]
+
+[[package]]
 name = "asyncio"
 version = "3.4.3"
 source = { registry = "https://pypi.org/simple" }
@@ -268,6 +277,11 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/8a/9c/cf0bce2cc1c8971bf56629d8f180e4ca35612c7e79e6e432e785261a8be4/celery-5.4.0.tar.gz", hash = "sha256:504a19140e8d3029d5acad88330c541d4c3f64c789d85f94756762d8bca7e706", size = 1575692 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/90/c4/6a4d3772e5407622feb93dd25c86ce3c0fee746fa822a777a627d56b4f2a/celery-5.4.0-py3-none-any.whl", hash = "sha256:369631eb580cf8c51a82721ec538684994f8277637edde2dfc0dacd73ed97f64", size = 425983 },
+]
+
+[package.optional-dependencies]
+redis = [
+    { name = "redis" },
 ]
 
 [[package]]
@@ -1102,7 +1116,8 @@ dependencies = [
     { name = "azure-identity" },
     { name = "azure-servicebus" },
     { name = "beautifulsoup4" },
-    { name = "celery" },
+    { name = "celery", extra = ["redis"] },
+    { name = "colorama" },
     { name = "crispy-tailwind" },
     { name = "dj-database-url" },
     { name = "dj-stripe" },
@@ -1129,6 +1144,7 @@ dependencies = [
     { name = "pymemcache" },
     { name = "python-dotenv" },
     { name = "readabilipy" },
+    { name = "redis" },
     { name = "requests" },
     { name = "requests-cache" },
     { name = "resend" },
@@ -1147,7 +1163,8 @@ requires-dist = [
     { name = "azure-identity", specifier = ">=1.19.0" },
     { name = "azure-servicebus", specifier = ">=7.13.0" },
     { name = "beautifulsoup4" },
-    { name = "celery", specifier = ">=5.4.0" },
+    { name = "celery", extras = ["redis"], specifier = ">=5.4.0" },
+    { name = "colorama", specifier = ">=0.4.6" },
     { name = "crispy-tailwind", specifier = ">=1.0.3" },
     { name = "dj-database-url", specifier = ">=2.3.0" },
     { name = "dj-stripe", specifier = ">=2.8.4" },
@@ -1174,6 +1191,7 @@ requires-dist = [
     { name = "pymemcache", specifier = ">=4.0.0" },
     { name = "python-dotenv" },
     { name = "readabilipy", specifier = ">=0.2.0" },
+    { name = "redis", specifier = ">=5.2.0" },
     { name = "requests" },
     { name = "requests-cache" },
     { name = "resend", specifier = ">=2.4.0" },
@@ -1647,6 +1665,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/e0/ca/0c9e5afed873dd29f529f24bb3174d582f77e343acfa8c77a39745fa7073/readabilipy-0.2.0.tar.gz", hash = "sha256:098bf347b19f362042fb6c08864ad776588bf844ac2261fb230f7f9c250fdae5", size = 38948 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/39/42/11f5795b747841912a6f7bacab32ab1eaabc911a4e9949fbf8786121f4d3/readabilipy-0.2.0-py3-none-any.whl", hash = "sha256:0050853cd6ab012ac75bb4d8f06427feb7dc32054da65060da44654d049802d0", size = 4339504 },
+]
+
+[[package]]
+name = "redis"
+version = "5.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "async-timeout", marker = "python_full_version < '3.11.3'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/53/17/2f4a87ffa4cd93714cf52edfa3ea94589e9de65f71e9f99cbcfa84347a53/redis-5.2.0.tar.gz", hash = "sha256:0b1087665a771b1ff2e003aa5bdd354f15a70c9e25d5a7dbf9c722c16528a7b0", size = 4607878 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/12/f5/ffa560ecc4bafbf25f7961c3d6f50d627a90186352e27e7d0ba5b1f6d87d/redis-5.2.0-py3-none-any.whl", hash = "sha256:ae174f2bb3b1bf2b09d54bf3e51fbc1469cf6c10aa03e21141f51969801a7897", size = 261428 },
 ]
 
 [[package]]
