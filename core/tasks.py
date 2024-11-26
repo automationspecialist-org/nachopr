@@ -426,7 +426,15 @@ def process_all_journalists_sync(limit: int = 10, re_process: bool = False):
 
 
 
-def categorize_news_page_with_gpt(page: NewsPage):
+@shared_task(
+    bind=True,
+    time_limit=900,  # 15 minute timeout
+    soft_time_limit=800,  # ~13 minute soft timeout
+    max_retries=3,
+    default_retry_delay=300,  # 5 minutes between retries
+    name='categorize_news_page_with_gpt'
+)
+def categorize_news_page_with_gpt(self, page: NewsPage):
     """Add this transaction wrapper and explicit category sync"""
     available_categories = NewsPageCategory.objects.all()
     client = AzureOpenAI(
@@ -492,30 +500,17 @@ def categorize_news_page_with_gpt(page: NewsPage):
                 
     except json.JSONDecodeError:
         logger.error(f'JSON decode error for result: {result}')
+        raise self.retry()
     except Exception as e:
         logger.error(f'Error in categorize_news_page_with_gpt: {str(e)}')
+        raise self.retry()
 
-
-@shared_task(
-    bind=True,
-    time_limit=900,  # 15 minute timeout
-    soft_time_limit=800,  # ~13 minute soft timeout
-    max_retries=3,
-    default_retry_delay=300  # 5 minutes between retries
-)
-def categorize_page_task(self, page_id):
-    """Categorize a single news page"""
-    try:
-        page = NewsPage.objects.get(id=page_id)
-        categorize_news_page_with_gpt(page)
-    except Exception as e:
-        logger.error(f"Error categorizing page {page_id}: {str(e)}")
-        raise self.retry(exc=e)
 
 @shared_task(
     time_limit=3600,  # 1 hour timeout
     soft_time_limit=3300,  # 55 minute soft timeout
-    rate_limit='2/m'  # Max 2 tasks per minute
+    rate_limit='2/m',  # Max 2 tasks per minute,
+    name='categorize_pages_task'
 )
 def categorize_pages_task(limit=1000):
     """Distribute categorization tasks"""
@@ -1299,7 +1294,7 @@ async def generate_embeddings(texts: List[str]) -> List[List[float]]:
         raise
 
 
-@shared_task(bind=True)
+@shared_task(bind=True, name='crawl_single_page_task')
 def crawl_single_page_task(self, url, source_id):
     """Process a single page from a crawl"""
     try:
@@ -1343,7 +1338,7 @@ def crawl_single_page_task(self, url, source_id):
         logger.error(f"Error processing page {url}: {str(e)}")
         raise
 
-@shared_task(bind=True)
+@shared_task(bind=True, name='crawl_single_source_task')
 def crawl_single_source_task(self, source_id, page_limit=None):
     """Crawl a single news source"""
     try:
@@ -1379,7 +1374,7 @@ def crawl_single_source_task(self, source_id, page_limit=None):
         logger.error(f"Error crawling source {source_id}: {str(e)}")
         raise
 
-@shared_task
+@shared_task(name='crawl_news_sources_task')
 def crawl_news_sources_task(domain_limit=None, page_limit=None):
     """Distribute crawling tasks across workers"""
     try:
@@ -1411,7 +1406,8 @@ def crawl_news_sources_task(domain_limit=None, page_limit=None):
         bind=True, name='continuous_crawl',
         max_retries=3,
         default_retry_delay=300,  # 5 minutes
-        autoretry_for=(openai.APIConnectionError,)
+        autoretry_for=(openai.APIConnectionError,),
+        name='continuous_crawl_task'
         )
 def continuous_crawl_task(self):
     """Orchestrate the continuous crawling process"""
@@ -1464,7 +1460,7 @@ def continuous_crawl_task(self):
         self.retry(countdown=300)
 
 
-@shared_task(bind=True)
+@shared_task(bind=True, name='process_journalist_task')
 def process_journalist_task(self, page_id):
     """Process journalists for a single page"""
     try:
@@ -1507,7 +1503,7 @@ def process_journalist_task(self, page_id):
         logger.error(f"Error processing page {page_id}: {str(e)}")
         raise
 
-@shared_task
+@shared_task(name='process_journalists_task')
 def process_journalists_task(limit=10):
     """Distribute journalist processing tasks"""
     pages = NewsPage.objects.exclude(content='').filter(processed=False)[:limit]
@@ -1515,7 +1511,7 @@ def process_journalists_task(limit=10):
     for page in pages:
         process_journalist_task.delay(page.id)
 
-@shared_task(bind=True)
+@shared_task(bind=True, name='categorize_page_task')
 def categorize_page_task(self, page_id):
     """Categorize a single news page"""
     try:
@@ -1525,7 +1521,7 @@ def categorize_page_task(self, page_id):
         logger.error(f"Error categorizing page {page_id}: {str(e)}")
         raise
 
-@shared_task
+@shared_task(name='categorize_pages_task')
 def categorize_pages_task(limit=1000):
     """Distribute categorization tasks"""
     pages = NewsPage.objects.filter(
@@ -1537,7 +1533,7 @@ def categorize_pages_task(limit=1000):
     for page in pages:
         categorize_page_task.delay(page.id)
 
-@shared_task(bind=True)
+@shared_task(bind=True, name='update_single_page_embedding_task')
 def update_single_page_embedding_task(self, page_id):
     """Update embedding for a single page"""
     try:
@@ -1569,7 +1565,7 @@ def update_single_page_embedding_task(self, page_id):
         logger.error(f"Error updating page embedding {page_id}: {str(e)}")
         raise
 
-@shared_task
+@shared_task(name='update_page_embeddings_task')
 def update_page_embeddings_task(limit=100):
     """Distribute page embedding updates"""
     pages = NewsPage.objects.filter(
@@ -1581,7 +1577,7 @@ def update_page_embeddings_task(limit=100):
     for page in pages:
         update_single_page_embedding_task.delay(page.id)
 
-@shared_task(bind=True)
+@shared_task(bind=True, name='update_single_journalist_embedding_task')
 def update_single_journalist_embedding_task(self, journalist_id):
     """Update embedding for a single journalist"""
     try:
@@ -1610,7 +1606,7 @@ def update_single_journalist_embedding_task(self, journalist_id):
         logger.error(f"Error updating journalist embedding {journalist_id}: {str(e)}")
         raise
 
-@shared_task
+@shared_task(name='update_journalist_embeddings_task')
 def update_journalist_embeddings_task(limit=100):
     """Distribute journalist embedding updates"""
     journalists = Journalist.objects.filter(
