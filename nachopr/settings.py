@@ -119,11 +119,29 @@ WSGI_APPLICATION = 'nachopr.wsgi.application'
 
 ASGI_APPLICATION = 'nachopr.asgi.application'
 
+class AzureInternalNetworkValidator:
+    def __contains__(self, host):
+        if not host.startswith('169.254.'):
+            return False
+        try:
+            # Split the IP and verify the last two octets
+            parts = host.split('.')
+            if len(parts) != 4:
+                return False
+            return (parts[0] == '169' and 
+                   parts[1] == '254' and 
+                   0 <= int(parts[2]) <= 255 and 
+                   0 <= int(parts[3]) <= 255)
+        except (ValueError, IndexError):
+            return False
+
 ALLOWED_HOSTS = [
-    '0.0.0.0', '127.0.0.1', 'nachopr.apps.innermaps.org',
+    '0.0.0.0', 
+    '127.0.0.1', 
+    'nachopr.apps.innermaps.org',
     'nachoapp-ekewd4f3gdbwcxcu.eastus-01.azurewebsites.net',
     'nachopr.com',
-    '169.254.*.*'
+    AzureInternalNetworkValidator(),
 ]
 
 # Add CSRF trusted origins for your domains

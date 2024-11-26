@@ -1403,12 +1403,12 @@ def crawl_news_sources_task(domain_limit=None, page_limit=None):
         raise
 
 @shared_task(
-        bind=True, name='continuous_crawl',
-        max_retries=3,
-        default_retry_delay=300,  # 5 minutes
-        autoretry_for=(openai.APIConnectionError,),
-        name='continuous_crawl_task'
-        )
+    bind=True,
+    name='continuous_crawl',
+    max_retries=3,
+    default_retry_delay=300,  # 5 minutes
+    autoretry_for=(openai.APIConnectionError,)
+)
 def continuous_crawl_task(self):
     """Orchestrate the continuous crawling process"""
     try:
