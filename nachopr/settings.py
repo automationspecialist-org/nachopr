@@ -341,4 +341,37 @@ EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = 'NachoPR <support@updates.nachopr.com>'
 SERVER_EMAIL = 'NachoPR <support@updates.nachopr.com>' 
 
+
+# Add Celery settings
+CELERY_BROKER_URL = f"azureservicebus://{os.environ.get('AZURE_QUEUE_POLICY_NAME')}:{os.environ.get('AZURE_QUEUE_POLICY_KEY')}@{os.environ.get('AZURE_QUEUE_HOST')}"
 CELERY_RESULT_BACKEND = 'django-db'
+
+# Celery Configuration
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 900  # 15 minutes
+CELERY_TASK_SOFT_TIME_LIMIT = 800  # ~13 minutes
+CELERY_WORKER_MAX_MEMORY_PER_CHILD = 250000  # 250MB
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 25
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_TASK_ACKS_LATE = True
+CELERY_WORKER_SEND_TASK_EVENTS = True
+CELERY_TASK_SEND_SENT_EVENT = True
+
+# Task queues configuration
+CELERY_TASK_DEFAULT_QUEUE = 'default'
+CELERY_TASK_QUEUES = {
+    'default': {},
+    'crawl': {},
+    'process': {},
+    'categorize': {},
+}
+
+CELERY_TASK_ROUTES = {
+    'core.tasks.continuous_crawl_task': {'queue': 'crawl'},
+    'core.tasks.crawl_single_source_task': {'queue': 'crawl'},
+    'core.tasks.crawl_single_page_task': {'queue': 'crawl'},
+    'core.tasks.process_journalist_task': {'queue': 'process'},
+    'core.tasks.process_journalists_task': {'queue': 'process'},
+    'core.tasks.categorize_page_task': {'queue': 'categorize'},
+    'core.tasks.categorize_pages_task': {'queue': 'categorize'},
+}

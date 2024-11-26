@@ -33,25 +33,44 @@ app = Celery(
     }
 )
 
-# Add memory and task management configurations
+# Optimize memory and task management configurations
 app.conf.update(
-    worker_max_memory_per_child=350000,  # 350MB memory limit
-    worker_max_tasks_per_child=50,       # Restart worker after 50 tasks
-    task_time_limit=1800,                # 30 minute timeout
-    task_soft_time_limit=1500,           # Soft timeout 25 minutes
+    # Memory management
+    worker_max_memory_per_child=250000,  # Reduced to 250MB to prevent SIGKILL
+    worker_max_tasks_per_child=25,       # Reduced to 25 tasks for more frequent recycling
+    
+    # Task execution
+    task_time_limit=900,                 # 15 minute hard timeout
+    task_soft_time_limit=800,            # ~13 minute soft timeout
     worker_prefetch_multiplier=1,        # Process one task at a time
-    task_acks_late=True                  # Acknowledge tasks after completion
+    task_acks_late=True,                 # Acknowledge after completion
+    
+    # Concurrency and pooling
+    worker_concurrency=2,                # Limit concurrent tasks
+    worker_pool_restarts=True,           # Enable pool restarts
+    
+    # Task routing
+    task_default_queue='default',        # Default queue name
+    task_routes={
+        'core.tasks.continuous_crawl_task': {'queue': 'crawl'},
+        'core.tasks.process_journalist_task': {'queue': 'process'},
+        'core.tasks.categorize_page_task': {'queue': 'categorize'},
+    },
+    
+    # Error handling
+    task_reject_on_worker_lost=True,     # Requeue tasks from lost workers
+    task_remote_tracebacks=True,         # Include remote tracebacks in errors
 )
 
 # Load task modules from all registered Django app configs
 app.config_from_object('django.conf:settings', namespace='CELERY')
 
-# Configure the Celery beat schedule
+# Update beat schedule with queue routing
 app.conf.beat_schedule = {
     'continuous-crawl': {
         'task': 'core.tasks.continuous_crawl_task',
-        'schedule': timedelta(minutes=5),
-        'options': {'queue': 'celery'}
+        'schedule': timedelta(minutes=15),  # Increased interval
+        'options': {'queue': 'crawl'}
     },
 }
 
