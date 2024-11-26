@@ -1339,7 +1339,7 @@ def crawl_single_source_task(self, source_id, page_limit=None):
         news_source = NewsSource.objects.get(id=source_id)
         logger.info(f"Starting crawl for {news_source.url}")
         
-        # Configure website crawler
+        # Use spider_rs for the full crawl
         website = (
             Website(news_source.url)
             .with_user_agent("Mozilla/5.0")
@@ -1351,18 +1351,30 @@ def crawl_single_source_task(self, source_id, page_limit=None):
         if page_limit:
             website = website.with_budget({"*": page_limit})
         
-        # Get list of URLs
+        # Get pages with content
         website.scrape()
         pages = website.get_pages()
-
         logger.info(f"Found {len(pages)} pages for {news_source.url}")
         
-        # Create tasks for each page
-        for page in pages[:page_limit] if page_limit else pages:
-            crawl_single_page_task.delay(page.url, source_id)
-            
-        # Update source last crawled time
+        # Process pages in bulk
         with transaction.atomic():
+            for page in pages:
+                # Skip if page already exists
+                if NewsPage.objects.filter(url=page.url).exists():
+                    continue
+                    
+                cleaned_content = clean_html(page.content)
+                news_page = NewsPage.objects.create(
+                    url=page.url,
+                    title=str(page.title()),
+                    content=cleaned_content,
+                    source=news_source
+                )
+                
+                # Queue journalist extraction for this page
+                process_journalist_task.delay(news_page.id)
+            
+            # Update source last crawled time
             news_source.last_crawled = timezone.now()
             news_source.save()
             
@@ -1425,7 +1437,7 @@ def continuous_crawl_task(self):
         # Test the connection with a simple completion
         try:
             test_response = client.chat.completions.create(
-                model="gpt-4",  # Use exact deployment name
+                model="gpt-4o-mini",  # Use exact deployment name
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant."},
                     {"role": "user", "content": "test"}
@@ -1436,8 +1448,7 @@ def continuous_crawl_task(self):
             logger.info("OpenAI connection test successful")
         except Exception as e:
             logger.error(f"OpenAI connection test failed: {str(e)}")
-            logger.error(f"OpenAI Configuration: endpoint={client.base_url}, "
-                        f"version={client.api_version}")
+            logger.error(f"OpenAI Configuration: endpoint={client.base_url}")
             raise
 
         # Continue with regular task if connection test passes

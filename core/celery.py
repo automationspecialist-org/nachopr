@@ -64,6 +64,8 @@ app.conf.update(
     # Error handling
     task_reject_on_worker_lost=True,     # Requeue tasks from lost workers
     task_remote_tracebacks=True,         # Include remote tracebacks in errors
+    broker_url=os.getenv('REDIS_URL', 'redis://localhost:6379/0'),
+    result_backend=os.getenv('REDIS_URL', 'redis://localhost:6379/0'),
 )
 
 # Update beat schedule with queue routing

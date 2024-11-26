@@ -39,6 +39,12 @@ RUN apt-get update && apt-get install -y \
     #&& apt-get install -y nodejs \
     #&& npm install -g npm@latest
 
+
+# Install Redis
+RUN apt-get update && apt-get install -y redis-server
+# Setup Redis and its logging
+RUN mkdir -p /var/log/redis \
+    && chown -R redis:redis /var/log/redis
 # Setup Supervisor and Celery
 RUN apt-get update && apt-get install -y supervisor \
     && mkdir -p /var/log/celery \
@@ -47,6 +53,7 @@ RUN apt-get update && apt-get install -y supervisor \
 # Copy supervisor configurations
 COPY supervisor/celeryworker.conf /etc/supervisor/conf.d/
 COPY supervisor/celerybeat.conf /etc/supervisor/conf.d/
+COPY supervisor/redis.conf /etc/supervisor/conf.d/
 
 RUN apt-get install -y --no-install-recommends dialog openssh-server \
     && echo "root:Docker!" | chpasswd \
