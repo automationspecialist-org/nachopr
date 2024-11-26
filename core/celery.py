@@ -24,7 +24,8 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 app.conf.update(
     # Broker and Backend settings
     broker_url=os.getenv('REDIS_URL', 'redis://localhost:6379/0'),
-    result_backend=os.getenv('REDIS_URL', 'redis://localhost:6379/0'),
+    result_backend='django-db',  # Use django-db backend
+    result_extended=True,  # Enable extended task results
     
     # Memory management
     worker_max_memory_per_child=1000000,  # 1GB memory limit per worker
