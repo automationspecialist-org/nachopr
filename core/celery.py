@@ -15,7 +15,7 @@ sas_policy_name = os.getenv('AZURE_QUEUE_POLICY_NAME')
 sas_key = os.getenv('AZURE_QUEUE_POLICY_KEY')
 namespace = os.getenv('AZURE_QUEUE_HOST')
 
-# Set the default Django settings module BEFORE any Django imports
+# Set the default Django settings module
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'nachopr.settings')
 
 # Create the Celery app
@@ -33,6 +33,9 @@ app = Celery(
         "debug": True
     }
 )
+
+# Load task modules from all registered Django app configs
+app.config_from_object('django.conf:settings', namespace='CELERY')
 
 # Optimize memory and task management configurations
 app.conf.update(
@@ -63,9 +66,6 @@ app.conf.update(
     task_remote_tracebacks=True,         # Include remote tracebacks in errors
 )
 
-# Load task modules from all registered Django app configs
-app.config_from_object('django.conf:settings', namespace='CELERY')
-
 # Update beat schedule with queue routing
 app.conf.beat_schedule = {
     'continuous-crawl': {
@@ -81,6 +81,3 @@ app.autodiscover_tasks()
 @app.task(bind=True)
 def debug_task(self):
     print(f'Request: {self.request!r}')
-
-# Make sure tasks are imported when Celery starts
-import core.tasks  # Add this import at the bottom
