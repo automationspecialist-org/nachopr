@@ -52,7 +52,12 @@ logger = logging.getLogger(__name__)
 
 lunary.config(app_id=os.getenv('LUNARY_PUBLIC_KEY'))
 
-
+azure_openai_client = AzureOpenAI(
+    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+    azure_deployment="gpt-4o-mini",
+    api_version="2024-02-15-preview",
+    api_key=os.getenv("AZURE_OPENAI_API_KEY")
+)
 
 # Cache failed domains to avoid rechecking
 failed_domains = set()
@@ -1437,22 +1442,6 @@ def continuous_crawl_task(self):
             api_key=os.getenv("AZURE_OPENAI_API_KEY")
         )
         
-        # Test the connection with a simple completion
-        try:
-            test_response = client.chat.completions.create(
-                messages=[  # Remove model parameter since it's set in constructor
-                    {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": "test"}
-                ],
-                max_tokens=5,
-                temperature=0.3,
-                model="gpt-4o-mini"
-            )
-            logger.info("OpenAI connection test successful")
-        except Exception as e:
-            logger.error(f"OpenAI connection test failed: {str(e)}")
-            logger.error(f"OpenAI Configuration: endpoint={os.getenv('AZURE_OPENAI_ENDPOINT')}")
-            raise
 
         # Continue with regular task if connection test passes
         newspage_count_before = NewsPage.objects.count()
@@ -1654,3 +1643,22 @@ def update_journalist_embeddings_task(limit=100):
     
     for journalist in journalists:
         update_single_journalist_embedding_task.delay(journalist.id)
+
+def test_openai_connection():
+    """Test the OpenAI connection"""
+    # Test the connection with a simple completion
+    try:
+        test_response = azure_openai_client.chat.completions.create(
+            messages=[  # Remove model parameter since it's set in constructor
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": "test"}
+            ],
+            max_tokens=5,
+            temperature=0.3,
+            model="gpt-4o-mini"
+        )
+        logger.info("OpenAI connection test successful")
+    except Exception as e:
+        logger.error(f"OpenAI connection test failed: {str(e)}")
+        logger.error(f"OpenAI Configuration: endpoint={os.getenv('AZURE_OPENAI_ENDPOINT')}")
+        raise
