@@ -1623,8 +1623,11 @@ def test_openai_connection():
     """Test the OpenAI connection"""
     # Test the connection with a simple completion
     try:
+        logger.info(f"AZURE_OPENAI_ENDPOINT: {os.getenv('AZURE_OPENAI_ENDPOINT')}")
+        logger.info(f"AZURE_OPENAI_API_KEY: {'***' if os.getenv('AZURE_OPENAI_API_KEY') else 'Not Set'}")
+        
         test_response = azure_openai_client.chat.completions.create(
-            messages=[  # Remove model parameter since it's set in constructor
+            messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": "test"}
             ],
