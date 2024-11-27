@@ -1621,7 +1621,6 @@ def update_journalist_embeddings_task(limit=100):
 
 def test_openai_connection():
     """Test the OpenAI connection"""
-    # Test the connection with a simple completion
     try:
         logger.info(f"AZURE_OPENAI_ENDPOINT: {os.getenv('AZURE_OPENAI_ENDPOINT')}")
         logger.info(f"AZURE_OPENAI_API_KEY: {'***' if os.getenv('AZURE_OPENAI_API_KEY') else 'Not Set'}")
@@ -1637,5 +1636,5 @@ def test_openai_connection():
         )
         logger.info("OpenAI connection test successful")
     except Exception as e:
-        logger.error(f"OpenAI connection test failed: {str(e)}")
+        logger.error(f"OpenAI connection test failed: {str(e)}", exc_info=True)
         logger.error(f"OpenAI Configuration: endpoint={os.getenv('AZURE_OPENAI_ENDPOINT')}")
