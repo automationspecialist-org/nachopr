@@ -222,13 +222,8 @@ def extract_journalists_with_gpt(content: str, track_prompt: bool = False) -> di
 
     clean_content = clean_html(content)
     
-    client = AzureOpenAI(
-        azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-        azure_deployment="gpt-4o-mini",
-        api_version="2024-08-01-preview",
-        api_key=os.getenv("AZURE_OPENAI_API_KEY")
-    )
-    lunary.monitor(client)
+    
+    lunary.monitor(azure_openai_client)
 
 
     journalist_json = { 
@@ -272,7 +267,7 @@ def extract_journalists_with_gpt(content: str, track_prompt: bool = False) -> di
 
     try:
         # Call the GPT-4 API on Azure
-        response = client.chat.completions.create(
+        response = azure_openai_client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a html to json extractor."},
@@ -439,12 +434,7 @@ def process_all_journalists_sync(limit: int = 10, re_process: bool = False):
 def categorize_news_page_with_gpt(self, page: NewsPage):
     """Add this transaction wrapper and explicit category sync"""
     available_categories = NewsPageCategory.objects.all()
-    client = AzureOpenAI(
-        azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-        azure_deployment="gpt-4o-mini",
-        api_version="2024-08-01-preview",
-        api_key=os.getenv("AZURE_OPENAI_API_KEY")
-    )
+    
     available_categories_str = ', '.join([f"{category.name}" for category in available_categories])
     json_schema = {
         "categories": [
@@ -468,7 +458,7 @@ def categorize_news_page_with_gpt(self, page: NewsPage):
     For example 'software', 'hardware', 'space' are categories, but 'news' is not.
     The categories should always be in English, regardless of the original language of the news page.
     """
-    response = client.chat.completions.create(
+    response = azure_openai_client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": "You are a news page categorizer."},
@@ -743,14 +733,6 @@ async def process_journalist_descriptions(limit: int = 10):
             try:
                 journalist, content = await gpt_queue.get()
                 
-                # Process with GPT
-                client = AzureOpenAI(
-                    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-                    azure_deployment="gpt-4o-mini",
-                    api_version="2024-08-01-preview",
-                    api_key=os.getenv("AZURE_OPENAI_API_KEY")
-                )
-
                 prompt = f"""
                 Extract a professional description of the journalist from their profile page.
                 Return a JSON object with a single 'description' field containing a 2-3 sentence summary.
@@ -759,8 +741,7 @@ async def process_journalist_descriptions(limit: int = 10):
                 {clean_html(content)}
                 """
 
-                response = client.chat.completions.create(
-                    model="gpt-4o-mini",
+                response = azure_openai_client.chat.completions.create(
                     messages=[
                         {"role": "system", "content": "You are a professional bio writer."},
                         {"role": "user", "content": prompt}
@@ -1435,13 +1416,7 @@ def continuous_crawl_task(self):
     """Orchestrate the continuous crawling process"""
     try:
         # Validate OpenAI connection first
-        client = AzureOpenAI(
-            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-            azure_deployment="gpt-4o-mini",  # Move deployment to constructor
-            api_version="2024-02-15-preview",
-            api_key=os.getenv("AZURE_OPENAI_API_KEY")
-        )
-        
+        test_openai_connection()
 
         # Continue with regular task if connection test passes
         newspage_count_before = NewsPage.objects.count()
