@@ -1639,4 +1639,3 @@ def test_openai_connection():
     except Exception as e:
         logger.error(f"OpenAI connection test failed: {str(e)}")
         logger.error(f"OpenAI Configuration: endpoint={os.getenv('AZURE_OPENAI_ENDPOINT')}")
-        raise
