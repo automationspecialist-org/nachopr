@@ -28,7 +28,7 @@ app.conf.update(
     result_extended=True,  # Enable extended task results
     
     # Memory management
-    worker_max_memory_per_child=1000000,  # 1GB memory limit per worker
+    worker_max_memory_per_child=2000000,  # 2GB memory limit per worker
     worker_max_tasks_per_child=25,
     worker_prefetch_multiplier=1,  # Don't prefetch tasks
 
