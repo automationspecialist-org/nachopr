@@ -1045,7 +1045,7 @@ def update_newspage_embedding_on_change(sender, instance, **kwargs):
 @receiver(post_save, sender=Journalist)
 def update_journalist_embedding_on_change(sender, instance, **kwargs):
     """Update embedding when Journalist data changes"""
-    # Skip if this save was triggered by an embedding update
+    # Skip if this save was triggered by an embedding update to avoid recursion
     if kwargs.get('update_fields') == {'embedding'}:
         return
         
@@ -1068,9 +1068,8 @@ def update_journalist_embedding_on_change(sender, instance, **kwargs):
             input=[text]
         )
         
-        # Update the embedding directly
-        instance.embedding = response.data[0].embedding
-        instance.save()
+        # Update the embedding directly using update() to avoid triggering the signal again
+        Journalist.objects.filter(id=instance.id).update(embedding=response.data[0].embedding)
         
     except Exception as e:
         logger.error(f"Error updating embedding for Journalist {instance.id}: {str(e)}")
@@ -1274,7 +1273,7 @@ async def generate_embeddings(texts: List[str]) -> List[List[float]]:
         raise
 
 
-@app.task(bind=True, name='crawl_single_page_task')
+@app.task(bind=True, name='crawl_single_page_task', track_started=True, ignore_result=False)
 def crawl_single_page_task(self, url, source_id):
     """Process a single page from a crawl"""
     try:
@@ -1318,7 +1317,7 @@ def crawl_single_page_task(self, url, source_id):
         logger.error(f"Error processing page {url}: {str(e)}")
         raise
 
-@app.task(bind=True, name='crawl_single_source_task')
+@app.task(bind=True, name='crawl_single_source_task', track_started=True, ignore_result=False)
 def crawl_single_source_task(self, source_id, page_limit=None):
     """Crawl a single news source"""
     try:
@@ -1368,7 +1367,7 @@ def crawl_single_source_task(self, source_id, page_limit=None):
         logger.error(f"Error crawling source {source_id}: {str(e)}")
         raise
 
-@app.task(name='crawl_news_sources_task')
+@app.task(name='crawl_news_sources_task', track_started=True, ignore_result=False)
 def crawl_news_sources_task(domain_limit=None, page_limit=None):
     """Distribute crawling tasks across workers"""
     try:
@@ -1410,7 +1409,9 @@ def crawl_news_sources_task(domain_limit=None, page_limit=None):
     default_retry_delay=300,
     retry_backoff=True,
     retry_backoff_max=3600,
-    retry_jitter=True
+    retry_jitter=True,
+    track_started=True,
+    ignore_result=False
 )
 def continuous_crawl_task(self):
     """Orchestrate the continuous crawling process"""
@@ -1463,7 +1464,7 @@ def handle_chain_error(request, exc, traceback):
     logger.error(f"Task chain error: {exc}", exc_info=True)
     # Notify admins or take other error handling actions as needed
 
-@app.task(bind=True, name='process_journalist_task')
+@app.task(bind=True, name='process_journalist_task', track_started=True, ignore_result=False)
 def process_journalist_task(self, page_id):
     """Process journalists for a single page"""
     try:
@@ -1506,7 +1507,7 @@ def process_journalist_task(self, page_id):
         logger.error(f"Error processing page {page_id}: {str(e)}")
         raise
 
-@app.task(name='process_journalists_task')
+@app.task(name='process_journalists_task', track_started=True, ignore_result=False)
 def process_journalists_task(limit=10):
     """Distribute journalist processing tasks"""
     pages = NewsPage.objects.exclude(content='').filter(processed=False)[:limit]
@@ -1514,7 +1515,7 @@ def process_journalists_task(limit=10):
     for page in pages:
         process_journalist_task.delay(page.id)
 
-@app.task(bind=True, name='categorize_page_task')
+@app.task(bind=True, name='categorize_page_task', track_started=True, ignore_result=False)
 def categorize_page_task(self, page_id):
     """Categorize a single news page"""
     try:
@@ -1524,7 +1525,7 @@ def categorize_page_task(self, page_id):
         logger.error(f"Error categorizing page {page_id}: {str(e)}")
         raise
 
-@app.task(name='categorize_pages_task')
+@app.task(name='categorize_pages_task', track_started=True, ignore_result=False)
 def categorize_pages_task(limit=1000):
     """Distribute categorization tasks"""
     pages = NewsPage.objects.filter(
@@ -1536,7 +1537,7 @@ def categorize_pages_task(limit=1000):
     for page in pages:
         categorize_page_task.delay(page.id)
 
-@app.task(bind=True, name='update_single_page_embedding_task')
+@app.task(bind=True, name='update_single_page_embedding_task', track_started=True, ignore_result=False)
 def update_single_page_embedding_task(self, page_id):
     """Update embedding for a single page"""
     try:
@@ -1568,7 +1569,7 @@ def update_single_page_embedding_task(self, page_id):
         logger.error(f"Error updating page embedding {page_id}: {str(e)}")
         raise
 
-@app.task(name='update_page_embeddings_task')
+@app.task(name='update_page_embeddings_task', track_started=True, ignore_result=False)
 def update_page_embeddings_task(limit=100):
     """Distribute page embedding updates"""
     pages = NewsPage.objects.filter(
@@ -1580,7 +1581,7 @@ def update_page_embeddings_task(limit=100):
     for page in pages:
         update_single_page_embedding_task.delay(page.id)
 
-@app.task(bind=True, name='update_single_journalist_embedding_task')
+@app.task(bind=True, name='update_single_journalist_embedding_task', track_started=True, ignore_result=False)
 def update_single_journalist_embedding_task(self, journalist_id):
     """Update embedding for a single journalist"""
     try:
@@ -1609,7 +1610,7 @@ def update_single_journalist_embedding_task(self, journalist_id):
         logger.error(f"Error updating journalist embedding {journalist_id}: {str(e)}")
         raise
 
-@app.task(name='update_journalist_embeddings_task')
+@app.task(name='update_journalist_embeddings_task', track_started=True, ignore_result=False)
 def update_journalist_embeddings_task(limit=100):
     """Distribute journalist embedding updates"""
     journalists = Journalist.objects.filter(
@@ -1641,25 +1642,14 @@ def test_openai_connection():
         try:
             import socket
             import urllib.parse
-            import requests
-            from urllib3.util.retry import Retry
-            from requests.adapters import HTTPAdapter
             
             # Parse the endpoint URL to get the hostname
             parsed_url = urllib.parse.urlparse(endpoint)
             hostname = parsed_url.hostname
             
             logger.info(f"Testing network connectivity to {hostname}...")
-            
-            # Use requests with retries instead of raw socket
-            session = requests.Session()
-            retries = Retry(total=3, backoff_factor=1)
-            session.mount('https://', HTTPAdapter(max_retries=retries))
-            
-            # Test the connection with a HEAD request
-            response = session.head(f"https://{hostname}", timeout=10)
-            logger.info(f"Network connectivity test successful: {response.status_code}")
-            
+            socket.create_connection((hostname, 443), timeout=10)
+            logger.info("Basic network connectivity test successful")
         except Exception as e:
             logger.error(f"Network connectivity test failed: {str(e)}")
             # Continue anyway to get more diagnostic information
@@ -1671,7 +1661,7 @@ def test_openai_connection():
             api_version="2024-02-15-preview",
             api_key=api_key,
             timeout=30.0,  # Add explicit timeout
-            max_retries=3  # Increase retries
+            max_retries=1  # Limit retries for faster feedback
         )
         
         logger.info("Attempting to make API call...")

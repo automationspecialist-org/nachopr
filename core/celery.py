@@ -1,71 +1,39 @@
+from __future__ import absolute_import, unicode_literals
 import os
 from celery import Celery
-from dotenv import load_dotenv
-import logging
-from datetime import timedelta
-from celery.schedules import crontab
+from django.conf import settings
+from celery.signals import task_postrun
+from django.db import close_old_connections
 
-load_dotenv()
-
-# Configure Celery logging
-logger = logging.getLogger('celery')
-logger.setLevel(logging.DEBUG)
-
-# Set the default Django settings module
+# Set the default Django settings module for the 'celery' program.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'nachopr.settings')
 
-# Create the Celery app
-app = Celery("nacho_pr")
+app = Celery('nachopr')
 
-# Load task modules from all registered Django app configs
+# Using a string here means the worker doesn't have to serialize
+# the configuration object to child processes.
 app.config_from_object('django.conf:settings', namespace='CELERY')
 
-# Optimize memory and task management configurations
-app.conf.update(
-    # Broker and Backend settings
-    broker_url=os.getenv('REDIS_URL', 'redis://localhost:6379/0'),
-    result_backend='django-db',  # Use django-db backend
-    result_extended=True,  # Enable extended task results
-    
-    # Memory management
-    worker_max_memory_per_child=2000000,  # 2GB memory limit per worker
-    worker_max_tasks_per_child=25,
-    worker_prefetch_multiplier=1,  # Don't prefetch tasks
+# Load task modules from all registered Django app configs.
+app.autodiscover_tasks()
 
-    
-    # Task execution
-    task_time_limit=1800,                 # 30 minute hard timeout
-    task_soft_time_limit=1200,            # ~20 minute soft timeout
-    task_acks_late=True,
-    
-    # Concurrency and pooling
-    worker_concurrency=2,
-    worker_pool_restarts=True,
-    
-    # Task routing
-    task_default_queue='default',
-    task_routes={
-        'core.tasks.continuous_crawl_task': {'queue': 'crawl'},
-        'core.tasks.process_journalist_task': {'queue': 'process'},
-        'core.tasks.categorize_page_task': {'queue': 'categorize'},
-    },
-    
-    # Error handling
-    task_reject_on_worker_lost=True,
-    task_remote_tracebacks=True,
+# Configure Celery to use Django-DB as result backend
+app.conf.update(
+    result_backend='django-db',
+    task_track_started=True,
+    task_time_limit=30 * 60,  # 30 minutes
+    worker_max_tasks_per_child=50,  # Restart worker after 50 tasks
+    task_serializer='json',
+    result_serializer='json',
+    accept_content=['json']
 )
 
-# Update beat schedule with queue routing
-app.conf.beat_schedule = {
-    'continuous-crawl': {
-        'task': 'core.tasks.continuous_crawl_task',
-        'schedule': timedelta(minutes=15),
-        'options': {'queue': 'crawl'}
-    },
-}
+@task_postrun.connect
+def close_db_connections(sender=None, task_id=None, task=None, args=None, kwargs=None,
+                        retval=None, state=None, **kwds):
+    """Close database connections after each task."""
+    close_old_connections()
 
-# Auto-discover tasks in all installed apps
-app.autodiscover_tasks()
 @app.task(bind=True)
 def debug_task(self):
     print(f'Request: {self.request!r}')

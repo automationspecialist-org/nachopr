@@ -362,9 +362,8 @@ SERVER_EMAIL = 'NachoPR <support@updates.nachopr.com>'
 
 # Add Celery settings
 CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
-
-# Celery Configuration
+CELERY_RESULT_BACKEND = 'django-db'
+CELERY_CACHE_BACKEND = 'django-cache'
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 900  # 15 minutes
 CELERY_TASK_SOFT_TIME_LIMIT = 800  # ~13 minutes
