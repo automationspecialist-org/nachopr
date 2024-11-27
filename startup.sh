@@ -40,7 +40,10 @@ uv run manage.py add_news_sources
 uv run manage.py collectstatic --no-input
 uv run manage.py generate_social_img
 uv run manage.py collectstatic --no-input
-uv run manage.py test_openai
+
+# Test OpenAI but don't fail if it doesn't work
+echo "Testing OpenAI connection..."
+uv run manage.py test_openai || echo "OpenAI test failed but continuing startup..."
 
 # Send a message to Slack when restarting
 if [ -n "$SLACK_WEBHOOK_URL" ]; then

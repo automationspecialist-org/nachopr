@@ -1626,7 +1626,7 @@ def test_openai_connection():
         logger.info(f"AZURE_OPENAI_ENDPOINT: {os.getenv('AZURE_OPENAI_ENDPOINT')}")
         logger.info(f"AZURE_OPENAI_API_KEY: {'***' if os.getenv('AZURE_OPENAI_API_KEY') else 'Not Set'}")
         
-        # Log proxy settings if they exist
+        # Log proxy and network settings
         logger.info(f"HTTP_PROXY: {os.getenv('HTTP_PROXY', 'Not Set')}")
         logger.info(f"HTTPS_PROXY: {os.getenv('HTTPS_PROXY', 'Not Set')}")
         
@@ -1634,7 +1634,24 @@ def test_openai_connection():
         api_key = os.getenv("AZURE_OPENAI_API_KEY")
         
         if not endpoint or not api_key:
-            raise ValueError("Missing required Azure OpenAI configuration")
+            logger.error("Missing required Azure OpenAI configuration")
+            return False
+            
+        # Test basic network connectivity first
+        try:
+            import socket
+            import urllib.parse
+            
+            # Parse the endpoint URL to get the hostname
+            parsed_url = urllib.parse.urlparse(endpoint)
+            hostname = parsed_url.hostname
+            
+            logger.info(f"Testing network connectivity to {hostname}...")
+            socket.create_connection((hostname, 443), timeout=10)
+            logger.info("Basic network connectivity test successful")
+        except Exception as e:
+            logger.error(f"Network connectivity test failed: {str(e)}")
+            # Continue anyway to get more diagnostic information
             
         logger.info("Creating Azure OpenAI client...")
         # Create a new client instance for testing to ensure clean configuration
@@ -1642,7 +1659,8 @@ def test_openai_connection():
             azure_endpoint=endpoint,
             api_version="2024-02-15-preview",
             api_key=api_key,
-            timeout=30.0  # Add explicit timeout
+            timeout=30.0,  # Add explicit timeout
+            max_retries=1  # Limit retries for faster feedback
         )
         
         logger.info("Attempting to make API call...")
@@ -1659,4 +1677,5 @@ def test_openai_connection():
         return True
     except Exception as e:
         logger.error(f"OpenAI connection test failed: {str(e)}", exc_info=True)
+        # Don't fail startup - just log the error
         return False
