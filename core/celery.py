@@ -34,8 +34,8 @@ app.conf.update(
 
     
     # Task execution
-    task_time_limit=900,                 # 15 minute hard timeout
-    task_soft_time_limit=800,            # ~13 minute soft timeout
+    task_time_limit=1800,                 # 30 minute hard timeout
+    task_soft_time_limit=1200,            # ~20 minute soft timeout
     task_acks_late=True,
     
     # Concurrency and pooling
