@@ -1641,14 +1641,25 @@ def test_openai_connection():
         try:
             import socket
             import urllib.parse
+            import requests
+            from urllib3.util.retry import Retry
+            from requests.adapters import HTTPAdapter
             
             # Parse the endpoint URL to get the hostname
             parsed_url = urllib.parse.urlparse(endpoint)
             hostname = parsed_url.hostname
             
             logger.info(f"Testing network connectivity to {hostname}...")
-            socket.create_connection((hostname, 443), timeout=10)
-            logger.info("Basic network connectivity test successful")
+            
+            # Use requests with retries instead of raw socket
+            session = requests.Session()
+            retries = Retry(total=3, backoff_factor=1)
+            session.mount('https://', HTTPAdapter(max_retries=retries))
+            
+            # Test the connection with a HEAD request
+            response = session.head(f"https://{hostname}", timeout=10)
+            logger.info(f"Network connectivity test successful: {response.status_code}")
+            
         except Exception as e:
             logger.error(f"Network connectivity test failed: {str(e)}")
             # Continue anyway to get more diagnostic information
@@ -1660,7 +1671,7 @@ def test_openai_connection():
             api_version="2024-02-15-preview",
             api_key=api_key,
             timeout=30.0,  # Add explicit timeout
-            max_retries=1  # Limit retries for faster feedback
+            max_retries=3  # Increase retries
         )
         
         logger.info("Attempting to make API call...")

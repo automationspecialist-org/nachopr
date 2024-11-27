@@ -5,10 +5,10 @@ set -e
 echo "Starting startup script..."
 
 # Append environment variables first
-#printenv | grep -Ev 'BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID|LANG|PWD|GPG_KEY|_=' | while read -r line; do
-#    echo "environment=$line" >> /etc/supervisor/conf.d/celeryworker.conf
-#    echo "environment=$line" >> /etc/supervisor/conf.d/celerybeat.conf
-#done
+printenv | grep -Ev 'BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID|LANG|PWD|GPG_KEY|_=' | while read -r line; do
+    echo "environment=$line" >> /etc/supervisor/conf.d/celeryworker.conf
+    echo "environment=$line" >> /etc/supervisor/conf.d/celerybeat.conf
+done
 
 
 if [ -n "$AZURE" ]; then
@@ -32,9 +32,6 @@ uv run manage.py collectstatic --no-input
 uv run manage.py generate_social_img
 uv run manage.py collectstatic --no-input
 
-# Test OpenAI but don't fail if it doesn't work
-echo "Testing OpenAI connection..."
-uv run manage.py test_openai || echo "OpenAI test failed but continuing startup..."
 
 # Send a message to Slack when restarting
 if [ -n "$SLACK_WEBHOOK_URL" ]; then
