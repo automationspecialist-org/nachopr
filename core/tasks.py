@@ -1622,16 +1622,30 @@ def update_journalist_embeddings_task(limit=100):
 def test_openai_connection():
     """Test the OpenAI connection"""
     try:
+        logger.info("Starting OpenAI connection test...")
         logger.info(f"AZURE_OPENAI_ENDPOINT: {os.getenv('AZURE_OPENAI_ENDPOINT')}")
         logger.info(f"AZURE_OPENAI_API_KEY: {'***' if os.getenv('AZURE_OPENAI_API_KEY') else 'Not Set'}")
         
+        # Log proxy settings if they exist
+        logger.info(f"HTTP_PROXY: {os.getenv('HTTP_PROXY', 'Not Set')}")
+        logger.info(f"HTTPS_PROXY: {os.getenv('HTTPS_PROXY', 'Not Set')}")
+        
+        endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+        api_key = os.getenv("AZURE_OPENAI_API_KEY")
+        
+        if not endpoint or not api_key:
+            raise ValueError("Missing required Azure OpenAI configuration")
+            
+        logger.info("Creating Azure OpenAI client...")
         # Create a new client instance for testing to ensure clean configuration
         test_client = AzureOpenAI(
-            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+            azure_endpoint=endpoint,
             api_version="2024-02-15-preview",
-            api_key=os.getenv("AZURE_OPENAI_API_KEY")
+            api_key=api_key,
+            timeout=30.0  # Add explicit timeout
         )
         
+        logger.info("Attempting to make API call...")
         test_response = test_client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -1645,5 +1659,4 @@ def test_openai_connection():
         return True
     except Exception as e:
         logger.error(f"OpenAI connection test failed: {str(e)}", exc_info=True)
-        logger.error(f"OpenAI Configuration: endpoint={os.getenv('AZURE_OPENAI_ENDPOINT')!r}")
-        raise
+        return False
