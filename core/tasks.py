@@ -1424,11 +1424,11 @@ def continuous_crawl_task(self):
         
         # Chain the crawling tasks with error handling
         chain(
-            crawl_news_sources_task.s(domain_limit=1, page_limit=2000),
-            process_journalists_task.s(limit=1000),
-            categorize_pages_task.s(limit=1000),
-            update_page_embeddings_task.s(limit=1000),
-            update_journalist_embeddings_task.s(limit=500)
+            crawl_news_sources_task.si(domain_limit=1, page_limit=2000),
+            process_journalists_task.si(limit=1000),
+            categorize_pages_task.si(limit=1000),
+            update_page_embeddings_task.si(limit=1000),
+            update_journalist_embeddings_task.si(limit=500)
         ).apply_async(link_error=handle_chain_error.s())
         
         # Log results
