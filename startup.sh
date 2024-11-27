@@ -5,13 +5,11 @@ set -e
 echo "Starting startup script..."
 
 # Append environment variables first
-printenv | grep -Ev 'BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID|LANG|PWD|GPG_KEY|_=' | while read -r line; do
-    echo "environment=$line" >> /etc/supervisor/conf.d/celeryworker.conf
-    echo "environment=$line" >> /etc/supervisor/conf.d/celerybeat.conf
-done
+#printenv | grep -Ev 'BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID|LANG|PWD|GPG_KEY|_=' | while read -r line; do
+#    echo "environment=$line" >> /etc/supervisor/conf.d/celeryworker.conf
+#    echo "environment=$line" >> /etc/supervisor/conf.d/celerybeat.conf
+#done
 
-# Source the updated environment
-. /etc/environment
 
 if [ -n "$AZURE" ]; then
     echo "Starting SSH service..."
@@ -27,13 +25,6 @@ fi
 
 # Run Django management commands
 uv run manage.py migrate
-#uv run manage.py clean_db
-uv run manage.py crontab remove
-
-if [ -n "$AZURE" ]; then
-    uv run manage.py crontab add
-    uv run manage.py crontab show
-fi
 
 uv run manage.py create_admin_user
 uv run manage.py add_news_sources
