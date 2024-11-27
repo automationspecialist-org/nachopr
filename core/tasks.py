@@ -52,11 +52,13 @@ logger = logging.getLogger(__name__)
 
 lunary.config(app_id=os.getenv('LUNARY_PUBLIC_KEY'))
 
+# Initialize Azure OpenAI client with proper configuration
 azure_openai_client = AzureOpenAI(
-    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-    azure_deployment="gpt-4o-mini",
+    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT", "").rstrip("/"),  # Remove trailing slash if present
     api_version="2024-02-15-preview",
-    api_key=os.getenv("AZURE_OPENAI_API_KEY")
+    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+    max_retries=3,  # Add explicit retry configuration
+    timeout=30.0    # Add explicit timeout
 )
 
 # Cache failed domains to avoid rechecking
@@ -214,59 +216,60 @@ def clean_html(html: str) -> str:
     return cleaned_html
 
 
+@retry(
+    retry=retry_if_exception_type((APIError, APIConnectionError, RateLimitError)),
+    wait=wait_exponential(multiplier=1, min=4, max=60),
+    stop=stop_after_attempt(5)
+)
 def extract_journalists_with_gpt(content: str, track_prompt: bool = False) -> dict:
     """
     Extract journalist information from the HTML content using GPT-4 on Azure.
     """
-    run_id = str(uuid.uuid4())
-
-    clean_content = clean_html(content)
-    
-    
-    lunary.monitor(azure_openai_client)
-
-
-    journalist_json = { 
-        "content_is_full_news_article": True,
-        "article_published_date": "2024-01-01",
-        "journalists": [
-            {
-                "name": "John Doe",
-                "description": "An experienced journalist covering international news.",
-                "profile_url": "https://example.com/john-doe",
-                "image_url": "https://example.com/john-doe.jpg"
-            },
-            {
-                "name": "Jane Smith",
-                "description": "A journalist specializing in technology and science.",
-                "profile_url": "https://example.com/jane-smith",
-                "image_url": "https://example.com/jane-smith.jpg"
-            }
-        ]
-    }
-    # Define the prompt for GPT-4
-    prompt = f"""
-    Extract journalist information from the following HTML content and return it as a JSON object with the journalist's name as the key and their metadata (profile_url and image_url) as the value:
-    Only extract journalists that are individual humans, not editorial teams such as 'Weather Team', '11alive.com', or '1News Reporters'.
-    HTML content:
-    ```
-    {clean_content}
-    ```
-
-    Use the following JSON schema:
-    ```
-    {journalist_json}
-    ```
-    If you cannot find any valid journalists, return an empty JSON object. Never output the example JSON objects such as 'John Doe' and 'Jane Smith'.
-    If you cannot extract the publushed article date, return an empty string for 'article_published_date'. 
-    The value of content_is_full_news_article should be true if the page is a full news article, and false otherwise.
-    If the page is a category page or list of multiple stories, set content_is_full_news_article to false.
-    """
-
-    
-
     try:
-        # Call the GPT-4 API on Azure
+        run_id = str(uuid.uuid4())
+
+        clean_content = clean_html(content)
+        
+        lunary.monitor(azure_openai_client)
+
+        journalist_json = { 
+            "content_is_full_news_article": True,
+            "article_published_date": "2024-01-01",
+            "journalists": [
+                {
+                    "name": "John Doe",
+                    "description": "An experienced journalist covering international news.",
+                    "profile_url": "https://example.com/john-doe",
+                    "image_url": "https://example.com/john-doe.jpg"
+                },
+                {
+                    "name": "Jane Smith",
+                    "description": "A journalist specializing in technology and science.",
+                    "profile_url": "https://example.com/jane-smith",
+                    "image_url": "https://example.com/jane-smith.jpg"
+                }
+            ]
+        }
+        # Define the prompt for GPT-4
+        prompt = f"""
+        Extract journalist information from the following HTML content and return it as a JSON object with the journalist's name as the key and their metadata (profile_url and image_url) as the value:
+        Only extract journalists that are individual humans, not editorial teams such as 'Weather Team', '11alive.com', or '1News Reporters'.
+        HTML content:
+        ```
+        {clean_content}
+        ```
+
+        Use the following JSON schema:
+        ```
+        {journalist_json}
+        ```
+        If you cannot find any valid journalists, return an empty JSON object. Never output the example JSON objects such as 'John Doe' and 'Jane Smith'.
+        If you cannot extract the publushed article date, return an empty string for 'article_published_date'. 
+        The value of content_is_full_news_article should be true if the page is a full news article, and false otherwise.
+        If the page is a category page or list of multiple stories, set content_is_full_news_article to false.
+        """
+
+        # Call the GPT-4 API on Azure with increased timeout
         response = azure_openai_client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -277,26 +280,23 @@ def extract_journalists_with_gpt(content: str, track_prompt: bool = False) -> di
             n=1,
             stop=None,
             temperature=0.3,
-            response_format={"type": "json_object"}
+            response_format={"type": "json_object"},
+            timeout=60  # Add 60 second timeout
         )
 
         result = response.choices[0].message.content
         journalists_data = json.loads(result)
+        return journalists_data
 
-
-    except (Exception, json.JSONDecodeError) as e:
-        # Track error with the raw response if available
-        error_data = {
-            "error_type": type(e).__name__,
-            "error_message": str(e),
-            "raw_response": result if 'result' in locals() else None
-        }
-        
-        logger.error(f"Error in extract_journalists_with_gpt: {str(e)}")
-        print('error:', result if 'result' in locals() else str(e))
-        journalists_data = {}
-
-    return journalists_data
+    except (APIError, APIConnectionError, RateLimitError) as e:
+        logger.error(f"OpenAI API error in extract_journalists_with_gpt: {str(e)}")
+        raise  # Let retry decorator handle these errors
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON decode error in extract_journalists_with_gpt: {str(e)}, raw response: {result if 'result' in locals() else None}")
+        return {}
+    except Exception as e:
+        logger.error(f"Unexpected error in extract_journalists_with_gpt: {str(e)}", exc_info=True)
+        return {}
 
 
 async def process_all_pages_journalists(limit: int = 10, re_process: bool = False):
@@ -1625,16 +1625,25 @@ def test_openai_connection():
         logger.info(f"AZURE_OPENAI_ENDPOINT: {os.getenv('AZURE_OPENAI_ENDPOINT')}")
         logger.info(f"AZURE_OPENAI_API_KEY: {'***' if os.getenv('AZURE_OPENAI_API_KEY') else 'Not Set'}")
         
-        test_response = azure_openai_client.chat.completions.create(
+        # Create a new client instance for testing to ensure clean configuration
+        test_client = AzureOpenAI(
+            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+            api_version="2024-02-15-preview",
+            api_key=os.getenv("AZURE_OPENAI_API_KEY")
+        )
+        
+        test_response = test_client.chat.completions.create(
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": "test"}
             ],
             max_tokens=5,
-            temperature=0.3,
-            model="gpt-4o-mini"
+            temperature=0.3
         )
         logger.info("OpenAI connection test successful")
+        return True
     except Exception as e:
         logger.error(f"OpenAI connection test failed: {str(e)}", exc_info=True)
-        logger.error(f"OpenAI Configuration: endpoint={os.getenv('AZURE_OPENAI_ENDPOINT')}")
+        logger.error(f"OpenAI Configuration: endpoint={os.getenv('AZURE_OPENAI_ENDPOINT')!r}")
+        raise
