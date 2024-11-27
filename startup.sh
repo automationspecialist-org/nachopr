@@ -11,7 +11,7 @@ printenv | grep -Ev 'BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID|LANG|PWD|GPG
 done
 
 # Source the updated environment
-source /etc/environment
+. /etc/environment
 
 if [ -n "$AZURE" ]; then
     echo "Starting SSH service..."
