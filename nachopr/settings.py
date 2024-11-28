@@ -424,5 +424,7 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
-TYPESENSE_API_KEY='local_only_key'
-TYPESENSE_URL='http://localhost:8108'
+TYPESENSE_API_KEY = os.environ.get('TYPESENSE_API_KEY', 'xyz')  # Default to 'xyz' if not set
+TYPESENSE_HOST = os.environ.get('TYPESENSE_HOST', '127.0.0.1')
+TYPESENSE_PORT = os.environ.get('TYPESENSE_PORT', '8108')
+TYPESENSE_PROTOCOL = os.environ.get('TYPESENSE_PROTOCOL', 'http')

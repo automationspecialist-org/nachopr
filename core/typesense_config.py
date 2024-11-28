@@ -23,12 +23,12 @@ def get_typesense_client():
     return typesense.Client({
         'api_key': settings.TYPESENSE_API_KEY,
         'nodes': [{
-            'host': '127.0.0.1',  # Using IP instead of localhost
-            'port': '8108',
-            'protocol': 'http'
+            'host': settings.TYPESENSE_HOST,
+            'port': settings.TYPESENSE_PORT,
+            'protocol': settings.TYPESENSE_PROTOCOL
         }],
         'connection_timeout_seconds': 2,
-        'num_retries': 3,  # Add retries
+        'num_retries': 3,
         'retry_interval_seconds': 1
     })
 

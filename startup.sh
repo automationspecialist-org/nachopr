@@ -4,6 +4,12 @@ set -e
 # Debug logging
 echo "Starting startup script..."
 
+# Ensure Typesense API key is set
+if [ -z "$TYPESENSE_API_KEY" ]; then
+    echo "TYPESENSE_API_KEY is not set. Using default value..."
+    export TYPESENSE_API_KEY="xyz"
+fi
+
 # Create necessary directories
 mkdir -p /var/lib/typesense
 mkdir -p /var/log/typesense
@@ -23,7 +29,7 @@ echo "Waiting for Typesense to be ready..."
 i=1
 max_attempts=30
 while [ $i -le $max_attempts ]; do
-    if curl -s http://127.0.0.1:8108/health > /dev/null; then
+    if curl -s -H "X-TYPESENSE-API-KEY: $TYPESENSE_API_KEY" http://127.0.0.1:8108/health > /dev/null; then
         echo "Typesense is ready!"
         break
     fi
