@@ -4,10 +4,15 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 ENV PYTHON_VERSION=3.11
 
+# Add deadsnakes PPA for Python 3.11
+RUN apt-get update && apt-get install -y software-properties-common \
+    && add-apt-repository ppa:deadsnakes/ppa
+
 # Install Python and basic dependencies
 RUN apt-get update && apt-get install -y \
     python${PYTHON_VERSION} \
     python${PYTHON_VERSION}-venv \
+    python${PYTHON_VERSION}-dev \
     python3-pip \
     build-essential \
     libpq-dev \
@@ -29,21 +34,9 @@ RUN apt-get update && apt-get install -y \
     openssh-server \
     redis-server \
     supervisor \
-    # PostgreSQL dependencies
     postgresql-client \
-    libpq-dev \
-    # Additional dependencies
-    gettext \
-    libcairo2 \
-    libpango-1.0-0 \
-    libpangocairo-1.0-0 \
-    libgdk-pixbuf2.0-0 \
-    libffi-dev \
-    shared-mime-info \
-    memcached \
-    libmemcached-dev \
-    && ln -s /usr/bin/python${PYTHON_VERSION} /usr/bin/python3 \
-    && ln -s /usr/bin/python${PYTHON_VERSION} /usr/bin/python
+    && ln -sf /usr/bin/python${PYTHON_VERSION} /usr/bin/python3 \
+    && ln -sf /usr/bin/python${PYTHON_VERSION} /usr/bin/python
 
 # Install Rust and Cargo
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
