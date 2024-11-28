@@ -4,6 +4,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 ENV PYTHON_VERSION=3.11
 
+# Install minimal systemd for Typesense
+RUN apt-get update && apt-get install -y systemd-sysv
+
 # Add deadsnakes PPA for Python 3.11
 RUN apt-get update && apt-get install -y software-properties-common \
     && add-apt-repository ppa:deadsnakes/ppa
@@ -42,19 +45,10 @@ RUN apt-get update && apt-get install -y \
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
     && . $HOME/.cargo/env
 
-# Download Typesense
-RUN curl -O https://dl.typesense.org/releases/27.1/typesense-server-27.1-amd64.deb
-
-# Try installing with dpkg first, then fix dependencies
-RUN dpkg -i typesense-server-27.1-amd64.deb || true && \
-    apt-get update && \
-    apt-get install -f -y && \
-    dpkg -i typesense-server-27.1-amd64.deb
-
-# Cleanup and configure
-RUN rm typesense-server-27.1-amd64.deb && \
-    mkdir -p /etc/typesense && \
-    echo "[server]\napi-key=local_only_key\ndata-dir=/var/lib/typesense\napi-port=8108\napi-address=127.0.0.1" > /etc/typesense/typesense-server.ini
+# Install Typesense
+RUN curl -O https://dl.typesense.org/releases/27.1/typesense-server-27.1-amd64.deb && \
+    apt-get install -y ./typesense-server-27.1-amd64.deb && \
+    rm typesense-server-27.1-amd64.deb
 
 # Setup Redis
 RUN mkdir -p /var/log/redis \
@@ -69,7 +63,6 @@ RUN mkdir -p /var/log/celery \
 COPY supervisor/celeryworker.conf /etc/supervisor/conf.d/
 COPY supervisor/celerybeat.conf /etc/supervisor/conf.d/
 COPY supervisor/redis.conf /etc/supervisor/conf.d/
-COPY supervisor/typesense.conf /etc/supervisor/conf.d/
 
 # Configure SSH
 RUN echo "root:Docker!" | chpasswd \

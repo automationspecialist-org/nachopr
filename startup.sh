@@ -4,15 +4,9 @@ set -e
 # Debug logging
 echo "Starting startup script..."
 
-# Append environment variables first
-printenv | grep -Ev 'BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID|LANG|PWD|GPG_KEY|_=' | while read -r line; do
-    echo "environment=$line" >> /etc/supervisor/conf.d/celeryworker.conf
-    echo "environment=$line" >> /etc/supervisor/conf.d/celerybeat.conf
-done
-
-# Start supervisor
-echo "Starting supervisor..."
-supervisord -c /etc/supervisor/supervisord.conf
+# Start Typesense
+echo "Starting Typesense..."
+systemctl start typesense-server.service
 
 # Wait for Typesense to be ready
 echo "Waiting for Typesense to be ready..."
@@ -30,16 +24,20 @@ done
 
 if [ $i -gt $max_attempts ]; then
     echo "Typesense failed to start after $max_attempts attempts"
-    echo "Checking supervisor logs:"
-    supervisorctl status
-    cat /var/log/typesense/stdout.log
-    cat /var/log/typesense/stderr.log
+    echo "Checking Typesense status:"
+    systemctl status typesense-server.service
     exit 1
 fi
 
-# Initialize Typesense
-echo "Initializing Typesense..."
-uv run python manage.py migrate_to_typesense
+# Append environment variables first
+printenv | grep -Ev 'BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID|LANG|PWD|GPG_KEY|_=' | while read -r line; do
+    echo "environment=$line" >> /etc/supervisor/conf.d/celeryworker.conf
+    echo "environment=$line" >> /etc/supervisor/conf.d/celerybeat.conf
+done
+
+# Start supervisor
+echo "Starting supervisor..."
+supervisord -c /etc/supervisor/supervisord.conf
 
 if [ -n "$AZURE" ]; then
     echo "Starting SSH service..."
