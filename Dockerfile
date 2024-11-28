@@ -36,8 +36,11 @@ RUN apt-get update && apt-get install -y \
     && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
 # Install Typesense
-RUN curl -O https://dl.typesense.org/releases/27.1/typesense-server-27.1-amd64.deb \
-    && apt install -y ./typesense-server-27.1-amd64.deb 
+RUN curl -O https://dl.typesense.org/releases/27.1/typesense-server-27.1-linux-amd64.tar.gz \
+    && tar -xzf typesense-server-27.1-linux-amd64.tar.gz \
+    && mv ./typesense-server /usr/local/bin/ \
+    && rm typesense-server-27.1-linux-amd64.tar.gz \
+    && mkdir -p /var/lib/typesense
 
 # Install Redis
 RUN apt-get update && apt-get install -y redis-server
