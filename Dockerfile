@@ -31,7 +31,9 @@ RUN apt-get update && apt-get install -y \
     && apt-get install -y libssl-dev pkg-config \
     && apt-get install -y curl \
     && apt-get install -y wget \
-    && apt-get install -y cron
+    && apt-get install -y cron \
+    # Install Rust and Cargo
+    && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
 # Install Typesense
 RUN curl -O https://dl.typesense.org/releases/27.1/typesense-server-27.1-amd64.deb 
