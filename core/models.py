@@ -46,7 +46,6 @@ class Journalist(models.Model):
     description = models.TextField(null=True, blank=True)
     sources = models.ManyToManyField(NewsSource, related_name='journalists')
     slug = models.SlugField(unique=True)
-    # Remove unique=True from URLs since empty values should be allowed
     profile_url = models.URLField(null=True, blank=True, max_length=500)
     image_url = models.URLField(null=True, blank=True, max_length=500)
     country = models.CharField(max_length=255, null=True, blank=True)
@@ -63,6 +62,7 @@ class Journalist(models.Model):
     )
     categories = models.ManyToManyField('NewsPageCategory', related_name='journalists', blank=True)
     email_search_with_hunter_tried = models.BooleanField(default=False)
+    created_at = models.DateTimeField(default=timezone.now)
     
     search_vector = SearchVectorField(null=True)
     embedding = VectorField(dimensions=EMBEDDING_DIMENSIONS, null=True)
