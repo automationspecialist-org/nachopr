@@ -76,7 +76,7 @@
             <div class="w-full lg:w-[520px] lg:flex-none text-left">
               <h3 class="font-bold text-lg mb-1 text-left">
                 {% if user.is_staff %}
-                  <a href="{% url 'admin:core_journalist_change' journalist.id %}" class="hover:text-blue-600">
+                    <a href="{% url 'admin:core_journalist_change' journalist.id %}" class="hover:text-blue-600">
                     {{ journalist.name }}
                   </a>
                 {% else %}

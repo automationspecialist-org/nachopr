@@ -101,35 +101,58 @@ def search_results(request):
     category_id = request.GET.get('category', '')
     page_number = int(request.GET.get('page', 1))
     
-    # Get Typesense client
-    from .typesense_config import get_typesense_client
-    client = get_typesense_client()
-    
-    # Build search parameters
-    search_parameters = {
-        'q': query,
-        'query_by': 'name,description,sources,categories',
-        'per_page': 10,
-        'page': page_number,
-    }
-    
-    # Add filters if specified
-    filter_rules = []
-    if country:
-        filter_rules.append(f'country:{country}')
-    if source_id:
-        source = NewsSource.objects.get(id=source_id)
-        filter_rules.append(f'sources:[{source.name}]')
-    if category_id:
-        category = NewsPageCategory.objects.get(id=category_id)
-        filter_rules.append(f'categories:[{category.name}]')
-    
-    if filter_rules:
-        search_parameters['filter_by'] = ' && '.join(filter_rules)
+    # If query is empty, return empty results
+    if not query:
+        return render(request, 'core/search_results.html', {
+            'results': [],
+            'total_hits': 0,
+            'page': page_number,
+            'has_next': False,
+            'has_previous': False,
+            'search_time': timezone.now() - starttime,
+            'is_subscriber': is_subscriber,
+        })
     
     try:
+        # Get Typesense client
+        from .typesense_config import get_typesense_client
+        client = get_typesense_client()
+        
+        # Build search parameters
+        search_parameters = {
+            'q': query,
+            'query_by': 'name,description,sources,categories',
+            'per_page': 10,
+            'page': page_number,
+        }
+        
+        # Add filters if specified
+        filter_rules = []
+        if country:
+            filter_rules.append(f'country:{country}')
+        if source_id:
+            source = NewsSource.objects.get(id=source_id)
+            filter_rules.append(f'sources:[{source.name}]')
+        if category_id:
+            category = NewsPageCategory.objects.get(id=category_id)
+            filter_rules.append(f'categories:[{category.name}]')
+        
+        if filter_rules:
+            search_parameters['filter_by'] = ' && '.join(filter_rules)
+        
+        logger.info(f"Searching Typesense with parameters: {search_parameters}")
+        
+        # Check if collection exists
+        try:
+            client.collections['journalists'].retrieve()
+        except Exception as e:
+            logger.error(f"Collection 'journalists' not found: {str(e)}")
+            from .typesense_config import init_typesense
+            init_typesense()
+            
         # Perform the search
         search_results = client.collections['journalists'].documents.search(search_parameters)
+        logger.info(f"Found {search_results['found']} results")
         
         # Handle non-subscribers
         if not is_subscriber:
@@ -162,18 +185,26 @@ def search_results(request):
         
         # Get the actual Journalist objects for the results
         journalist_ids = [hit['document']['id'] for hit in search_results['hits']]
+        logger.info(f"Looking up journalists with IDs: {journalist_ids}")
+        
         journalists = Journalist.objects.filter(id__in=journalist_ids).prefetch_related(
             'sources', 'categories', 'articles'
         )
         
         # Map Journalist objects to results
         journalist_map = {str(j.id): j for j in journalists}
+        logger.info(f"Found {len(journalist_map)} matching journalists in database")
+        
+        # Create a list of journalists in the same order as the search results
+        mapped_results = []
         for hit in search_results['hits']:
-            hit['journalist'] = journalist_map.get(hit['document']['id'])
+            doc_id = hit['document']['id']
+            if doc_id in journalist_map:
+                mapped_results.append(journalist_map[doc_id])
         
         # Prepare context
         context = {
-            'results': search_results['hits'],
+            'results': mapped_results,
             'total_hits': search_results['found'],
             'page': page_number,
             'has_next': len(search_results['hits']) == 10,
@@ -185,9 +216,9 @@ def search_results(request):
         return render(request, 'core/search_results.html', context)
         
     except Exception as e:
-        logger.error(f"Search error: {str(e)}")
+        logger.error(f"Search error: {str(e)}", exc_info=True)
         return render(request, 'core/search_results.html', 
-                    {'error': 'An error occurred during search'})
+                    {'error': 'An error occurred during search. Please try again.'})
 
 
 def free_media_list(request):
