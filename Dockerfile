@@ -43,10 +43,9 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
     && . $HOME/.cargo/env
 
 # Install Typesense
-RUN curl -O https://dl.typesense.org/releases/0.24.1/typesense-server-0.24.1-amd64.deb \
-    && apt-get update \
-    && apt install -y ./typesense-server-0.24.1-amd64.deb \
-    && rm typesense-server-0.24.1-amd64.deb \
+RUN curl -O https://dl.typesense.org/releases/27.1/typesense-server-27.1-amd64.deb \
+    && apt install ./typesense-server-27.1-amd64.deb \
+    && rm typesense-server-27.1-amd64.deb \
     && mkdir -p /etc/typesense \
     && echo "[server]\napi-key=local_only_key\ndata-dir=/var/lib/typesense\napi-port=8108\napi-address=127.0.0.1" > /etc/typesense/typesense-server.ini
 
