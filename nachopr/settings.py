@@ -424,12 +424,5 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
-TYPESENSE_CLIENT_CONFIG = {
-    'api_key': 'local_only_key',  # Same as in typesense-server.ini
-    'nodes': [{
-        'host': 'localhost',
-        'port': '8108',
-        'protocol': 'http'
-    }],
-    'connection_timeout_seconds': 2
-}
+TYPESENSE_API_KEY='local_only_key'
+TYPESENSE_URL='http://localhost:8108'

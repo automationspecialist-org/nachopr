@@ -6,6 +6,7 @@ from django.contrib.postgres.indexes import GinIndex
 from django.contrib.postgres.search import SearchVector
 from pgvector.django import VectorField
 import logging
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -141,6 +142,54 @@ class Journalist(models.Model):
         # Join all parts with newlines
         return "\n".join(text_parts)
 
+    def update_typesense(self):
+        """Update or create document in Typesense"""
+        try:
+            from .typesense_config import get_typesense_client
+            client = get_typesense_client()
+            
+            document = {
+                'id': str(self.id),
+                'name': self.name,
+                'description': self.description or '',
+                'country': self.country or '',
+                'sources': list(self.sources.values_list('name', flat=True)),
+                'categories': list(self.categories.values_list('name', flat=True)),
+                'articles_count': self.articles.count(),
+                'email_status': self.email_status or '',
+                'created_at': int(self.created_at.timestamp()) if self.created_at else int(timezone.now().timestamp())
+            }
+            
+            try:
+                # Try to update
+                client.collections['journalists'].documents[str(self.id)].update(document)
+            except:
+                # If update fails (document doesn't exist), create it
+                client.collections['journalists'].documents.create(document)
+        except Exception as e:
+            logger.error(f"Error updating journalist {self.id} in Typesense: {str(e)}")
+    
+    def delete_from_typesense(self):
+        """Delete document from Typesense"""
+        try:
+            from .typesense_config import get_typesense_client
+            client = get_typesense_client()
+            client.collections['journalists'].documents[str(self.id)].delete()
+        except Exception as e:
+            logger.error(f"Error deleting journalist {self.id} from Typesense: {str(e)}")
+    
+    def save(self, *args, **kwargs):
+        # First do the normal save
+        super().save(*args, **kwargs)
+        # Then update Typesense
+        self.update_typesense()
+    
+    def delete(self, *args, **kwargs):
+        # First delete from Typesense
+        self.delete_from_typesense()
+        # Then do the normal delete
+        super().delete(*args, **kwargs)
+
     class Meta:
         indexes = [
             models.Index(fields=['country']),
@@ -261,7 +310,6 @@ class SavedSearch(models.Model):
     
     def __str__(self):
         return self.name
-
 
 class SavedList(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='saved_lists')

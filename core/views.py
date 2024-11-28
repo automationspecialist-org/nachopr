@@ -31,6 +31,7 @@ import asyncio
 from pgvector.django import CosineDistance
 from django.db.models import F
 from django.db.models import Count
+from typesense.client import Client
 
 # Get logger instance at the top of the file
 logger = logging.getLogger(__name__)
@@ -98,149 +99,95 @@ def search_results(request):
     country = request.GET.get('country', '')
     source_id = request.GET.get('source', '')
     category_id = request.GET.get('category', '')
-    page_number = request.GET.get('page', 1)
-
-    # Start with all journalists - optimize initial query
-    results = Journalist.objects.prefetch_related(
-        Prefetch('sources', queryset=NewsSource.objects.only('id', 'name')),
-        Prefetch('categories', queryset=NewsPageCategory.objects.only('id', 'name')),
-        Prefetch(
-            'articles',
-            queryset=NewsPage.objects.select_related('source')
-                          .filter(is_news_article=True)
-                          .prefetch_related('categories')
-                          .only(
-                              'id', 
-                              'title', 
-                              'source__name', 
-                              'published_date'
-                          )[:5],
-            to_attr='prefetched_articles'
-        )
-    ).only(
-        'id', 
-        'name',
-        'description',
-        'image_url',
-        'country',
-        'email_status'
-    ).order_by('id')
-
-    # Get embeddings for the search query if it exists
-    if query:
-        try:
-            # Generate embedding for search query
-            from core.tasks import generate_embeddings
-            
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                query_embedding = loop.run_until_complete(
-                    generate_embeddings([query])
-                )[0]
-                
-                # Combine traditional search with vector similarity
-                results = results.annotate(
-                    text_similarity=SearchRank(
-                        'search_vector',
-                        SearchQuery(query, config='english')
-                    ),
-                    semantic_similarity=CosineDistance('embedding', query_embedding),
-                    article_similarity=CosineDistance('articles__embedding', query_embedding)
-                ).filter(
-                    # Broader text search
-                    Q(name__icontains=query) |
-                    Q(description__icontains=query) |
-                    Q(sources__name__icontains=query) |
-                    Q(categories__name__icontains=query) |
-                    # Semantic search with thresholds
-                    Q(semantic_similarity__lte=0.8) |
-                    Q(article_similarity__lte=0.8)
-                ).distinct().order_by(
-                    # Combine rankings with weights
-                    (F('text_similarity') * 0.3 +
-                     (1 - F('semantic_similarity')) * 0.4 +
-                     (1 - F('article_similarity')) * 0.3),
-                    'id'
-                )
-            except Exception as e:
-                logger.error(f"Error generating embeddings: {str(e)}")
-                # Fallback to basic text search if embeddings fail
-                results = results.filter(
-                    Q(name__icontains=query) |
-                    Q(description__icontains=query) |
-                    Q(sources__name__icontains=query) |
-                    Q(categories__name__icontains=query)
-                ).distinct()
-            finally:
-                loop.close()
-        except Exception as e:
-            logger.error(f"Search error: {str(e)}")
-            # Fallback to basic ordering if all else fails
-            results = results.order_by('id')
-    else:
-        results = results.order_by('id')
-
-    # Cache the results count before pagination
-    total_count = None
-    if is_subscriber:
-        total_count = results.count()
-        
-    # Apply filters - moved after search for better performance
+    page_number = int(request.GET.get('page', 1))
+    
+    # Get Typesense client
+    from .typesense_config import get_typesense_client
+    client = get_typesense_client()
+    
+    # Build search parameters
+    search_parameters = {
+        'q': query,
+        'query_by': 'name,description,sources,categories',
+        'per_page': 10,
+        'page': page_number,
+    }
+    
+    # Add filters if specified
+    filter_rules = []
     if country:
-        results = results.filter(country=country)
+        filter_rules.append(f'country:{country}')
     if source_id:
-        results = results.filter(sources__id=source_id)
+        source = NewsSource.objects.get(id=source_id)
+        filter_rules.append(f'sources:[{source.name}]')
     if category_id:
-        results = results.filter(categories__id=category_id)
-
-    # Handle non-subscribers
-    if not is_subscriber:
-        token = request.GET.get('cf-turnstile-response')
-        if not token:
-            return render(request, 'core/search_results.html', 
-                        {'error': 'Please complete the security check',
-                         'reset_turnstile': True})
+        category = NewsPageCategory.objects.get(id=category_id)
+        filter_rules.append(f'categories:[{category.name}]')
+    
+    if filter_rules:
+        search_parameters['filter_by'] = ' && '.join(filter_rules)
+    
+    try:
+        # Perform the search
+        search_results = client.collections['journalists'].documents.search(search_parameters)
         
-        # Verify token with Cloudflare
-        data = {
-            'secret': os.getenv('CLOUDFLARE_TURNSTILE_SECRET_KEY'),
-            'response': token,
-            'remoteip': request.META.get('REMOTE_ADDR'),
+        # Handle non-subscribers
+        if not is_subscriber:
+            token = request.GET.get('cf-turnstile-response')
+            if not token:
+                return render(request, 'core/search_results.html', 
+                            {'error': 'Please complete the security check',
+                             'reset_turnstile': True})
+            
+            # Verify token with Cloudflare
+            data = {
+                'secret': os.getenv('CLOUDFLARE_TURNSTILE_SECRET_KEY'),
+                'response': token,
+                'remoteip': request.META.get('REMOTE_ADDR'),
+            }
+            response = requests.post('https://challenges.cloudflare.com/turnstile/v0/siteverify', data=data)
+            
+            if not response.json().get('success', False):
+                return render(request, 'core/search_results.html', 
+                            {'error': 'Security check failed',
+                             'reset_turnstile': True})
+            
+            # Limit results for non-subscribers
+            search_results['hits'] = search_results['hits'][:10]
+        else:
+            request.user.searches_count += 1
+            if not request.user.has_searched:
+                request.user.has_searched = True
+            request.user.save()
+        
+        # Get the actual Journalist objects for the results
+        journalist_ids = [hit['document']['id'] for hit in search_results['hits']]
+        journalists = Journalist.objects.filter(id__in=journalist_ids).prefetch_related(
+            'sources', 'categories', 'articles'
+        )
+        
+        # Map Journalist objects to results
+        journalist_map = {str(j.id): j for j in journalists}
+        for hit in search_results['hits']:
+            hit['journalist'] = journalist_map.get(hit['document']['id'])
+        
+        # Prepare context
+        context = {
+            'results': search_results['hits'],
+            'total_hits': search_results['found'],
+            'page': page_number,
+            'has_next': len(search_results['hits']) == 10,
+            'has_previous': page_number > 1,
+            'search_time': timezone.now() - starttime,
+            'is_subscriber': is_subscriber,
         }
-        response = requests.post('https://challenges.cloudflare.com/turnstile/v0/siteverify', data=data)
         
-        if not response.json().get('success', False):
-            return render(request, 'core/search_results.html', 
-                        {'error': 'Security check failed',
-                         'reset_turnstile': True})
+        return render(request, 'core/search_results.html', context)
         
-        filtered_results = results[:10]  # Limit results for non-subscribers
-    else:
-        request.user.searches_count += 1
-        if not request.user.has_searched:
-            request.user.has_searched = True
-        request.user.save()
-
-        # Add pagination for subscribers
-        paginator = Paginator(results, 10)  # Show 10 results per page
-        filtered_results = paginator.get_page(page_number)
-
-    unfiltered_results_count = results.count()
-    time_taken = timezone.now() - starttime
-
-    sources = NewsSource.objects.values('id', 'name').order_by('name')
-    return render(
-        request, 
-        'core/search_results.html',
-        {
-            'results': filtered_results, 
-            'time_taken': time_taken, 
-            'unfiltered_results_count': unfiltered_results_count,
-            'sources': sources,
-            'source_id': source_id
-        }
-    )
+    except Exception as e:
+        logger.error(f"Search error: {str(e)}")
+        return render(request, 'core/search_results.html', 
+                    {'error': 'An error occurred during search'})
 
 
 def free_media_list(request):
@@ -732,3 +679,9 @@ def get_user_lists(request):
     ).order_by('-updated_at')
     
     return JsonResponse(list(lists), safe=False)
+
+def get_typesense_client():
+    return Client(
+        os.getenv('TYPESENSE_URL'),
+        os.getenv('TYPESENSE_API_KEY')
+    )
