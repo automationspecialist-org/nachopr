@@ -16,14 +16,26 @@ supervisord -c /etc/supervisor/supervisord.conf
 
 # Wait for Typesense to be ready
 echo "Waiting for Typesense to be ready..."
-for i in {1..30}; do
+i=1
+max_attempts=30
+while [ $i -le $max_attempts ]; do
     if curl -s http://127.0.0.1:8108/health > /dev/null; then
         echo "Typesense is ready!"
         break
     fi
-    echo "Waiting for Typesense... attempt $i"
-    sleep 1
+    echo "Waiting for Typesense... attempt $i of $max_attempts"
+    i=$((i + 1))
+    sleep 2
 done
+
+if [ $i -gt $max_attempts ]; then
+    echo "Typesense failed to start after $max_attempts attempts"
+    echo "Checking supervisor logs:"
+    supervisorctl status
+    cat /var/log/typesense/stdout.log
+    cat /var/log/typesense/stderr.log
+    exit 1
+fi
 
 # Initialize Typesense
 echo "Initializing Typesense..."
