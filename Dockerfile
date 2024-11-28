@@ -1,7 +1,14 @@
-FROM library/python:3.11-slim-bullseye
+FROM ubuntu:22.04
 
-# Install dependencies for building Python packages
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+ENV PYTHON_VERSION=3.11
+
+# Install Python and basic dependencies
 RUN apt-get update && apt-get install -y \
+    python${PYTHON_VERSION} \
+    python${PYTHON_VERSION}-venv \
+    python3-pip \
     build-essential \
     libpq-dev \
     gettext \
@@ -20,37 +27,42 @@ RUN apt-get update && apt-get install -y \
     cron \
     dialog \
     openssh-server \
-    # psycopg2 dependencies
-    && apt-get install -y libpq-dev \
-    # Translations dependencies
-    && apt-get install -y gettext \
-    && apt-get install -y libcairo2 libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0 libffi-dev shared-mime-info  \
-    # Add memcached and its dependencies
-    && apt-get install -y memcached libmemcached-dev \
-    # Add Rust and Cargo for maturin
-    && apt-get install -y libssl-dev pkg-config \
-    && apt-get install -y curl \
-    && apt-get install -y wget \
-    && apt-get install -y cron \
-    # Install Rust and Cargo
-    && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    redis-server \
+    supervisor \
+    # PostgreSQL dependencies
+    postgresql-client \
+    libpq-dev \
+    # Additional dependencies
+    gettext \
+    libcairo2 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libgdk-pixbuf2.0-0 \
+    libffi-dev \
+    shared-mime-info \
+    memcached \
+    libmemcached-dev \
+    && ln -s /usr/bin/python${PYTHON_VERSION} /usr/bin/python3 \
+    && ln -s /usr/bin/python${PYTHON_VERSION} /usr/bin/python
+
+# Install Rust and Cargo
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
+    && . $HOME/.cargo/env
 
 # Install Typesense
-RUN curl -O https://dl.typesense.org/releases/0.24.1/typesense-server-0.24.1-linux-amd64.tar.gz \
-    && tar -xzf typesense-server-0.24.1-linux-amd64.tar.gz \
-    && mv ./typesense-server /usr/local/bin/ \
-    && rm typesense-server-0.24.1-linux-amd64.tar.gz \
-    && mkdir -p /var/lib/typesense
+RUN curl -O https://dl.typesense.org/releases/0.24.1/typesense-server-0.24.1-amd64.deb \
+    && apt-get update \
+    && apt install -y ./typesense-server-0.24.1-amd64.deb \
+    && rm typesense-server-0.24.1-amd64.deb \
+    && mkdir -p /etc/typesense \
+    && echo "[server]\napi-key=local_only_key\ndata-dir=/var/lib/typesense\napi-port=8108\napi-address=127.0.0.1" > /etc/typesense/typesense-server.ini
 
-# Install Redis
-RUN apt-get update && apt-get install -y redis-server
-# Setup Redis and its logging
+# Setup Redis
 RUN mkdir -p /var/log/redis \
     && chown -R redis:redis /var/log/redis
 
-# Setup Supervisor and Celery
-RUN apt-get update && apt-get install -y supervisor \
-    && mkdir -p /var/log/celery \
+# Setup logging directories
+RUN mkdir -p /var/log/celery \
     && mkdir -p /etc/supervisor/conf.d \
     && mkdir -p /var/log/typesense
 
@@ -60,25 +72,24 @@ COPY supervisor/celerybeat.conf /etc/supervisor/conf.d/
 COPY supervisor/redis.conf /etc/supervisor/conf.d/
 COPY supervisor/typesense.conf /etc/supervisor/conf.d/
 
-RUN apt-get install -y --no-install-recommends dialog openssh-server \
-    && echo "root:Docker!" | chpasswd \
-    && mkdir -p /run/sshd   
-# Now copy and set permissions for SSH config
+# Configure SSH
+RUN echo "root:Docker!" | chpasswd \
+    && mkdir -p /run/sshd
 COPY sshd_config /etc/ssh/
 RUN chmod 755 /etc/ssh/sshd_config
 
-# Configure SQLite
+# Configure paths
 ENV LD_LIBRARY_PATH=/usr/local/lib
-
-# Add cargo to PATH
 ENV PATH="/root/.cargo/bin:${PATH}"
 
+# Install uv
 RUN pip install uv
 
+# Setup application
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
 
-# Combine Python dependency installation steps
+# Install Python dependencies
 COPY pyproject.toml* uv.lock* /usr/src/app/
 RUN uv venv /usr/src/app/venv \
     && . /usr/src/app/venv/bin/activate \
@@ -88,18 +99,12 @@ ENV PATH="/usr/src/app/venv/bin:$PATH"
 # Copy application code
 COPY . /usr/src/app/
 
-# Create Typesense data directory and set permissions
-RUN mkdir -p /var/lib/typesense 
-    #&& chown -R typesense:typesense /var/lib/typesense \
-    #&& chmod 755 /var/lib/typesense
-
-# Modify startup script to ensure SSH starts properly
+# Setup startup script
 COPY startup.sh /usr/src/app/
 RUN chmod +x /usr/src/app/startup.sh && rm -rf /var/lib/apt/lists/* /tmp/*
 
 EXPOSE 80
 
-# Ensure proper initialization
 ENTRYPOINT ["/usr/src/app/startup.sh"]
 
  
