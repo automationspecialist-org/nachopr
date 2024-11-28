@@ -1273,7 +1273,12 @@ async def generate_embeddings(texts: List[str]) -> List[List[float]]:
         raise
 
 
-@app.task(bind=True, name='crawl_single_page_task', track_started=True, ignore_result=False)
+@app.task(
+    bind=True, 
+    name='nachopr.crawl_single_page',
+    track_started=True, 
+    ignore_result=False
+)
 def crawl_single_page_task(self, url, source_id):
     """Process a single page from a crawl"""
     try:
@@ -1317,7 +1322,12 @@ def crawl_single_page_task(self, url, source_id):
         logger.error(f"Error processing page {url}: {str(e)}")
         raise
 
-@app.task(bind=True, name='crawl_single_source_task', track_started=True, ignore_result=False)
+@app.task(
+    bind=True, 
+    name='nachopr.crawl_single_source',
+    track_started=True, 
+    ignore_result=False
+)
 def crawl_single_source_task(self, source_id, page_limit=None):
     """Crawl a single news source"""
     try:
@@ -1367,7 +1377,11 @@ def crawl_single_source_task(self, source_id, page_limit=None):
         logger.error(f"Error crawling source {source_id}: {str(e)}")
         raise
 
-@app.task(name='crawl_news_sources_task', track_started=True, ignore_result=False)
+@app.task(
+    name='nachopr.crawl_news_sources',
+    track_started=True,
+    ignore_result=False
+)
 def crawl_news_sources_task(domain_limit=None, page_limit=None):
     """Distribute crawling tasks across workers"""
     try:
@@ -1404,7 +1418,7 @@ def crawl_news_sources_task(domain_limit=None, page_limit=None):
 
 @app.task(
     bind=True,
-    name='core.tasks.continuous_crawl_task',
+    name='nachopr.continuous_crawl',  # Use consistent naming pattern
     max_retries=3,
     default_retry_delay=300,
     retry_backoff=True,

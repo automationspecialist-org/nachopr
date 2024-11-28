@@ -336,18 +336,18 @@ LOGGING = {
 
 
 
-CRONJOBS = [
+#CRONJOBS = [
     #('*/20 * * * *', 'core.cron.crawl_job', '>> /tmp/cron.log 2>&1'),
-    ('*/30 * * * *', 'core.cron.categorize_job', '>> /tmp/cron_categorize.log 2>&1'),
-    ('*/30 * * * *', 'core.cron.process_journalist_profiles_job', '>> /tmp/cron_process_journalist_profiles.log 2>&1'),
+    #('*/30 * * * *', 'core.cron.categorize_job', '>> /tmp/cron_categorize.log 2>&1'),
+    #('*/30 * * * *', 'core.cron.process_journalist_profiles_job', '>> /tmp/cron_process_journalist_profiles.log 2>&1'),
     #('*/30 * * * *', 'core.cron.guess_emails_job', '>> /tmp/cron_guess_emails.log 2>&1'),
-    ('*/30 * * * *', 'core.cron.clean_db_job', '>> /tmp/cron_clean_db.log 2>&1'),
-    ('*/30 * * * *', 'core.cron.algolia_reindex_job', '>> /tmp/cron_algolia_reindex.log 2>&1'),
-    ('*/30 * * * *', 'core.cron.generate_social_share_image_job', '>> /tmp/cron_generate_social_share_image.log 2>&1'),
-    ('*/30 * * * *', 'core.cron.find_digital_pr_examples_job', '>> /tmp/cron_find_digital_pr_examples.log 2>&1'),
-    ('*/30 * * * *', 'core.cron.sync_journalist_categories_job', '>> /tmp/cron_sync_journalist_categories.log 2>&1'),
-    ('*/15 * * * *', 'core.cron.update_embeddings_job', '>> /tmp/cron_update_embeddings.log 2>&1'),
-]
+    #('*/30 * * * *', 'core.cron.clean_db_job', '>> /tmp/cron_clean_db.log 2>&1'),
+    #('*/30 * * * *', 'core.cron.algolia_reindex_job', '>> /tmp/cron_algolia_reindex.log 2>&1'),
+    #('*/30 * * * *', 'core.cron.generate_social_share_image_job', '>> /tmp/cron_generate_social_share_image.log 2>&1'),
+    #('*/30 * * * *', 'core.cron.find_digital_pr_examples_job', '>> /tmp/cron_find_digital_pr_examples.log 2>&1'),
+    #('*/30 * * * *', 'core.cron.sync_journalist_categories_job', '>> /tmp/cron_sync_journalist_categories.log 2>&1'),
+    #('*/15 * * * *', 'core.cron.update_embeddings_job', '>> /tmp/cron_update_embeddings.log 2>&1'),
+#]
 
 EMAIL_HOST_USER = 'support@updates.nachopr.com' 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -364,6 +364,7 @@ SERVER_EMAIL = 'NachoPR <support@updates.nachopr.com>'
 CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
 CELERY_RESULT_BACKEND = 'django-db'
 CELERY_CACHE_BACKEND = 'django-cache'
+CELERY_RESULT_EXTENDED = True
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 900  # 15 minutes
 CELERY_TASK_SOFT_TIME_LIMIT = 800  # ~13 minutes
@@ -373,6 +374,8 @@ CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 CELERY_TASK_ACKS_LATE = True
 CELERY_WORKER_SEND_TASK_EVENTS = True
 CELERY_TASK_SEND_SENT_EVENT = True
+CELERY_TASK_STORE_ERRORS_EVEN_IF_IGNORED = True
+CELERY_TASK_STORE_SUCCESS = True
 
 # Task queues configuration
 CELERY_TASK_DEFAULT_QUEUE = 'default'
@@ -391,4 +394,32 @@ CELERY_TASK_ROUTES = {
     'core.tasks.process_journalists_task': {'queue': 'process'},
     'core.tasks.categorize_page_task': {'queue': 'categorize'},
     'core.tasks.categorize_pages_task': {'queue': 'categorize'},
+}
+
+CELERY_BEAT_SCHEDULE = {
+    'continuous-crawl': {
+        'task': 'nachopr.continuous_crawl',
+        'schedule': 60.0,  # Run every minute
+        'options': {
+            'queue': 'crawl',
+            'acks_late': True,  # Don't ack the task until it completes
+            'max_concurrency': 1  # Only allow one instance at a time
+        }
+    },
+    'process-journalists': {
+        'task': 'process_journalists_task',
+        'schedule': 1800.0,  # Run every 30 minutes
+    },
+    'categorize-pages': {
+        'task': 'categorize_pages_task',
+        'schedule': 1800.0,  # Run every 30 minutes
+    },
+    'update-page-embeddings': {
+        'task': 'update_page_embeddings_task',
+        'schedule': 900.0,  # Run every 15 minutes
+    },
+    'update-journalist-embeddings': {
+        'task': 'update_journalist_embeddings_task',
+        'schedule': 1800.0,  # Run every 30 minutes
+    },
 }
