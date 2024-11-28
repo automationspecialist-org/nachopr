@@ -34,10 +34,8 @@ RUN apt-get update && apt-get install -y \
     && apt-get install -y cron
 
 # Install Typesense
-RUN curl -O https://dl.typesense.org/releases/0.24.1/typesense-server-0.24.1-amd64.deb \
-    && apt-get update \
-    && apt-get install -y ./typesense-server-0.24.1-amd64.deb \
-    && rm typesense-server-0.24.1-amd64.deb
+RUN curl -O https://dl.typesense.org/releases/27.1/typesense-server-27.1-amd64.deb \
+    && apt install -y ./typesense-server-27.1-amd64.deb 
 
 # Install Redis
 RUN apt-get update && apt-get install -y redis-server
