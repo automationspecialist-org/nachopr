@@ -423,3 +423,13 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': 1800.0,  # Run every 30 minutes
     },
 }
+
+TYPESENSE_CLIENT_CONFIG = {
+    'api_key': 'local_only_key',  # Same as in typesense-server.ini
+    'nodes': [{
+        'host': 'localhost',
+        'port': '8108',
+        'protocol': 'http'
+    }],
+    'connection_timeout_seconds': 2
+}

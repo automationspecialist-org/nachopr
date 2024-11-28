@@ -36,8 +36,7 @@ from tenacity import (
     retry_if_exception_type
 )
 from openai import APIError, APIConnectionError, RateLimitError
-from celery import shared_task, chain
-from celery.signals import task_success
+from celery import chain
 from core.celery import app  # Import the Celery app instance
 
 

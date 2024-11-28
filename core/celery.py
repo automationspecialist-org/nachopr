@@ -1,7 +1,6 @@
 from __future__ import absolute_import, unicode_literals
 import os
 from celery import Celery
-from django.conf import settings
 from celery.signals import task_postrun, task_prerun
 from django.db import close_old_connections
 

@@ -1,7 +1,7 @@
 import subprocess
 import sys
 import time
-from typing import List, Dict
+from typing import Dict
 import os
 import signal
 import atexit

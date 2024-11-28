@@ -20,6 +20,39 @@ RUN apt-get update && apt-get install -y \
     cron \
     dialog \
     openssh-server \
+    # Install Typesense
+    && curl -O https://dl.typesense.org/releases/27.1/typesense-server-27.1-amd64.deb \
+    && apt install -y ./typesense-server-27.1-amd64.deb \
+    && rm typesense-server-27.1-amd64.deb 
+    # ... rest of your existing installations
+
+# Simplified Typesense configuration for local use
+RUN mkdir -p /etc/typesense \
+    && echo "[server]\napi-key=local_only_key\ndata-dir=/var/lib/typesense\napi-port=8108\napi-address=127.0.0.1" > /etc/typesense/typesense-server.ini
+
+# Add Typesense to supervisor
+COPY supervisor/typesense.conf /etc/supervisor/conf.d/
+
+# Install dependencies for building Python packages
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    gettext \
+    libcairo2 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libgdk-pixbuf2.0-0 \
+    libffi-dev \
+    shared-mime-info \
+    memcached \
+    libmemcached-dev \
+    libssl-dev \
+    pkg-config \
+    curl \
+    wget \
+    cron \
+    dialog \
+    openssh-server \
     # psycopg2 dependencies
     && apt-get install -y libpq-dev \
     # Translations dependencies
@@ -89,7 +122,7 @@ COPY . /usr/src/app/
 COPY startup.sh /usr/src/app/
 RUN chmod +x /usr/src/app/startup.sh && rm -rf /var/lib/apt/lists/* /tmp/*
 
-EXPOSE 80 2222
+EXPOSE 80 
 
 # Ensure proper initialization
 ENTRYPOINT ["/usr/src/app/startup.sh"]
