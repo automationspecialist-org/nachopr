@@ -1,11 +1,13 @@
+FROM typesense/typesense:0.25.1 as typesense
+
 FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 ENV PYTHON_VERSION=3.11
 
-# Install minimal systemd for Typesense
-RUN apt-get update && apt-get install -y systemd-sysv
+# Copy Typesense binary from official image
+COPY --from=typesense /opt/typesense-server /usr/local/bin/typesense-server
 
 # Add deadsnakes PPA for Python 3.11
 RUN apt-get update && apt-get install -y software-properties-common \
@@ -45,11 +47,6 @@ RUN apt-get update && apt-get install -y \
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
     && . $HOME/.cargo/env
 
-# Install Typesense
-RUN curl -O https://dl.typesense.org/releases/27.1/typesense-server-27.1-amd64.deb && \
-    apt-get install -y ./typesense-server-27.1-amd64.deb && \
-    rm typesense-server-27.1-amd64.deb
-
 # Setup Redis
 RUN mkdir -p /var/log/redis \
     && chown -R redis:redis /var/log/redis
@@ -63,6 +60,7 @@ RUN mkdir -p /var/log/celery \
 COPY supervisor/celeryworker.conf /etc/supervisor/conf.d/
 COPY supervisor/celerybeat.conf /etc/supervisor/conf.d/
 COPY supervisor/redis.conf /etc/supervisor/conf.d/
+COPY supervisor/typesense.conf /etc/supervisor/conf.d/
 
 # Configure SSH
 RUN echo "root:Docker!" | chpasswd \
