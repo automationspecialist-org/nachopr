@@ -36,8 +36,8 @@ RUN apt-get update && apt-get install -y \
     && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
 # Install Typesense
-RUN curl -O https://dl.typesense.org/releases/27.1/typesense-server-27.1-amd64.deb 
-    #&& apt install -y ./typesense-server-27.1-amd64.deb 
+RUN curl -O https://dl.typesense.org/releases/27.1/typesense-server-27.1-amd64.deb \
+    && apt install -y ./typesense-server-27.1-amd64.deb 
 
 # Install Redis
 RUN apt-get update && apt-get install -y redis-server
@@ -86,9 +86,9 @@ ENV PATH="/usr/src/app/venv/bin:$PATH"
 COPY . /usr/src/app/
 
 # Create Typesense data directory and set permissions
-RUN mkdir -p /var/lib/typesense \
-    && chown -R typesense:typesense /var/lib/typesense \
-    && chmod 755 /var/lib/typesense
+RUN mkdir -p /var/lib/typesense 
+    #&& chown -R typesense:typesense /var/lib/typesense \
+    #&& chmod 755 /var/lib/typesense
 
 # Modify startup script to ensure SSH starts properly
 COPY startup.sh /usr/src/app/
