@@ -1,4 +1,4 @@
-FROM library/python:3.11-slim-buster
+FROM library/python:3.11-slim-bullseye
 
 # Install dependencies for building Python packages
 RUN apt-get update && apt-get install -y \
@@ -36,10 +36,10 @@ RUN apt-get update && apt-get install -y \
     && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
 # Install Typesense
-RUN curl -O https://dl.typesense.org/releases/27.1/typesense-server-27.1-linux-amd64.tar.gz \
-    && tar -xzf typesense-server-27.1-linux-amd64.tar.gz \
+RUN curl -O https://dl.typesense.org/releases/0.24.1/typesense-server-0.24.1-linux-amd64.tar.gz \
+    && tar -xzf typesense-server-0.24.1-linux-amd64.tar.gz \
     && mv ./typesense-server /usr/local/bin/ \
-    && rm typesense-server-27.1-linux-amd64.tar.gz \
+    && rm typesense-server-0.24.1-linux-amd64.tar.gz \
     && mkdir -p /var/lib/typesense
 
 # Install Redis
