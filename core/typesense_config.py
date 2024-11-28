@@ -23,11 +23,13 @@ def get_typesense_client():
     return typesense.Client({
         'api_key': settings.TYPESENSE_API_KEY,
         'nodes': [{
-            'host': 'localhost',  # Using localhost since it's internal
+            'host': '127.0.0.1',  # Using IP instead of localhost
             'port': '8108',
             'protocol': 'http'
         }],
-        'connection_timeout_seconds': 2
+        'connection_timeout_seconds': 2,
+        'num_retries': 3,  # Add retries
+        'retry_interval_seconds': 1
     })
 
 def init_typesense():

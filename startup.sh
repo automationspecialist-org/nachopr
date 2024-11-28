@@ -10,6 +10,24 @@ printenv | grep -Ev 'BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID|LANG|PWD|GPG
     echo "environment=$line" >> /etc/supervisor/conf.d/celerybeat.conf
 done
 
+# Start supervisor
+echo "Starting supervisor..."
+supervisord -c /etc/supervisor/supervisord.conf
+
+# Wait for Typesense to be ready
+echo "Waiting for Typesense to be ready..."
+for i in {1..30}; do
+    if curl -s http://127.0.0.1:8108/health > /dev/null; then
+        echo "Typesense is ready!"
+        break
+    fi
+    echo "Waiting for Typesense... attempt $i"
+    sleep 1
+done
+
+# Initialize Typesense
+echo "Initializing Typesense..."
+uv run python manage.py migrate_to_typesense
 
 if [ -n "$AZURE" ]; then
     echo "Starting SSH service..."
@@ -32,17 +50,12 @@ uv run manage.py collectstatic --no-input
 uv run manage.py generate_social_img
 uv run manage.py collectstatic --no-input
 
-
 # Send a message to Slack when restarting
 if [ -n "$SLACK_WEBHOOK_URL" ]; then
     curl -X POST -H 'Content-type: application/json' --data '{"text":"The nachopr application is restarting."}' "$SLACK_WEBHOOK_URL"
 else
     echo "SLACK_WEBHOOK_URL is not set. Skipping Slack notification."
 fi
-
-# Start supervisor
-echo "Starting supervisor..."
-supervisord -c /etc/supervisor/supervisord.conf
 
 echo "Starting Granian..."
 exec uv run granian --interface asginl \
