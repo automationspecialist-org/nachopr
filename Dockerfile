@@ -45,9 +45,11 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
 # Download Typesense
 RUN curl -O https://dl.typesense.org/releases/27.1/typesense-server-27.1-amd64.deb
 
-# Update apt and install Typesense
-RUN apt-get update && \
-    apt-get install -y ./typesense-server-27.1-amd64.deb
+# Try installing with dpkg first, then fix dependencies
+RUN dpkg -i typesense-server-27.1-amd64.deb || true && \
+    apt-get update && \
+    apt-get install -f -y && \
+    dpkg -i typesense-server-27.1-amd64.deb
 
 # Cleanup and configure
 RUN rm typesense-server-27.1-amd64.deb && \
