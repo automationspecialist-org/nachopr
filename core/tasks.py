@@ -1720,15 +1720,33 @@ def send_slack_notification(message, blocks=None):
 def migrate_to_typesense_task(self):
     """Run Typesense migration as a background task"""
     try:
+        # First check if migration is needed
+        client = get_typesense_client()
+        collection_stats = client.collections['journalists'].retrieve()
         total_journalists = Journalist.objects.count()
+        
+        if collection_stats.get('num_documents', 0) >= total_journalists:
+            logger.info(f"Typesense collection already has {collection_stats.get('num_documents')} documents, no migration needed")
+            return
+            
         logger.info(f"Starting Typesense migration in background for {total_journalists} journalists")
         send_slack_notification(f"🔄 Starting Typesense migration for {total_journalists} journalists...")
         
-        call_command('migrate_to_typesense')
+        # Run migration in batches
+        batch_size = 100
+        processed = 0
+        while processed < total_journalists:
+            batch = Journalist.objects.all()[processed:processed + batch_size]
+            for journalist in batch:
+                try:
+                    journalist.update_typesense()
+                except Exception as e:
+                    logger.error(f"Error migrating journalist {journalist.id}: {str(e)}")
+            
+            processed += batch_size
+            logger.info(f"Migrated {min(processed, total_journalists)}/{total_journalists} journalists")
         
         # Verify the migration
-        from core.typesense_config import get_typesense_client
-        client = get_typesense_client()
         collection_stats = client.collections['journalists'].retrieve()
         
         # Create a formatted message for Slack
@@ -1758,6 +1776,7 @@ def migrate_to_typesense_task(self):
         send_slack_notification("Typesense migration completed", blocks)
         logger.info(f"Typesense collection stats after migration: {collection_stats}")
         logger.info("Completed Typesense migration")
+        
     except Exception as e:
         error_msg = f"❌ Error during Typesense migration: {str(e)}"
         send_slack_notification(error_msg)
@@ -1813,10 +1832,14 @@ def sync_typesense_index():
         logger.error(error_msg, exc_info=True)
         raise
 
-# Schedule the periodic task
+# Schedule the periodic tasks
 app.conf.beat_schedule = {
     'sync-typesense-index': {
         'task': 'core.tasks.sync_typesense_index',
         'schedule': timedelta(hours=1),
+    },
+    'migrate-to-typesense': {
+        'task': 'core.tasks.migrate_to_typesense_task',
+        'schedule': timedelta(minutes=5),  # Run every 5 minutes until successful
     },
 }
