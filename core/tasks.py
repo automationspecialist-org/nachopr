@@ -1699,19 +1699,72 @@ def test_openai_connection():
         # Don't fail startup - just log the error
         return False
 
-@app.task(bind=True, name='migrate_to_typesense_task', track_started=True, 
-    ignore_result=False)
+def send_slack_notification(message, blocks=None):
+    """Send a notification to Slack"""
+    webhook_url = os.getenv('SLACK_WEBHOOK_URL')
+    if not webhook_url:
+        logger.warning("SLACK_WEBHOOK_URL not set, skipping notification")
+        return
+    
+    try:
+        payload = {'text': message}
+        if blocks:
+            payload['blocks'] = blocks
+            
+        response = requests.post(webhook_url, json=payload)
+        response.raise_for_status()
+    except Exception as e:
+        logger.error(f"Error sending Slack notification: {str(e)}")
+
+@shared_task(bind=True)
 def migrate_to_typesense_task(self):
     """Run Typesense migration as a background task"""
     try:
-        logger.info("Starting Typesense migration in background")
+        total_journalists = Journalist.objects.count()
+        logger.info(f"Starting Typesense migration in background for {total_journalists} journalists")
+        send_slack_notification(f"🔄 Starting Typesense migration for {total_journalists} journalists...")
+        
         call_command('migrate_to_typesense')
+        
+        # Verify the migration
+        from core.typesense_config import get_typesense_client
+        client = get_typesense_client()
+        collection_stats = client.collections['journalists'].retrieve()
+        
+        # Create a formatted message for Slack
+        blocks = [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "✅ *Typesense Migration Complete*"
+                }
+            },
+            {
+                "type": "section",
+                "fields": [
+                    {
+                        "type": "mrkdwn",
+                        "text": f"*Total Documents:*\n{collection_stats.get('num_documents', 0)}"
+                    },
+                    {
+                        "type": "mrkdwn",
+                        "text": f"*DB Count:*\n{total_journalists}"
+                    }
+                ]
+            }
+        ]
+        
+        send_slack_notification("Typesense migration completed", blocks)
+        logger.info(f"Typesense collection stats after migration: {collection_stats}")
         logger.info("Completed Typesense migration")
     except Exception as e:
-        logger.error(f"Error during Typesense migration: {str(e)}")
+        error_msg = f"❌ Error during Typesense migration: {str(e)}"
+        send_slack_notification(error_msg)
+        logger.error(error_msg, exc_info=True)
         raise
 
-@app.task(name='sync_typesense_index', track_started=True, ignore_result=False)
+@app.task
 def sync_typesense_index():
     """
     Periodic task to sync Typesense index with database.
@@ -1720,9 +1773,44 @@ def sync_typesense_index():
     try:
         logger.info("Starting Typesense sync")
         count = sync_recent_journalists()
+        
+        # Verify the sync
+        from core.typesense_config import get_typesense_client
+        client = get_typesense_client()
+        collection_stats = client.collections['journalists'].retrieve()
+        
+        if count > 0:
+            # Only send notification if there were updates
+            blocks = [
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": "✅ *Typesense Sync Complete*"
+                    }
+                },
+                {
+                    "type": "section",
+                    "fields": [
+                        {
+                            "type": "mrkdwn",
+                            "text": f"*Journalists Updated:*\n{count}"
+                        },
+                        {
+                            "type": "mrkdwn",
+                            "text": f"*Total Documents:*\n{collection_stats.get('num_documents', 0)}"
+                        }
+                    ]
+                }
+            ]
+            send_slack_notification("Typesense sync completed", blocks)
+        
+        logger.info(f"Typesense collection stats after sync: {collection_stats}")
         logger.info(f"Synced {count} journalists")
     except Exception as e:
-        logger.error(f"Error during Typesense sync: {str(e)}")
+        error_msg = f"❌ Error during Typesense sync: {str(e)}"
+        send_slack_notification(error_msg)
+        logger.error(error_msg, exc_info=True)
         raise
 
 # Schedule the periodic task
