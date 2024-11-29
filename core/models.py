@@ -10,6 +10,7 @@ from django.utils import timezone
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from core.utils.typesense_utils import update_journalist_in_typesense
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -145,11 +146,48 @@ class Journalist(models.Model):
         # Join all parts with newlines
         return "\n".join(text_parts)
 
+    def clean_content(self, content):
+        """Clean article content for indexing"""
+        if not content:
+            return ""
+        # Remove markdown links
+        content = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', content)
+        # Remove HTML tags
+        content = re.sub(r'<[^>]+>', ' ', content)
+        # Remove special characters and extra whitespace
+        content = re.sub(r'[\n\r\t]+', ' ', content)
+        content = re.sub(r'\s+', ' ', content)
+        # Remove escape characters
+        content = content.replace('\\', '')
+        return content.strip()
+
     def update_typesense(self, force=False):
         """Update or create document in Typesense"""
         try:
             from .typesense_config import get_typesense_client
             client = get_typesense_client()
+            
+            # Get article data - order by published_date and ensure is_news_article=True
+            articles = self.articles.filter(is_news_article=True).order_by('-published_date', '-id')
+            
+            # Get article titles and content
+            article_titles = []
+            article_contents = []
+            
+            for article in articles[:10]:  # Limit to 10 most recent articles
+                if article.title:
+                    article_titles.append(article.title)
+                if article.content:
+                    cleaned_content = self.clean_content(article.content)
+                    if cleaned_content:
+                        article_contents.append(cleaned_content)
+            
+            # Debug logging
+            logger.info(f"Indexing journalist {self.id} ({self.name}) with {len(article_titles)} articles")
+            logger.info(f"Article titles: {article_titles}")
+            
+            # Concatenate article content, limiting to prevent oversized documents
+            article_content = ' '.join(article_contents)[:100000]  # Limit content size to 100KB
             
             document = {
                 'id': str(self.id),
@@ -158,10 +196,15 @@ class Journalist(models.Model):
                 'country': self.country or '',
                 'sources': list(self.sources.values_list('name', flat=True)),
                 'categories': list(self.categories.values_list('name', flat=True)),
-                'articles_count': self.articles.count(),
+                'articles_count': articles.count(),
                 'email_status': self.email_status or '',
-                'created_at': int(self.created_at.timestamp()) if self.created_at else int(timezone.now().timestamp())
+                'created_at': int(self.created_at.timestamp()) if self.created_at else int(timezone.now().timestamp()),
+                'article_titles': article_titles,
+                'article_content': article_content,
             }
+            
+            # Debug logging
+            logger.info(f"Document for journalist {self.id}: {document}")
             
             try:
                 if force:

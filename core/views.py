@@ -121,10 +121,21 @@ def search_results(request):
         # Build search parameters
         search_parameters = {
             'q': query,
-            'query_by': 'name,description,sources,categories',
+            'query_by': 'name,description,sources,categories,article_titles,article_content',
+            'query_by_weights': '8,4,2,2,6,1',  # Weight name highest, then article titles, then other fields
             'per_page': 10,
             'page': page_number,
+            'highlight_fields': 'article_titles,article_content',  # Highlight matching content
+            'highlight_full_fields': 'article_titles,article_content',  # Return full field content for highlighting
+            'prefix': False,  # Disable prefix search for exact matching
+            'typo_tolerance': False,  # Disable typo tolerance for exact matching
+            'min_len_1typo': 4,  # Minimum length for 1 typo
+            'min_len_2typo': 8,  # Minimum length for 2 typos
+            'exhaustive_search': True,  # Enable exhaustive search for better accuracy
         }
+        
+        logger.info(f"Searching Typesense with parameters: {search_parameters}")
+        logger.info(f"Query: {query}")
         
         # Add filters if specified
         filter_rules = []
@@ -200,7 +211,10 @@ def search_results(request):
         for hit in search_results['hits']:
             doc_id = hit['document']['id']
             if doc_id in journalist_map:
-                mapped_results.append(journalist_map[doc_id])
+                journalist = journalist_map[doc_id]
+                # Add highlights to journalist object
+                journalist.highlights = hit.get('highlights', [])
+                mapped_results.append(journalist)
         
         # Prepare context
         context = {
@@ -209,7 +223,7 @@ def search_results(request):
             'page': page_number,
             'has_next': len(search_results['hits']) == 10,
             'has_previous': page_number > 1,
-            'time_taken': timezone.now() - starttime,
+            'time_taken': (timezone.now() - starttime).total_seconds(),
             'unfiltered_results_count': search_results['found'],
             'is_subscriber': is_subscriber,
         }

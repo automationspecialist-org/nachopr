@@ -6,14 +6,16 @@ JOURNALIST_SCHEMA = {
     'name': 'journalists',
     'fields': [
         {'name': 'id', 'type': 'string'},
-        {'name': 'name', 'type': 'string'},
-        {'name': 'description', 'type': 'string', 'optional': True},
+        {'name': 'name', 'type': 'string', 'weight': 8},
+        {'name': 'description', 'type': 'string', 'optional': True, 'weight': 4},
         {'name': 'country', 'type': 'string', 'optional': True, 'facet': True},
         {'name': 'sources', 'type': 'string[]', 'facet': True, 'optional': True},
         {'name': 'categories', 'type': 'string[]', 'facet': True, 'optional': True},
         {'name': 'articles_count', 'type': 'int32', 'optional': True},
         {'name': 'email_status', 'type': 'string', 'optional': True},
         {'name': 'created_at', 'type': 'int64'},
+        {'name': 'article_titles', 'type': 'string[]', 'optional': True, 'weight': 6},
+        {'name': 'article_content', 'type': 'string', 'optional': True, 'weight': 1},
     ],
     'default_sorting_field': 'created_at'
 }
