@@ -33,6 +33,7 @@ from django.db.models import F
 from django.db.models import Count
 from typesense.client import Client
 import traceback
+import re
 
 # Get logger instance at the top of the file
 logger = logging.getLogger(__name__)
@@ -91,6 +92,43 @@ def search(request):
         }
     }
     return render(request, 'core/app_search.html', context=context)
+
+
+def extract_highlight_context(text, max_words_each_side=10):
+    """Extract highlighted text with limited context on each side."""
+    # Find all highlighted portions
+    highlights = re.finditer(r'<mark>(.*?)</mark>', text)
+    
+    # Process each highlight
+    processed_highlights = []
+    for match in highlights:
+        highlight = match.group(1)
+        start_pos = match.start()
+        end_pos = match.end()
+        
+        # Get text before highlight (up to max_words_each_side words)
+        pre_text = text[:start_pos].strip()
+        pre_words = pre_text.split()[-max_words_each_side:]
+        pre_context = ' '.join(pre_words) if pre_words else ''
+        
+        # Get text after highlight (up to max_words_each_side words)
+        post_text = text[end_pos:].strip()
+        post_words = post_text.split()[:max_words_each_side]
+        post_context = ' '.join(post_words) if post_words else ''
+        
+        # Combine with ellipsis if needed
+        result = []
+        if pre_text and pre_context != pre_text:
+            result.append('...')
+        result.append(pre_context)
+        result.append(f'<mark>{highlight}</mark>')
+        result.append(post_context)
+        if post_text and post_context != post_text:
+            result.append('...')
+            
+        processed_highlights.append(' '.join(filter(None, result)))
+    
+    return ' ... '.join(processed_highlights)
 
 
 def search_results(request):
@@ -242,20 +280,22 @@ def search_results(request):
                         clean_snippet = highlight_text.replace('<mark>', '').replace('</mark>', '')
                         
                         if highlight['field'] == 'article_titles':
-                            # For article titles, find exact match
+                            # For article titles, keep full title
+                            processed_text = highlight_text
                             for title in article_map:
                                 if title in clean_snippet:
                                     url = article_map[title]
                                     break
                         elif highlight['field'] == 'article_content':
-                            # For article content, use first article that contains this content
+                            # For article content, extract context around highlights
+                            processed_text = extract_highlight_context(highlight_text)
                             for article in journalist.articles.filter(is_news_article=True, content__icontains=clean_snippet):
                                 url = article.url
                                 break
                         
                         journalist.highlights.append({
                             'field': highlight['field'],
-                            'snippet': highlight_text,
+                            'snippet': processed_text,
                             'url': url
                         })
                 
@@ -275,20 +315,22 @@ def search_results(request):
                         clean_snippet = highlight_text.replace('<mark>', '').replace('</mark>', '')
                         
                         if field == 'article_titles':
-                            # For article titles, find exact match
+                            # For article titles, keep full title
+                            processed_text = highlight_text
                             for title in article_map:
                                 if title in clean_snippet:
                                     url = article_map[title]
                                     break
                         elif field == 'article_content':
-                            # For article content, use first article that contains this content
+                            # For article content, extract context around highlights
+                            processed_text = extract_highlight_context(highlight_text)
                             for article in journalist.articles.filter(is_news_article=True, content__icontains=clean_snippet):
                                 url = article.url
                                 break
                                 
                         journalist.highlights.append({
                             'field': field,
-                            'snippet': highlight_text,
+                            'snippet': processed_text,
                             'url': url
                         })
                 
