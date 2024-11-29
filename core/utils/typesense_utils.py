@@ -27,13 +27,13 @@ def sync_recent_journalists():
         # Initialize Typesense if needed
         init_typesense()
         
-        # Get all journalists modified in the last hour
+        # Get all journalists created in the last hour
         recent_journalists = Journalist.objects.filter(
-            updated_at__gte=timezone.now() - timedelta(hours=1)
+            created_at__gte=timezone.now() - timedelta(hours=1)
         )
         
         if not recent_journalists.exists():
-            logger.info("No journalists updated in the last hour")
+            logger.info("No journalists created in the last hour")
             return 0
         
         count = recent_journalists.count()

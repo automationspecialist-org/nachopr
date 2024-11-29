@@ -1722,11 +1722,18 @@ def migrate_to_typesense_task(self):
     try:
         # First check if migration is needed
         client = get_typesense_client()
-        collection_stats = client.collections['journalists'].retrieve()
+        
+        try:
+            collection_stats = client.collections['journalists'].retrieve()
+            current_docs = collection_stats.get('num_documents', 0)
+        except Exception as e:
+            logger.warning(f"Could not get collection stats, assuming empty: {str(e)}")
+            current_docs = 0
+            
         total_journalists = Journalist.objects.count()
         
-        if collection_stats.get('num_documents', 0) >= total_journalists:
-            logger.info(f"Typesense collection already has {collection_stats.get('num_documents')} documents, no migration needed")
+        if current_docs >= total_journalists:
+            logger.info(f"Typesense collection already has {current_docs} documents, no migration needed")
             return
             
         logger.info(f"Starting Typesense migration in background for {total_journalists} journalists")
@@ -1735,11 +1742,15 @@ def migrate_to_typesense_task(self):
         # Run migration in batches
         batch_size = 100
         processed = 0
+        
+        # Get all journalists ordered by ID to ensure consistent batching
         while processed < total_journalists:
-            batch = Journalist.objects.all()[processed:processed + batch_size]
+            batch = Journalist.objects.all().order_by('id')[processed:processed + batch_size]
             for journalist in batch:
                 try:
-                    journalist.update_typesense()
+                    # Force update even if document exists
+                    journalist.update_typesense(force=True)
+                    logger.debug(f"Migrated journalist {journalist.id}: {journalist.name}")
                 except Exception as e:
                     logger.error(f"Error migrating journalist {journalist.id}: {str(e)}")
             
@@ -1747,36 +1758,40 @@ def migrate_to_typesense_task(self):
             logger.info(f"Migrated {min(processed, total_journalists)}/{total_journalists} journalists")
         
         # Verify the migration
-        collection_stats = client.collections['journalists'].retrieve()
-        
-        # Create a formatted message for Slack
-        blocks = [
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": "✅ *Typesense Migration Complete*"
-                }
-            },
-            {
-                "type": "section",
-                "fields": [
-                    {
+        try:
+            collection_stats = client.collections['journalists'].retrieve()
+            final_docs = collection_stats.get('num_documents', 0)
+            
+            # Create a formatted message for Slack
+            blocks = [
+                {
+                    "type": "section",
+                    "text": {
                         "type": "mrkdwn",
-                        "text": f"*Total Documents:*\n{collection_stats.get('num_documents', 0)}"
-                    },
-                    {
-                        "type": "mrkdwn",
-                        "text": f"*DB Count:*\n{total_journalists}"
+                        "text": "✅ *Typesense Migration Complete*"
                     }
-                ]
-            }
-        ]
-        
-        send_slack_notification("Typesense migration completed", blocks)
-        logger.info(f"Typesense collection stats after migration: {collection_stats}")
-        logger.info("Completed Typesense migration")
-        
+                },
+                {
+                    "type": "section",
+                    "fields": [
+                        {
+                            "type": "mrkdwn",
+                            "text": f"*Total Documents:*\n{final_docs}"
+                        },
+                        {
+                            "type": "mrkdwn",
+                            "text": f"*DB Count:*\n{total_journalists}"
+                        }
+                    ]
+                }
+            ]
+            
+            send_slack_notification("Typesense migration completed", blocks)
+            logger.info(f"Typesense collection stats after migration: {collection_stats}")
+            
+        except Exception as e:
+            logger.error(f"Error verifying migration: {str(e)}")
+            
     except Exception as e:
         error_msg = f"❌ Error during Typesense migration: {str(e)}"
         send_slack_notification(error_msg)
