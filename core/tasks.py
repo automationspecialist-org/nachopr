@@ -1783,7 +1783,7 @@ def migrate_to_typesense_task(self):
         logger.error(error_msg, exc_info=True)
         raise
 
-@app.task
+@app.task(name='core.tasks.sync_typesense_index')
 def sync_typesense_index():
     """
     Periodic task to sync Typesense index with database.
@@ -1794,7 +1794,6 @@ def sync_typesense_index():
         count = sync_recent_journalists()
         
         # Verify the sync
-        from core.typesense_config import get_typesense_client
         client = get_typesense_client()
         collection_stats = client.collections['journalists'].retrieve()
         

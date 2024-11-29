@@ -402,29 +402,33 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': 60.0,  # Run every minute
         'options': {
             'queue': 'crawl',
-            'acks_late': True,  # Don't ack the task until it completes
-            'max_concurrency': 1  # Only allow one instance at a time
+            'acks_late': True,
+            'max_concurrency': 1
         }
     },
     'process-journalists': {
-        'task': 'process_journalists_task',
+        'task': 'core.tasks.process_journalists_task',
         'schedule': 1800.0,  # Run every 30 minutes
     },
     'categorize-pages': {
-        'task': 'categorize_pages_task',
+        'task': 'core.tasks.categorize_pages_task',
         'schedule': 1800.0,  # Run every 30 minutes
     },
     'update-page-embeddings': {
-        'task': 'update_page_embeddings_task',
+        'task': 'core.tasks.update_page_embeddings_task',
         'schedule': 900.0,  # Run every 15 minutes
     },
     'update-journalist-embeddings': {
-        'task': 'update_journalist_embeddings_task',
+        'task': 'core.tasks.update_journalist_embeddings_task',
         'schedule': 1800.0,  # Run every 30 minutes
     },
     'sync-typesense-index': {
         'task': 'core.tasks.sync_typesense_index',
         'schedule': 3600.0,  # Run every hour
+        'options': {
+            'queue': 'default',
+            'acks_late': True,
+        }
     },
     'migrate-to-typesense': {
         'task': 'core.tasks.migrate_to_typesense_task',
