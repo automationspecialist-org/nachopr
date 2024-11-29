@@ -209,7 +209,8 @@ def search_results(request):
             'page': page_number,
             'has_next': len(search_results['hits']) == 10,
             'has_previous': page_number > 1,
-            'search_time': timezone.now() - starttime,
+            'time_taken': timezone.now() - starttime,
+            'unfiltered_results_count': search_results['found'],
             'is_subscriber': is_subscriber,
         }
         

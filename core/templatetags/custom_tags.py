@@ -4,8 +4,9 @@ register = template.Library()
 
 @register.filter
 def time_diff_display(diff):
-    #if diff < 1:
-    #    return f"{int(diff * 1000)} ms"
-    #else:
-    #    return f"{diff:.2f} s"
-    return diff
+    """Format timedelta into human readable string"""
+    total_seconds = diff.total_seconds()
+    if total_seconds < 1:
+        return f"{int(total_seconds * 1000)} ms"
+    else:
+        return f"{total_seconds:.2f} s"
