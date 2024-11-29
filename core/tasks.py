@@ -1831,15 +1831,3 @@ def sync_typesense_index():
         send_slack_notification(error_msg)
         logger.error(error_msg, exc_info=True)
         raise
-
-# Schedule the periodic tasks
-app.conf.beat_schedule = {
-    'sync-typesense-index': {
-        'task': 'core.tasks.sync_typesense_index',
-        'schedule': timedelta(hours=1),
-    },
-    'migrate-to-typesense': {
-        'task': 'core.tasks.migrate_to_typesense_task',
-        'schedule': timedelta(minutes=5),  # Run every 5 minutes until successful
-    },
-}
