@@ -145,7 +145,7 @@ class Journalist(models.Model):
         # Join all parts with newlines
         return "\n".join(text_parts)
 
-    def update_typesense(self):
+    def update_typesense(self, force=False):
         """Update or create document in Typesense"""
         try:
             from .typesense_config import get_typesense_client
@@ -164,13 +164,30 @@ class Journalist(models.Model):
             }
             
             try:
-                # Try to update
-                client.collections['journalists'].documents[str(self.id)].update(document)
-            except:
-                # If update fails (document doesn't exist), create it
-                client.collections['journalists'].documents.create(document)
+                if force:
+                    # If force is True, try to create first
+                    try:
+                        client.collections['journalists'].documents.create(document)
+                    except Exception as e:
+                        # If creation fails (document exists), try update
+                        client.collections['journalists'].documents[str(self.id)].update(document)
+                else:
+                    # Try to update first
+                    try:
+                        client.collections['journalists'].documents[str(self.id)].update(document)
+                    except Exception as e:
+                        # If update fails (document doesn't exist), create it
+                        client.collections['journalists'].documents.create(document)
+                
+                logger.info(f"Successfully updated/created document for journalist {self.id} in Typesense")
+                
+            except Exception as e:
+                logger.error(f"Error updating/creating document: {str(e)}")
+                raise  # Re-raise the exception to be caught by the outer try block
+                
         except Exception as e:
             logger.error(f"Error updating journalist {self.id} in Typesense: {str(e)}")
+            raise  # Re-raise the exception so it's not silently caught
     
     def delete_from_typesense(self):
         """Delete document from Typesense"""
