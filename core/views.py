@@ -690,6 +690,12 @@ def save_to_list(request):
             new_list_name = data.get('new_list_name')
             journalists = data.get('journalists', [])
 
+            if not journalists:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'No journalists selected'
+                }, status=400)
+
             with transaction.atomic():
                 # Create or get the list
                 if list_id:
@@ -707,7 +713,7 @@ def save_to_list(request):
                         name=new_list_name.strip()
                     )
 
-                # Update user activity flags
+                # Update user flags
                 if not list_id:
                     request.user.has_created_list = True
                 if journalists:
@@ -893,10 +899,12 @@ def get_user_lists(request):
         'id', 
         'name'
     ).annotate(
-        journalist_count=Count('journalists')
+        journalists__count=Count('journalists')
     ).order_by('-updated_at')
     
-    return JsonResponse(list(lists), safe=False)
+    return JsonResponse({
+        'lists': list(lists)
+    })
 
 def get_typesense_client():
     return Client(
