@@ -9,7 +9,7 @@ import logging
 from django.utils import timezone
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from .tasks import sync_typesense_index
+from core.utils.typesense_utils import update_journalist_in_typesense
 
 logger = logging.getLogger(__name__)
 
@@ -405,8 +405,4 @@ def update_typesense_on_save(sender, instance, created, **kwargs):
     Signal handler to update Typesense when a journalist is created or updated.
     This ensures real-time updates while the periodic task handles any missed updates.
     """
-    try:
-        instance.update_typesense()
-    except Exception as e:
-        logger.error(f"Error updating Typesense for journalist {instance.id}: {str(e)}")
-        # Don't raise the exception to prevent disrupting the save operation
+    update_journalist_in_typesense(instance)
