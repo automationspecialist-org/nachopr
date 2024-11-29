@@ -11,6 +11,8 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from core.utils.typesense_utils import update_journalist_in_typesense
 import re
+from tenacity import retry, stop_after_attempt, wait_exponential
+import openai
 
 logger = logging.getLogger(__name__)
 
@@ -130,21 +132,30 @@ class Journalist(models.Model):
         except Exception as e:
             logger.error(f"Error updating search vector for journalist {self.pk}: {str(e)}")
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=10),
+        reraise=True
+    )
     def get_text_for_embedding(self):
-        """Get text representation of journalist for embedding generation"""
-        text_parts = []
-        
-        if self.name:
-            text_parts.append(f"Name: {self.name}")
-        
-        if self.description:
-            text_parts.append(f"Description: {self.description}")
+        """Get text representation of journalist for embedding generation with retry logic"""
+        try:
+            text_parts = []
             
-        if self.country:
-            text_parts.append(f"Country: {self.country}")
+            if self.name:
+                text_parts.append(f"Name: {self.name}")
             
-        # Join all parts with newlines
-        return "\n".join(text_parts)
+            if self.description:
+                text_parts.append(f"Description: {self.description}")
+                
+            if self.country:
+                text_parts.append(f"Country: {self.country}")
+                
+            # Join all parts with newlines
+            return "\n".join(text_parts)
+        except Exception as e:
+            logger.error(f"Error generating text for embedding for journalist {self.id}: {str(e)}")
+            raise
 
     def clean_content(self, content):
         """Clean article content for indexing"""
@@ -161,8 +172,13 @@ class Journalist(models.Model):
         content = content.replace('\\', '')
         return content.strip()
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=10),
+        reraise=True
+    )
     def update_typesense(self, force=False):
-        """Update or create document in Typesense"""
+        """Update or create document in Typesense with retry logic"""
         try:
             from .typesense_config import get_typesense_client
             client = get_typesense_client()
@@ -230,16 +246,31 @@ class Journalist(models.Model):
                 
         except Exception as e:
             logger.error(f"Error updating journalist {self.id} in Typesense: {str(e)}")
-            raise  # Re-raise the exception so it's not silently caught
+            # Add specific error handling for different types of exceptions
+            if isinstance(e, openai.APIError):
+                logger.error("OpenAI API error - will retry")
+                raise
+            elif isinstance(e, openai.APIConnectionError):
+                logger.error("Connection error to OpenAI API - will retry")
+                raise
+            else:
+                logger.error(f"Unexpected error: {str(e)}")
+                raise
     
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=10),
+        reraise=True
+    )
     def delete_from_typesense(self):
-        """Delete document from Typesense"""
+        """Delete document from Typesense with retry logic"""
         try:
             from .typesense_config import get_typesense_client
             client = get_typesense_client()
             client.collections['journalists'].documents[str(self.id)].delete()
         except Exception as e:
             logger.error(f"Error deleting journalist {self.id} from Typesense: {str(e)}")
+            raise
     
     def save(self, *args, **kwargs):
         # First do the normal save
