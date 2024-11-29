@@ -60,7 +60,7 @@ fi
 
 # Run Django management commands
 uv run manage.py migrate
-
+uv run manage.py migrate_to_typesense
 uv run manage.py create_admin_user
 uv run manage.py add_news_sources
 uv run manage.py collectstatic --no-input
