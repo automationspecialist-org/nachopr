@@ -32,6 +32,7 @@ from pgvector.django import CosineDistance
 from django.db.models import F
 from django.db.models import Count
 from typesense.client import Client
+import traceback
 
 # Get logger instance at the top of the file
 logger = logging.getLogger(__name__)
@@ -213,7 +214,84 @@ def search_results(request):
             if doc_id in journalist_map:
                 journalist = journalist_map[doc_id]
                 # Add highlights to journalist object
-                journalist.highlights = hit.get('highlights', [])
+                journalist.highlights = []
+                
+                # Get all article titles and URLs for this journalist
+                article_map = {
+                    article.title: article.url 
+                    for article in journalist.articles.filter(is_news_article=True)
+                }
+                
+                logger.info(f"Hit structure for journalist {doc_id}: {hit}")
+                
+                # Handle old format with 'highlights' array
+                if 'highlights' in hit:
+                    for highlight in hit['highlights']:
+                        # Try to find matching article URL
+                        url = None
+                        
+                        # Get the highlight text
+                        if 'snippets' in highlight:
+                            highlight_text = highlight['snippets'][0]
+                        elif 'value' in highlight:
+                            highlight_text = highlight['value']
+                        else:
+                            continue  # Skip if no valid highlight text found
+                            
+                        # Clean the snippet for matching
+                        clean_snippet = highlight_text.replace('<mark>', '').replace('</mark>', '')
+                        
+                        if highlight['field'] == 'article_titles':
+                            # For article titles, find exact match
+                            for title in article_map:
+                                if title in clean_snippet:
+                                    url = article_map[title]
+                                    break
+                        elif highlight['field'] == 'article_content':
+                            # For article content, use first article that contains this content
+                            for article in journalist.articles.filter(is_news_article=True, content__icontains=clean_snippet):
+                                url = article.url
+                                break
+                        
+                        journalist.highlights.append({
+                            'field': highlight['field'],
+                            'snippet': highlight_text,
+                            'url': url
+                        })
+                
+                # Handle new format with 'highlight' object
+                elif 'highlight' in hit:
+                    for field, highlight in hit['highlight'].items():
+                        # Try to find matching article URL
+                        url = None
+                        
+                        # Get the highlight text
+                        if isinstance(highlight, list):
+                            highlight_text = highlight[0]['value']
+                        else:
+                            highlight_text = highlight['value']
+                            
+                        # Clean the snippet for matching
+                        clean_snippet = highlight_text.replace('<mark>', '').replace('</mark>', '')
+                        
+                        if field == 'article_titles':
+                            # For article titles, find exact match
+                            for title in article_map:
+                                if title in clean_snippet:
+                                    url = article_map[title]
+                                    break
+                        elif field == 'article_content':
+                            # For article content, use first article that contains this content
+                            for article in journalist.articles.filter(is_news_article=True, content__icontains=clean_snippet):
+                                url = article.url
+                                break
+                                
+                        journalist.highlights.append({
+                            'field': field,
+                            'snippet': highlight_text,
+                            'url': url
+                        })
+                
                 mapped_results.append(journalist)
         
         # Prepare context
@@ -228,12 +306,14 @@ def search_results(request):
             'is_subscriber': is_subscriber,
         }
         
-        return render(request, 'core/search_results.html', context)
-        
+        return render(request, 'core/search_results.html', context=context)
     except Exception as e:
-        logger.error(f"Search error: {str(e)}", exc_info=True)
-        return render(request, 'core/search_results.html', 
-                    {'error': 'An error occurred during search. Please try again.'})
+        logger.error(f"Search error: {str(e)}")
+        logger.error(traceback.format_exc())
+        return render(request, 'core/search_results.html', {
+            'error': f"An error occurred while searching: {str(e)}",
+            'is_subscriber': is_subscriber,
+        })
 
 
 def free_media_list(request):
