@@ -42,6 +42,7 @@ from celery import shared_task
 from django.core.management import call_command
 from core.typesense_config import get_typesense_client, init_typesense
 from datetime import timedelta
+from core.utils.typesense_utils import sync_recent_journalists
 
 
 load_dotenv()
@@ -1717,32 +1718,8 @@ def sync_typesense_index():
     """
     try:
         logger.info("Starting Typesense sync")
-        
-        # Initialize Typesense if needed
-        init_typesense()
-        client = get_typesense_client()
-        
-        # Get all journalists modified in the last hour
-        # This assumes you have an updated_at field, adjust the time window as needed
-        recent_journalists = Journalist.objects.filter(
-            updated_at__gte=timezone.now() - timedelta(hours=1)
-        )
-        
-        if not recent_journalists.exists():
-            logger.info("No journalists updated in the last hour")
-            return
-        
-        logger.info(f"Found {recent_journalists.count()} journalists to sync")
-        
-        # Update each journalist in Typesense
-        for journalist in recent_journalists:
-            try:
-                journalist.update_typesense()
-            except Exception as e:
-                logger.error(f"Error syncing journalist {journalist.id}: {str(e)}")
-        
-        logger.info("Completed Typesense sync")
-        
+        count = sync_recent_journalists()
+        logger.info(f"Synced {count} journalists")
     except Exception as e:
         logger.error(f"Error during Typesense sync: {str(e)}")
         raise
