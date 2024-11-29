@@ -422,6 +422,7 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'update_journalist_embeddings_task',
         'schedule': 1800.0,  # Run every 30 minutes
     },
+
 }
 
 TYPESENSE_API_KEY = os.environ.get('TYPESENSE_API_KEY', 'xyz')  # Default to 'xyz' if not set

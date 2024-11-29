@@ -1699,7 +1699,8 @@ def test_openai_connection():
         # Don't fail startup - just log the error
         return False
 
-@shared_task(bind=True)
+@app.task(bind=True, name='migrate_to_typesense_task', track_started=True, 
+    ignore_result=False)
 def migrate_to_typesense_task(self):
     """Run Typesense migration as a background task"""
     try:
@@ -1710,7 +1711,7 @@ def migrate_to_typesense_task(self):
         logger.error(f"Error during Typesense migration: {str(e)}")
         raise
 
-@app.task
+@app.task(name='sync_typesense_index', track_started=True, ignore_result=False)
 def sync_typesense_index():
     """
     Periodic task to sync Typesense index with database.
