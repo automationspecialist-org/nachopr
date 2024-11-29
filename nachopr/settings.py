@@ -394,6 +394,8 @@ CELERY_TASK_ROUTES = {
     'core.tasks.process_journalists_task': {'queue': 'process'},
     'core.tasks.categorize_page_task': {'queue': 'categorize'},
     'core.tasks.categorize_pages_task': {'queue': 'categorize'},
+    'core.tasks.sync_typesense_index': {'queue': 'default'},
+    'core.tasks.migrate_to_typesense_task': {'queue': 'default'},
 }
 
 CELERY_BEAT_SCHEDULE = {
