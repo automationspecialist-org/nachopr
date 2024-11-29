@@ -7,6 +7,9 @@ from django.contrib.postgres.search import SearchVector
 from pgvector.django import VectorField
 import logging
 from django.utils import timezone
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from .tasks import sync_typesense_index
 
 logger = logging.getLogger(__name__)
 
@@ -395,3 +398,15 @@ class EmailDiscovery(models.Model):
         
     def __str__(self):
         return f"{self.journalist.name} - {self.email}"
+
+@receiver(post_save, sender=Journalist)
+def update_typesense_on_save(sender, instance, created, **kwargs):
+    """
+    Signal handler to update Typesense when a journalist is created or updated.
+    This ensures real-time updates while the periodic task handles any missed updates.
+    """
+    try:
+        instance.update_typesense()
+    except Exception as e:
+        logger.error(f"Error updating Typesense for journalist {instance.id}: {str(e)}")
+        # Don't raise the exception to prevent disrupting the save operation

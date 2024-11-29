@@ -60,12 +60,15 @@ fi
 
 # Run Django management commands
 uv run manage.py migrate
-uv run manage.py migrate_to_typesense
 uv run manage.py create_admin_user
 uv run manage.py add_news_sources
 uv run manage.py collectstatic --no-input
 uv run manage.py generate_social_img
 uv run manage.py collectstatic --no-input
+
+# Trigger Typesense migration in background
+echo "Triggering Typesense migration in background..."
+uv run manage.py shell -c "from core.tasks import migrate_to_typesense_task; migrate_to_typesense_task.delay()"
 
 # Send a message to Slack when restarting
 if [ -n "$SLACK_WEBHOOK_URL" ]; then
