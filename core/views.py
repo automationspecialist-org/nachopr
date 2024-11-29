@@ -34,6 +34,10 @@ from django.db.models import Count
 from typesense.client import Client
 import traceback
 import re
+import hashlib
+import hmac
+import time
+from django.conf import settings
 
 # Get logger instance at the top of the file
 logger = logging.getLogger(__name__)
@@ -131,6 +135,39 @@ def extract_highlight_context(text, max_words_each_side=10):
     return ' ... '.join(processed_highlights)
 
 
+def generate_turnstile_signature(request):
+    """Generate a unique signature for Turnstile verification"""
+    # Combine IP address, user agent, and timestamp (rounded to nearest hour)
+    # This means the signature will change every hour and for different browsers/IPs
+    current_hour = int(time.time() / 3600)
+    user_data = f"{request.META.get('REMOTE_ADDR')}:{request.META.get('HTTP_USER_AGENT')}:{current_hour}"
+    
+    # Create HMAC using Django's secret key
+    key = settings.SECRET_KEY.encode()
+    signature = hmac.new(key, user_data.encode(), hashlib.sha256).hexdigest()
+    
+    return f"{current_hour}:{signature}"
+
+def verify_turnstile_signature(request, cookie_value):
+    """Verify the Turnstile cookie signature"""
+    try:
+        stored_hour, stored_signature = cookie_value.split(':')
+        stored_hour = int(stored_hour)
+        current_hour = int(time.time() / 3600)
+        
+        # Check if the signature is expired (more than 24 hours old)
+        if current_hour - stored_hour > 24:
+            return False
+            
+        # Regenerate signature with stored hour
+        user_data = f"{request.META.get('REMOTE_ADDR')}:{request.META.get('HTTP_USER_AGENT')}:{stored_hour}"
+        key = settings.SECRET_KEY.encode()
+        expected_signature = hmac.new(key, user_data.encode(), hashlib.sha256).hexdigest()
+        
+        return hmac.compare_digest(stored_signature, expected_signature)
+    except (ValueError, AttributeError):
+        return False
+
 def search_results(request):
     starttime = timezone.now()
     is_subscriber = request.user.is_authenticated
@@ -206,24 +243,27 @@ def search_results(request):
         
         # Handle non-subscribers
         if not is_subscriber:
-            token = request.GET.get('cf-turnstile-response')
-            if not token:
-                return render(request, 'core/search_results.html', 
-                            {'error': 'Please complete the security check',
-                             'reset_turnstile': True})
-            
-            # Verify token with Cloudflare
-            data = {
-                'secret': os.getenv('CLOUDFLARE_TURNSTILE_SECRET_KEY'),
-                'response': token,
-                'remoteip': request.META.get('REMOTE_ADDR'),
-            }
-            response = requests.post('https://challenges.cloudflare.com/turnstile/v0/siteverify', data=data)
-            
-            if not response.json().get('success', False):
-                return render(request, 'core/search_results.html', 
-                            {'error': 'Security check failed',
-                             'reset_turnstile': True})
+            # Check for existing verification cookie and validate its signature
+            cookie_value = request.COOKIES.get('turnstile_verified')
+            if not cookie_value or not verify_turnstile_signature(request, cookie_value):
+                token = request.GET.get('cf-turnstile-response')
+                if not token:
+                    return render(request, 'core/search_results.html', 
+                                {'error': 'Please complete the security check',
+                                 'reset_turnstile': True})
+                
+                # Verify token with Cloudflare
+                data = {
+                    'secret': os.getenv('CLOUDFLARE_TURNSTILE_SECRET_KEY'),
+                    'response': token,
+                    'remoteip': request.META.get('REMOTE_ADDR'),
+                }
+                response = requests.post('https://challenges.cloudflare.com/turnstile/v0/siteverify', data=data)
+                
+                if not response.json().get('success', False):
+                    return render(request, 'core/search_results.html', 
+                                {'error': 'Security check failed',
+                                 'reset_turnstile': True})
             
             # Limit results for non-subscribers
             search_results['hits'] = search_results['hits'][:10]
@@ -348,7 +388,17 @@ def search_results(request):
             'is_subscriber': is_subscriber,
         }
         
-        return render(request, 'core/search_results.html', context=context)
+        response = render(request, 'core/search_results.html', context=context)
+        
+        # Set verification cookie if Turnstile was just verified
+        if not is_subscriber and request.GET.get('cf-turnstile-response'):
+            # Generate signed cookie value
+            cookie_value = generate_turnstile_signature(request)
+            # Set cookie to expire in 24 hours
+            response.set_cookie('turnstile_verified', cookie_value, max_age=86400, httponly=True, samesite='Lax', secure=True)
+        
+        return response
+        
     except Exception as e:
         logger.error(f"Search error: {str(e)}")
         logger.error(traceback.format_exc())
