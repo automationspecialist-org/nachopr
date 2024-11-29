@@ -384,6 +384,7 @@ CELERY_TASK_QUEUES = {
     'crawl': {},
     'process': {},
     'categorize': {},
+    'typesense': {},  # Add dedicated queue for Typesense tasks
 }
 
 CELERY_TASK_ROUTES = {
@@ -394,8 +395,8 @@ CELERY_TASK_ROUTES = {
     'core.tasks.process_journalists_task': {'queue': 'process'},
     'core.tasks.categorize_page_task': {'queue': 'categorize'},
     'core.tasks.categorize_pages_task': {'queue': 'categorize'},
-    'core.tasks.sync_typesense_index': {'queue': 'default'},
-    'core.tasks.migrate_to_typesense_task': {'queue': 'default'},
+    'core.tasks.sync_typesense_index': {'queue': 'typesense'},
+    'core.tasks.migrate_to_typesense_task': {'queue': 'typesense'},
 }
 
 CELERY_BEAT_SCHEDULE = {
@@ -426,9 +427,9 @@ CELERY_BEAT_SCHEDULE = {
     },
     'sync-typesense-index': {
         'task': 'core.tasks.sync_typesense_index',
-        'schedule': 3600.0,  # Run every hour
+        'schedule': 360.0,  # Run every 6 minutes
         'options': {
-            'queue': 'default',
+            'queue': 'typesense',
             'acks_late': True,
         }
     },
@@ -436,7 +437,7 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'core.tasks.migrate_to_typesense_task',
         'schedule': 300.0,  # Run every 5 minutes
         'options': {
-            'queue': 'default',
+            'queue': 'typesense',
             'acks_late': True,
         }
     },
