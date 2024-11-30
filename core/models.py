@@ -4,7 +4,6 @@ from django.contrib.auth.models import AbstractUser
 from django.contrib.postgres.search import SearchVectorField
 from django.contrib.postgres.indexes import GinIndex
 from django.contrib.postgres.search import SearchVector
-from pgvector.django import VectorField
 import logging
 from django.utils import timezone
 from django.db.models.signals import post_save
@@ -12,11 +11,8 @@ from django.dispatch import receiver
 from core.utils.typesense_utils import update_journalist_in_typesense
 import re
 from tenacity import retry, stop_after_attempt, wait_exponential
-import openai
 
 logger = logging.getLogger(__name__)
-
-EMBEDDING_DIMENSIONS = 1536  # text-embedding-3-small dimensions
 
 
 class NewsSource(models.Model):
@@ -71,7 +67,6 @@ class Journalist(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     
     search_vector = SearchVectorField(null=True)
-    embedding = VectorField(dimensions=EMBEDDING_DIMENSIONS, null=True)
 
     def __str__(self):
         return self.name
@@ -131,31 +126,6 @@ class Journalist(models.Model):
             Journalist.objects.filter(pk=self.pk).update(search_vector=vector)
         except Exception as e:
             logger.error(f"Error updating search vector for journalist {self.pk}: {str(e)}")
-
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=4, max=10),
-        reraise=True
-    )
-    def get_text_for_embedding(self):
-        """Get text representation of journalist for embedding generation with retry logic"""
-        try:
-            text_parts = []
-            
-            if self.name:
-                text_parts.append(f"Name: {self.name}")
-            
-            if self.description:
-                text_parts.append(f"Description: {self.description}")
-                
-            if self.country:
-                text_parts.append(f"Country: {self.country}")
-                
-            # Join all parts with newlines
-            return "\n".join(text_parts)
-        except Exception as e:
-            logger.error(f"Error generating text for embedding for journalist {self.id}: {str(e)}")
-            raise
 
     def clean_content(self, content):
         """Clean article content for indexing"""
@@ -246,16 +216,7 @@ class Journalist(models.Model):
                 
         except Exception as e:
             logger.error(f"Error updating journalist {self.id} in Typesense: {str(e)}")
-            # Add specific error handling for different types of exceptions
-            if isinstance(e, openai.APIError):
-                logger.error("OpenAI API error - will retry")
-                raise
-            elif isinstance(e, openai.APIConnectionError):
-                logger.error("Connection error to OpenAI API - will retry")
-                raise
-            else:
-                logger.error(f"Unexpected error: {str(e)}")
-                raise
+            raise
     
     @retry(
         stop=stop_after_attempt(3),
@@ -315,7 +276,6 @@ class NewsPage(models.Model):
     is_news_article = models.BooleanField(default=False)
     search_vector = SearchVectorField(null=True, blank=True)
     published_date = models.DateField(null=True, blank=True)
-    embedding = VectorField(dimensions=EMBEDDING_DIMENSIONS, null=True)
 
     def __str__(self):
         return self.title

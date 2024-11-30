@@ -38,7 +38,8 @@ def task_prerun_handler(task_id, task, *args, **kwargs):
         task_name=task.name,
         status='STARTED',
         content_type='application/json',
-        content_encoding='utf-8'
+        content_encoding='utf-8',
+        result=None
     )
 
 @task_postrun.connect

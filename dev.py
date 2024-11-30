@@ -86,7 +86,7 @@ class DevServer:
         
         commands = [
             # Django dev server
-            ("uv run python manage.py runserver 9000", "Django", Fore.GREEN),
+            ("uv run python manage.py runserver 8001", "Django", Fore.GREEN),
             
             # Tailwind
             ("uv run python manage.py tailwind start", "Tailwind", Fore.BLUE),

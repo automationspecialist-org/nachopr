@@ -417,14 +417,6 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'core.tasks.categorize_pages_task',
         'schedule': 1800.0,  # Run every 30 minutes
     },
-    'update-page-embeddings': {
-        'task': 'core.tasks.update_page_embeddings_task',
-        'schedule': 900.0,  # Run every 15 minutes
-    },
-    'update-journalist-embeddings': {
-        'task': 'core.tasks.update_journalist_embeddings_task',
-        'schedule': 1800.0,  # Run every 30 minutes
-    },
     'sync-typesense-index': {
         'task': 'core.tasks.sync_typesense_index',
         'schedule': 360.0,  # Run every 6 minutes
