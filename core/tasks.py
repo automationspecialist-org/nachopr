@@ -150,6 +150,8 @@ async def crawl_news_sources(domain_limit: int = None, page_limit: int = None, m
             NewsSource.objects.filter(
                 Q(last_crawled__lt=timezone.now() - timezone.timedelta(days=7)) |
                 Q(last_crawled__isnull=True)
+            ).filter(
+                url__isnull=False
             ).order_by(
                 '-priority',
                 'last_crawled'
@@ -293,7 +295,7 @@ def clean_html(html: str) -> str:
     wait=wait_exponential(multiplier=2, min=4, max=120),  # Increased max wait time
     stop=stop_after_attempt(8)  # Increased retry attempts
 )
-def extract_journalists_with_gpt(content: str, track_prompt: bool = False) -> dict:
+def extract_journalists_with_gpt(content: str) -> dict:
     """
     Extract journalist information from the HTML content using GPT-4 on Azure.
     """

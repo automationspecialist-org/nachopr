@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class NewsSource(models.Model):
-    url = models.URLField(unique=True, max_length=500)
+    url = models.URLField(unique=True, max_length=800)
     name = models.CharField(max_length=255)
     slug = models.SlugField(unique=True)
     last_crawled = models.DateTimeField(null=True, blank=True)
@@ -212,11 +212,9 @@ class Journalist(models.Model):
                 
             except Exception as e:
                 logger.error(f"Error updating/creating document: {str(e)}")
-                raise  # Re-raise the exception to be caught by the outer try block
                 
         except Exception as e:
             logger.error(f"Error updating journalist {self.id} in Typesense: {str(e)}")
-            raise
     
     @retry(
         stop=stop_after_attempt(3),
