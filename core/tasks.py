@@ -1138,7 +1138,14 @@ def crawl_single_source_task(self, source_id, page_limit=None):
     """Crawl a single news source"""
     try:
         news_source = NewsSource.objects.get(id=source_id)
-        logger.info(f"Starting crawl for {news_source.url}")
+        start_message = f"🚀 Starting crawl for {news_source.url}"
+        logger.info(start_message)
+        slack_webhook_url = os.getenv("SLACK_WEBHOOK_URL")
+        if slack_webhook_url:
+            requests.post(slack_webhook_url, json={"text": start_message})
+        
+        # Get initial page count
+        pages_before = NewsPage.objects.filter(source=news_source).count()
         
         # Use spider_rs for the full crawl
         website = (
@@ -1179,8 +1186,20 @@ def crawl_single_source_task(self, source_id, page_limit=None):
             news_source.last_crawled = timezone.now()
             news_source.save()
             
+        # After crawling, get final count and send completion message
+        pages_after = NewsPage.objects.filter(source=news_source).count()
+        new_pages = pages_after - pages_before
+        
+        end_message = f"✅ Finished crawl for {news_source.url}\n• Found {new_pages:,} new pages\n• Total pages: {pages_after:,}"
+        logger.info(end_message)
+        if slack_webhook_url:
+            requests.post(slack_webhook_url, json={"text": end_message})
+            
     except Exception as e:
-        logger.error(f"Error crawling source {source_id}: {str(e)}")
+        error_message = f"❌ Error crawling {news_source.url if 'news_source' in locals() else 'source'}: {str(e)}"
+        logger.error(error_message)
+        if slack_webhook_url:
+            requests.post(slack_webhook_url, json={"text": error_message})
         raise
 
 @app.task(

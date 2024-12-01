@@ -93,7 +93,7 @@ class DevServer:
             
             # Celery workers
             ("uv run celery -A core worker --queues=default --loglevel=INFO --concurrency=2 --max-memory-per-child=1000000 -P processes", "Celery-Default", Fore.YELLOW),
-            ("uv run celery -A core worker --queues=crawl --loglevel=INFO --concurrency=1 --max-memory-per-child=1000000 -P processes", "Celery-Crawl", Fore.MAGENTA),
+            ("uv run celery -A core worker --queues=crawl --loglevel=INFO --concurrency=1 --max-memory-per-child=4000000 -P processes", "Celery-Crawl", Fore.MAGENTA),
             ("uv run celery -A core worker --queues=process --loglevel=INFO --concurrency=2", "Celery-Process", Fore.CYAN),
             ("uv run celery -A core worker --queues=categorize --loglevel=INFO --concurrency=1", "Celery-Categorize", Fore.WHITE),
             
