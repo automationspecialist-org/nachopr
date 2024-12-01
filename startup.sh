@@ -63,6 +63,7 @@ fi
 uv run manage.py migrate
 uv run manage.py create_admin_user
 uv run manage.py add_news_sources
+uv run manage.py backfill_journalist_stats
 uv run manage.py collectstatic --no-input
 uv run manage.py generate_social_img
 uv run manage.py collectstatic --no-input

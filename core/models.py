@@ -455,3 +455,20 @@ def update_typesense_on_save(sender, instance, created, **kwargs):
     This ensures real-time updates while the periodic task handles any missed updates.
     """
     update_journalist_in_typesense(instance)
+
+@receiver(post_save, sender=Journalist)
+def track_journalist_creation(sender, instance, created, **kwargs):
+    if created:
+        # Get or create today's stat
+        today = timezone.now().date()
+        stat, _ = DbStat.objects.get_or_create(
+            date__date=today,
+            defaults={
+                'num_journalists': Journalist.objects.count(),
+                'num_journalists_added_today': 1
+            }
+        )
+        if _:  # if we didn't create a new record
+            stat.num_journalists_added_today += 1
+            stat.num_journalists = Journalist.objects.count()
+            stat.save()

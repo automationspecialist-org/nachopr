@@ -3,7 +3,7 @@ from core.tasks import find_single_email_with_hunter_io
 from dotenv import load_dotenv
 from django.shortcuts import get_object_or_404, render
 import requests
-from core.models import CustomUser, NewsSource, NewsPage, Journalist, NewsPageCategory, PricingPlan, SavedSearch, SavedList, EmailDiscovery
+from core.models import CustomUser, NewsSource, NewsPage, Journalist, NewsPageCategory, PricingPlan, SavedSearch, SavedList, EmailDiscovery, DbStat
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect
 from django.views.decorators.csrf import csrf_exempt
@@ -32,6 +32,7 @@ import hashlib
 import hmac
 import time
 from django.conf import settings
+from datetime import timedelta
 
 # Get logger instance at the top of the file
 logger = logging.getLogger(__name__)
@@ -763,10 +764,27 @@ def health(request):
     journalist_email_count = Journalist.objects.exclude(email_address__isnull=True).exclude(email_address='').count()
     news_article_count = NewsPage.objects.filter(is_news_article=True).count()
     
-    return HttpResponse(
-        f"OK - {journalist_email_count} journalists with email, {news_article_count} news articles", 
-        status=200
-    )
+    # Get the last 30 days of stats
+    end_date = timezone.now().date()
+    start_date = end_date - timedelta(days=30)
+    
+    daily_stats = DbStat.objects.filter(
+        date__date__gte=start_date,
+        date__date__lte=end_date
+    ).order_by('date')
+    
+    stats_data = {
+        'labels': [stat.date.strftime('%Y-%m-%d') for stat in daily_stats],
+        'values': [stat.num_journalists_added_today for stat in daily_stats]
+    }
+    
+    context = {
+        'journalist_email_count': journalist_email_count,
+        'news_article_count': news_article_count,
+        'stats_data': stats_data
+    }
+    
+    return render(request, 'core/health.html', context)
 
 
 def journalist_detail(request, id):
