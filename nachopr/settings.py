@@ -336,8 +336,8 @@ LOGGING = {
 
 
 
-#CRONJOBS = [
-    #('*/20 * * * *', 'core.cron.crawl_job', '>> /tmp/cron.log 2>&1'),
+CRONJOBS = [
+    ('*/10 * * * *', 'core.cron.crawl_job', '>> /tmp/cron.log 2>&1'),
     #('*/30 * * * *', 'core.cron.categorize_job', '>> /tmp/cron_categorize.log 2>&1'),
     #('*/30 * * * *', 'core.cron.process_journalist_profiles_job', '>> /tmp/cron_process_journalist_profiles.log 2>&1'),
     #('*/30 * * * *', 'core.cron.guess_emails_job', '>> /tmp/cron_guess_emails.log 2>&1'),
@@ -347,7 +347,7 @@ LOGGING = {
     #('*/30 * * * *', 'core.cron.find_digital_pr_examples_job', '>> /tmp/cron_find_digital_pr_examples.log 2>&1'),
     #('*/30 * * * *', 'core.cron.sync_journalist_categories_job', '>> /tmp/cron_sync_journalist_categories.log 2>&1'),
     #('*/15 * * * *', 'core.cron.update_embeddings_job', '>> /tmp/cron_update_embeddings.log 2>&1'),
-#]
+]
 
 EMAIL_HOST_USER = 'support@updates.nachopr.com' 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
