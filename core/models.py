@@ -456,19 +456,33 @@ def update_typesense_on_save(sender, instance, created, **kwargs):
     """
     update_journalist_in_typesense(instance)
 
+
 @receiver(post_save, sender=Journalist)
 def track_journalist_creation(sender, instance, created, **kwargs):
     if created:
-        # Get or create today's stat
+        # Get today's date and create timezone-aware datetime objects for start/end of day
         today = timezone.now().date()
-        stat, _ = DbStat.objects.get_or_create(
-            date__date=today,
-            defaults={
-                'num_journalists': Journalist.objects.count(),
-                'num_journalists_added_today': 1
-            }
-        )
-        if _:  # if we didn't create a new record
-            stat.num_journalists_added_today += 1
-            stat.num_journalists = Journalist.objects.count()
-            stat.save()
+        today_start = timezone.make_aware(timezone.datetime.combine(today, timezone.datetime.min.time()))
+        today_end = timezone.make_aware(timezone.datetime.combine(today, timezone.datetime.max.time()))
+        
+        # Get or create today's stat with precise datetime filtering
+        try:
+            stat = DbStat.objects.filter(
+                date__gte=today_start,
+                date__lte=today_end
+            ).first()
+            
+            if stat:
+                # Update existing stat
+                stat.num_journalists_added_today += 1
+                stat.num_journalists = Journalist.objects.count()
+                stat.save()
+            else:
+                # Create new stat
+                DbStat.objects.create(
+                    date=today_start,
+                    num_journalists=Journalist.objects.count(),
+                    num_journalists_added_today=1
+                )
+        except Exception as e:
+            logger.error(f"Error tracking journalist creation: {str(e)}")

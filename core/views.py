@@ -763,6 +763,7 @@ def health(request):
     
     journalist_email_count = Journalist.objects.exclude(email_address__isnull=True).exclude(email_address='').count()
     news_article_count = NewsPage.objects.filter(is_news_article=True).count()
+    all_newspage_count = NewsPage.objects.count()
     
     # Get the last 30 days of stats
     end_date = timezone.now().date()
@@ -781,6 +782,7 @@ def health(request):
     context = {
         'journalist_email_count': journalist_email_count,
         'news_article_count': news_article_count,
+        'all_newspage_count': all_newspage_count,
         'stats_data': stats_data
     }
     
