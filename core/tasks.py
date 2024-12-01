@@ -55,7 +55,7 @@ lunary.config(app_id=os.getenv('LUNARY_PUBLIC_KEY'))
 
 # Initialize Azure OpenAI client with proper configuration
 azure_openai_client = AzureOpenAI(
-    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT", "").rstrip("/"),  # Remove trailing slash if present
+    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT", "").rstrip("/").strip('"').strip("'"),  # Remove trailing slash and quotes
     api_version="2024-02-15-preview",
     api_key=os.getenv("AZURE_OPENAI_API_KEY"),
     max_retries=5,      # Increased from 3
@@ -74,8 +74,8 @@ def validate_azure_endpoint():
         return False
         
     try:
-        # Remove any trailing slashes
-        endpoint = endpoint.rstrip("/")
+        # Remove any trailing slashes and quotes
+        endpoint = endpoint.rstrip("/").strip('"').strip("'")
         
         # Parse URL to validate format
         parsed = urlparse(endpoint)
