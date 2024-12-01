@@ -1,7 +1,6 @@
 from django.core.management.base import BaseCommand
 from core.models import Journalist
 from core.typesense_config import init_typesense
-from django.utils import timezone
 import logging
 from django.db import transaction
 

@@ -1,7 +1,7 @@
 from django.utils import timezone
 from datetime import timedelta
 import logging
-from core.typesense_config import get_typesense_client, init_typesense
+from core.typesense_config import init_typesense
 
 logger = logging.getLogger(__name__)
 

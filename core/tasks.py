@@ -23,9 +23,7 @@ from mailscout import Scout
 from functools import lru_cache
 from datetime import datetime
 import requests
-from typing import List, Optional
-from django.db.models.signals import post_save, m2m_changed
-from django.dispatch import receiver
+from typing import Optional
 import requests_cache
 from urllib.parse import urlparse, urlunparse
 from tenacity import (
@@ -38,9 +36,7 @@ from openai import APIError, APIConnectionError, RateLimitError
 from celery import chain
 from core.celery import app  # Import the Celery app instance
 from celery import shared_task
-from django.core.management import call_command
-from core.typesense_config import get_typesense_client, init_typesense
-from datetime import timedelta
+from core.typesense_config import get_typesense_client
 from core.utils.typesense_utils import sync_recent_journalists
 
 
@@ -72,18 +68,15 @@ def test_openai_connection():
     """Test the OpenAI connection"""
     try:
         logger.info("Starting OpenAI connection test...")
-        logger.info(f"AZURE_OPENAI_ENDPOINT: {os.getenv('AZURE_OPENAI_ENDPOINT')}")
-        logger.info(f"AZURE_OPENAI_API_KEY: {'***' if os.getenv('AZURE_OPENAI_API_KEY') else 'Not Set'}")
         
-        # Log proxy and network settings
-        logger.info(f"HTTP_PROXY: {os.getenv('HTTP_PROXY', 'Not Set')}")
-        logger.info(f"HTTPS_PROXY: {os.getenv('HTTPS_PROXY', 'Not Set')}")
-        
+        # Get and validate environment variables
         endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
         api_key = os.getenv("AZURE_OPENAI_API_KEY")
         
         if not endpoint or not api_key:
             logger.error("Missing required Azure OpenAI configuration")
+            logger.error(f"AZURE_OPENAI_ENDPOINT: {'Set' if endpoint else 'Not Set'}")
+            logger.error(f"AZURE_OPENAI_API_KEY: {'Set' if api_key else 'Not Set'}")
             return False
             
         # Test basic network connectivity first
@@ -108,8 +101,8 @@ def test_openai_connection():
             azure_endpoint=endpoint,
             api_version="2024-02-15-preview",
             api_key=api_key,
-            timeout=30.0,  # Add explicit timeout
-            max_retries=1  # Limit retries for faster feedback
+            timeout=60.0,  # Increased timeout
+            max_retries=3   # Increased retries
         )
         
         logger.info("Attempting to make API call...")
@@ -126,6 +119,8 @@ def test_openai_connection():
         return True
     except Exception as e:
         logger.error(f"OpenAI connection test failed: {str(e)}", exc_info=True)
+        # Log additional diagnostic information
+        logger.error(f"Current working directory: {os.getcwd()}")
         # Don't fail startup - just log the error
         return False
 
@@ -306,19 +301,6 @@ def extract_journalists_with_gpt(content: str) -> dict:
         clean_content = clean_html(content)
         
         lunary.monitor(azure_openai_client)
-
-        # Test connection before making the main API call
-        try:
-            test_response = azure_openai_client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{"role": "system", "content": "test"}],
-                max_tokens=5,
-                temperature=0.3
-            )
-            logger.info(f"Connection test successful for run {run_id}")
-        except Exception as e:
-            logger.error(f"Connection test failed for run {run_id}: {str(e)}")
-            raise APIConnectionError(f"Connection test failed: {str(e)}")
 
         journalist_json = { 
             "content_is_full_news_article": True,
@@ -1254,10 +1236,6 @@ def crawl_news_sources_task(domain_limit=None, page_limit=None):
 def continuous_crawl_task(self):
     """Orchestrate the continuous crawling process"""
     try:
-        # Validate OpenAI connection first
-        test_openai_connection()
-
-        # Continue with regular task if connection test passes
         newspage_count_before = NewsPage.objects.count()
         journalist_count_before = Journalist.objects.count()
         
@@ -1344,7 +1322,7 @@ def process_journalist_task(self, page_id):
         raise
 
 @app.task(name='process_journalists_task', track_started=True, ignore_result=False)
-def process_journalists_task(limit=10):
+def process_journalists_task(limit=2):
     """Distribute journalist processing tasks"""
     pages = NewsPage.objects.exclude(content='').filter(processed=False)[:limit]
     

@@ -4,8 +4,6 @@ from dotenv import load_dotenv
 from django.shortcuts import get_object_or_404, render
 import requests
 from core.models import CustomUser, NewsSource, NewsPage, Journalist, NewsPageCategory, PricingPlan, SavedSearch, SavedList, EmailDiscovery
-from django.db.models import Prefetch
-from django.core.paginator import Paginator
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect
 from django.views.decorators.csrf import csrf_exempt
@@ -15,7 +13,6 @@ from django.contrib.auth.tokens import default_token_generator
 from django.template.loader import render_to_string
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
-from django.db.models import Q
 from django.utils import timezone
 # Create a session for the user
 import json
@@ -23,12 +20,9 @@ from django.db import transaction
 import random
 import string
 from .polar import PolarClient
-from django.contrib.postgres.search import SearchQuery, SearchRank
 import resend
 import logging
 from django.urls import reverse
-import asyncio
-from pgvector.django import CosineDistance
 from django.db.models import F
 from django.db.models import Count
 from typesense.client import Client

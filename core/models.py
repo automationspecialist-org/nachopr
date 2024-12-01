@@ -197,14 +197,14 @@ class Journalist(models.Model):
                     # If force is True, try to create first
                     try:
                         client.collections['journalists'].documents.create(document)
-                    except Exception as e:
+                    except Exception:
                         # If creation fails (document exists), try update
                         client.collections['journalists'].documents[str(self.id)].update(document)
                 else:
                     # Try to update first
                     try:
                         client.collections['journalists'].documents[str(self.id)].update(document)
-                    except Exception as e:
+                    except Exception:
                         # If update fails (document doesn't exist), create it
                         client.collections['journalists'].documents.create(document)
                 
