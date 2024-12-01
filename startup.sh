@@ -18,6 +18,7 @@ mkdir -p /var/log/typesense
 printenv | grep -Ev 'BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID|LANG|PWD|GPG_KEY|_=' | while read -r line; do
     echo "environment=$line" >> /etc/supervisor/conf.d/celeryworker.conf
     echo "environment=$line" >> /etc/supervisor/conf.d/celerybeat.conf
+    echo "export $line" >> /root/.bashrc
 done
 
 # Start supervisor

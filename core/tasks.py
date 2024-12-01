@@ -60,9 +60,78 @@ azure_openai_client = AzureOpenAI(
     azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT", "").rstrip("/"),  # Remove trailing slash if present
     api_version="2024-02-15-preview",
     api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-    max_retries=3,  # Add explicit retry configuration
-    timeout=30.0    # Add explicit timeout
+    max_retries=5,      # Increased from 3
+    timeout=60.0,       # Increased from 30
+    default_headers={   # Add custom headers
+        "User-Agent": "NachoPR/1.0",
+        "Connection": "keep-alive"
+    }
 )
+
+def test_openai_connection():
+    """Test the OpenAI connection"""
+    try:
+        logger.info("Starting OpenAI connection test...")
+        logger.info(f"AZURE_OPENAI_ENDPOINT: {os.getenv('AZURE_OPENAI_ENDPOINT')}")
+        logger.info(f"AZURE_OPENAI_API_KEY: {'***' if os.getenv('AZURE_OPENAI_API_KEY') else 'Not Set'}")
+        
+        # Log proxy and network settings
+        logger.info(f"HTTP_PROXY: {os.getenv('HTTP_PROXY', 'Not Set')}")
+        logger.info(f"HTTPS_PROXY: {os.getenv('HTTPS_PROXY', 'Not Set')}")
+        
+        endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+        api_key = os.getenv("AZURE_OPENAI_API_KEY")
+        
+        if not endpoint or not api_key:
+            logger.error("Missing required Azure OpenAI configuration")
+            return False
+            
+        # Test basic network connectivity first
+        try:
+            import socket
+            import urllib.parse
+            
+            # Parse the endpoint URL to get the hostname
+            parsed_url = urllib.parse.urlparse(endpoint)
+            hostname = parsed_url.hostname
+            
+            logger.info(f"Testing network connectivity to {hostname}...")
+            socket.create_connection((hostname, 443), timeout=10)
+            logger.info("Basic network connectivity test successful")
+        except Exception as e:
+            logger.error(f"Network connectivity test failed: {str(e)}")
+            # Continue anyway to get more diagnostic information
+            
+        logger.info("Creating Azure OpenAI client...")
+        # Create a new client instance for testing to ensure clean configuration
+        test_client = AzureOpenAI(
+            azure_endpoint=endpoint,
+            api_version="2024-02-15-preview",
+            api_key=api_key,
+            timeout=30.0,  # Add explicit timeout
+            max_retries=1  # Limit retries for faster feedback
+        )
+        
+        logger.info("Attempting to make API call...")
+        test_response = test_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": "test"}
+            ],
+            max_tokens=5,
+            temperature=0.3
+        )
+        logger.info("OpenAI connection test successful")
+        return True
+    except Exception as e:
+        logger.error(f"OpenAI connection test failed: {str(e)}", exc_info=True)
+        # Don't fail startup - just log the error
+        return False
+
+# Add connection validation on startup
+if not test_openai_connection():
+    logger.warning("Failed to validate OpenAI connection on startup")
 
 # Cache failed domains to avoid rechecking
 failed_domains = set()
@@ -221,8 +290,8 @@ def clean_html(html: str) -> str:
 
 @retry(
     retry=retry_if_exception_type((APIError, APIConnectionError, RateLimitError)),
-    wait=wait_exponential(multiplier=1, min=4, max=60),
-    stop=stop_after_attempt(5)
+    wait=wait_exponential(multiplier=2, min=4, max=120),  # Increased max wait time
+    stop=stop_after_attempt(8)  # Increased retry attempts
 )
 def extract_journalists_with_gpt(content: str, track_prompt: bool = False) -> dict:
     """
@@ -230,10 +299,24 @@ def extract_journalists_with_gpt(content: str, track_prompt: bool = False) -> di
     """
     try:
         run_id = str(uuid.uuid4())
+        logger.info(f"Starting journalist extraction for run {run_id}")
 
         clean_content = clean_html(content)
         
         lunary.monitor(azure_openai_client)
+
+        # Test connection before making the main API call
+        try:
+            test_response = azure_openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "system", "content": "test"}],
+                max_tokens=5,
+                temperature=0.3
+            )
+            logger.info(f"Connection test successful for run {run_id}")
+        except Exception as e:
+            logger.error(f"Connection test failed for run {run_id}: {str(e)}")
+            raise APIConnectionError(f"Connection test failed: {str(e)}")
 
         journalist_json = { 
             "content_is_full_news_article": True,
@@ -273,6 +356,7 @@ def extract_journalists_with_gpt(content: str, track_prompt: bool = False) -> di
         """
 
         # Call the GPT-4 API on Azure with increased timeout
+        logger.info(f"Making API call for run {run_id}")
         response = azure_openai_client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -284,21 +368,24 @@ def extract_journalists_with_gpt(content: str, track_prompt: bool = False) -> di
             stop=None,
             temperature=0.3,
             response_format={"type": "json_object"},
-            timeout=60  # Add 60 second timeout
+            timeout=90  # Increased timeout to 90 seconds
         )
 
         result = response.choices[0].message.content
         journalists_data = json.loads(result)
+        logger.info(f"Successfully extracted journalists for run {run_id}")
         return journalists_data
 
     except (APIError, APIConnectionError, RateLimitError) as e:
-        logger.error(f"OpenAI API error in extract_journalists_with_gpt: {str(e)}")
+        logger.error(f"OpenAI API error in extract_journalists_with_gpt (run {run_id if 'run_id' in locals() else 'unknown'}): {str(e)}")
+        logger.error(f"API endpoint: {os.getenv('AZURE_OPENAI_ENDPOINT')}")
+        logger.error(f"API key present: {'Yes' if os.getenv('AZURE_OPENAI_API_KEY') else 'No'}")
         raise  # Let retry decorator handle these errors
     except json.JSONDecodeError as e:
-        logger.error(f"JSON decode error in extract_journalists_with_gpt: {str(e)}, raw response: {result if 'result' in locals() else None}")
+        logger.error(f"JSON decode error in extract_journalists_with_gpt (run {run_id if 'run_id' in locals() else 'unknown'}): {str(e)}, raw response: {result if 'result' in locals() else None}")
         return {}
     except Exception as e:
-        logger.error(f"Unexpected error in extract_journalists_with_gpt: {str(e)}", exc_info=True)
+        logger.error(f"Unexpected error in extract_journalists_with_gpt (run {run_id if 'run_id' in locals() else 'unknown'}): {str(e)}", exc_info=True)
         return {}
 
 
@@ -1284,66 +1371,7 @@ def categorize_pages_task(limit=1000):
     for page in pages:
         categorize_page_task.delay(page.id)
 
-def test_openai_connection():
-    """Test the OpenAI connection"""
-    try:
-        logger.info("Starting OpenAI connection test...")
-        logger.info(f"AZURE_OPENAI_ENDPOINT: {os.getenv('AZURE_OPENAI_ENDPOINT')}")
-        logger.info(f"AZURE_OPENAI_API_KEY: {'***' if os.getenv('AZURE_OPENAI_API_KEY') else 'Not Set'}")
-        
-        # Log proxy and network settings
-        logger.info(f"HTTP_PROXY: {os.getenv('HTTP_PROXY', 'Not Set')}")
-        logger.info(f"HTTPS_PROXY: {os.getenv('HTTPS_PROXY', 'Not Set')}")
-        
-        endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-        api_key = os.getenv("AZURE_OPENAI_API_KEY")
-        
-        if not endpoint or not api_key:
-            logger.error("Missing required Azure OpenAI configuration")
-            return False
-            
-        # Test basic network connectivity first
-        try:
-            import socket
-            import urllib.parse
-            
-            # Parse the endpoint URL to get the hostname
-            parsed_url = urllib.parse.urlparse(endpoint)
-            hostname = parsed_url.hostname
-            
-            logger.info(f"Testing network connectivity to {hostname}...")
-            socket.create_connection((hostname, 443), timeout=10)
-            logger.info("Basic network connectivity test successful")
-        except Exception as e:
-            logger.error(f"Network connectivity test failed: {str(e)}")
-            # Continue anyway to get more diagnostic information
-            
-        logger.info("Creating Azure OpenAI client...")
-        # Create a new client instance for testing to ensure clean configuration
-        test_client = AzureOpenAI(
-            azure_endpoint=endpoint,
-            api_version="2024-02-15-preview",
-            api_key=api_key,
-            timeout=30.0,  # Add explicit timeout
-            max_retries=1  # Limit retries for faster feedback
-        )
-        
-        logger.info("Attempting to make API call...")
-        test_response = test_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": "test"}
-            ],
-            max_tokens=5,
-            temperature=0.3
-        )
-        logger.info("OpenAI connection test successful")
-        return True
-    except Exception as e:
-        logger.error(f"OpenAI connection test failed: {str(e)}", exc_info=True)
-        # Don't fail startup - just log the error
-        return False
+
 
 def send_slack_notification(message, blocks=None):
     """Send a notification to Slack"""
