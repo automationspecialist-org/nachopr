@@ -38,6 +38,7 @@ from core.celery import app  # Import the Celery app instance
 from celery import shared_task
 from core.typesense_config import get_typesense_client
 from core.utils.typesense_utils import sync_recent_journalists
+import time
 
 
 load_dotenv()
@@ -339,8 +340,15 @@ def extract_journalists_with_gpt(content: str) -> dict:
         If the page is a category page or list of multiple stories, set content_is_full_news_article to false.
         """
 
-        # Call the GPT-4 API on Azure with increased timeout
+        # Add request ID to headers for tracing
+        azure_openai_client.default_headers['X-Request-ID'] = run_id
+        
+        # Log API request details
         logger.info(f"Making API call for run {run_id}")
+        logger.debug(f"API endpoint: {os.getenv('AZURE_OPENAI_ENDPOINT')}")
+        logger.debug(f"Content length: {len(clean_content)} characters")
+
+        start_time = time.time()
         response = azure_openai_client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -354,23 +362,61 @@ def extract_journalists_with_gpt(content: str) -> dict:
             response_format={"type": "json_object"},
             timeout=90  # Increased timeout to 90 seconds
         )
+        elapsed_time = time.time() - start_time
+
+        # Log response timing and details
+        logger.info(f"API call completed for run {run_id} in {elapsed_time:.2f}s")
+        logger.debug(f"Response tokens: {response.usage.total_tokens if hasattr(response, 'usage') else 'unknown'}")
 
         result = response.choices[0].message.content
         journalists_data = json.loads(result)
         logger.info(f"Successfully extracted journalists for run {run_id}")
         return journalists_data
 
-    except (APIError, APIConnectionError, RateLimitError) as e:
-        logger.error(f"OpenAI API error in extract_journalists_with_gpt (run {run_id if 'run_id' in locals() else 'unknown'}): {str(e)}")
-        logger.error(f"API endpoint: {os.getenv('AZURE_OPENAI_ENDPOINT')}")
-        logger.error(f"API key present: {'Yes' if os.getenv('AZURE_OPENAI_API_KEY') else 'No'}")
-        raise  # Let retry decorator handle these errors
+    except RateLimitError as e:
+        logger.error(f"Rate limit exceeded for run {run_id if 'run_id' in locals() else 'unknown'}")
+        logger.error(f"Rate limit details: {str(e)}")
+        # Log headers and response for debugging
+        if hasattr(e, 'response'):
+            logger.error(f"Response headers: {e.response.headers if e.response else 'No headers'}")
+        raise
+
+    except APIConnectionError as e:
+        logger.error(f"Connection error in run {run_id if 'run_id' in locals() else 'unknown'}")
+        logger.error(f"Connection error details: {str(e)}")
+        # Log network diagnostics
+        try:
+            import socket
+            import urllib.parse
+            endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+            parsed_url = urllib.parse.urlparse(endpoint)
+            hostname = parsed_url.hostname
+            logger.error(f"Attempting to resolve {hostname}")
+            ip = socket.gethostbyname(hostname)
+            logger.error(f"DNS resolution: {hostname} -> {ip}")
+        except Exception as dns_error:
+            logger.error(f"DNS diagnostic failed: {str(dns_error)}")
+        raise
+
+    except APIError as e:
+        logger.error(f"API error in run {run_id if 'run_id' in locals() else 'unknown'}")
+        logger.error(f"API error details: {str(e)}")
+        if hasattr(e, 'response'):
+            logger.error(f"Response status: {e.response.status_code if e.response else 'No status'}")
+            logger.error(f"Response body: {e.response.text if e.response else 'No body'}")
+        raise
+
     except json.JSONDecodeError as e:
-        logger.error(f"JSON decode error in extract_journalists_with_gpt (run {run_id if 'run_id' in locals() else 'unknown'}): {str(e)}, raw response: {result if 'result' in locals() else None}")
+        logger.error(f"JSON decode error in run {run_id if 'run_id' in locals() else 'unknown'}")
+        logger.error(f"Raw response: {result if 'result' in locals() else None}")
+        logger.error(f"JSON error details: {str(e)}")
         return {}
+
     except Exception as e:
-        logger.error(f"Unexpected error in extract_journalists_with_gpt (run {run_id if 'run_id' in locals() else 'unknown'}): {str(e)}", exc_info=True)
-        return {}
+        logger.error(f"Unexpected error in run {run_id if 'run_id' in locals() else 'unknown'}")
+        logger.error(f"Error type: {type(e).__name__}")
+        logger.error(f"Error details: {str(e)}", exc_info=True)
+        raise
 
 
 async def process_all_pages_journalists(limit: int = 10, re_process: bool = False):
