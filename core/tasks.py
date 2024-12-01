@@ -39,6 +39,7 @@ from celery import shared_task
 from core.typesense_config import get_typesense_client
 from core.utils.typesense_utils import sync_recent_journalists
 import time
+import socket
 
 
 load_dotenv()
@@ -65,69 +66,40 @@ azure_openai_client = AzureOpenAI(
     }
 )
 
-def test_openai_connection():
-    """Test the OpenAI connection"""
+def validate_azure_endpoint():
+    """Validate Azure OpenAI endpoint format"""
+    endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "")
+    if not endpoint:
+        logger.error("AZURE_OPENAI_ENDPOINT environment variable is not set")
+        return False
+        
     try:
-        logger.info("Starting OpenAI connection test...")
+        # Remove any trailing slashes
+        endpoint = endpoint.rstrip("/")
         
-        # Get and validate environment variables
-        endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-        api_key = os.getenv("AZURE_OPENAI_API_KEY")
-        
-        if not endpoint or not api_key:
-            logger.error("Missing required Azure OpenAI configuration")
-            logger.error(f"AZURE_OPENAI_ENDPOINT: {'Set' if endpoint else 'Not Set'}")
-            logger.error(f"AZURE_OPENAI_API_KEY: {'Set' if api_key else 'Not Set'}")
+        # Parse URL to validate format
+        parsed = urlparse(endpoint)
+        if not all([parsed.scheme, parsed.netloc]):
+            logger.error(f"Invalid endpoint format: {endpoint}")
             return False
             
-        # Test basic network connectivity first
+        # Test DNS resolution
+        hostname = parsed.netloc
         try:
-            import socket
-            import urllib.parse
+            socket.gethostbyname(hostname)
+            logger.info(f"Successfully resolved {hostname}")
+            return True
+        except socket.gaierror as e:
+            logger.error(f"DNS resolution failed for {hostname}: {str(e)}")
+            return False
             
-            # Parse the endpoint URL to get the hostname
-            parsed_url = urllib.parse.urlparse(endpoint)
-            hostname = parsed_url.hostname
-            
-            logger.info(f"Testing network connectivity to {hostname}...")
-            socket.create_connection((hostname, 443), timeout=10)
-            logger.info("Basic network connectivity test successful")
-        except Exception as e:
-            logger.error(f"Network connectivity test failed: {str(e)}")
-            # Continue anyway to get more diagnostic information
-            
-        logger.info("Creating Azure OpenAI client...")
-        # Create a new client instance for testing to ensure clean configuration
-        test_client = AzureOpenAI(
-            azure_endpoint=endpoint,
-            api_version="2024-02-15-preview",
-            api_key=api_key,
-            timeout=60.0,  # Increased timeout
-            max_retries=3   # Increased retries
-        )
-        
-        logger.info("Attempting to make API call...")
-        test_response = test_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": "test"}
-            ],
-            max_tokens=5,
-            temperature=0.3
-        )
-        logger.info("OpenAI connection test successful")
-        return True
     except Exception as e:
-        logger.error(f"OpenAI connection test failed: {str(e)}", exc_info=True)
-        # Log additional diagnostic information
-        logger.error(f"Current working directory: {os.getcwd()}")
-        # Don't fail startup - just log the error
+        logger.error(f"Error validating endpoint: {str(e)}")
         return False
 
-# Add connection validation on startup
-if not test_openai_connection():
-    logger.warning("Failed to validate OpenAI connection on startup")
+# Add validation check on startup
+if not validate_azure_endpoint():
+    logger.error("Failed to validate Azure OpenAI endpoint")
 
 # Cache failed domains to avoid rechecking
 failed_domains = set()
