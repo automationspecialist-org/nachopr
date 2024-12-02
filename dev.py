@@ -99,6 +99,9 @@ class DevServer:
             
             # Celery beat
             ("uv run celery -A core beat --loglevel=INFO", "Celery-Beat", Fore.LIGHTBLUE_EX),
+
+            # Flower
+            ("uv run celery -A core flower --basic-auth=dunc:Bunny-Neurosis5-Chump-Urgency-Deplored", "Flower", Fore.LIGHTGREEN_EX),
         ]
 
         for cmd, name, color in commands:

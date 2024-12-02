@@ -61,6 +61,7 @@ COPY supervisor/celeryworker.conf /etc/supervisor/conf.d/
 COPY supervisor/celerybeat.conf /etc/supervisor/conf.d/
 COPY supervisor/redis.conf /etc/supervisor/conf.d/
 COPY supervisor/typesense.conf /etc/supervisor/conf.d/
+COPY supervisor/celeryflower.conf /etc/supervisor/conf.d/
 
 # Configure SSH
 RUN echo "root:Docker!" | chpasswd \

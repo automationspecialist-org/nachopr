@@ -48,4 +48,5 @@ dependencies = [
     "redis>=5.2.0",
     "pydantic>=2.9.2",
     "typesense>=0.21.0",
+    "flower>=2.0.1",
 ]
