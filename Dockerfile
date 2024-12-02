@@ -54,7 +54,8 @@ RUN mkdir -p /var/log/redis \
 # Setup logging directories
 RUN mkdir -p /var/log/celery \
     && mkdir -p /etc/supervisor/conf.d \
-    && mkdir -p /var/log/typesense
+    && mkdir -p /var/log/typesense \
+    && mkdir -p /var/log/journalist
 
 # Copy supervisor configurations
 COPY supervisor/celeryworker.conf /etc/supervisor/conf.d/
@@ -63,6 +64,7 @@ COPY supervisor/redis.conf /etc/supervisor/conf.d/
 COPY supervisor/typesense.conf /etc/supervisor/conf.d/
 COPY supervisor/celeryflower.conf /etc/supervisor/conf.d/
 COPY supervisor/crawler.conf /etc/supervisor/conf.d/
+COPY supervisor/journalist_processor.conf /etc/supervisor/conf.d/
 RUN mkdir -p /var/log/crawler
 
 

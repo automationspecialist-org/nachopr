@@ -33,7 +33,7 @@ class Command(BaseCommand):
                     domain_limit=options['domain_limit'],
                     page_limit=options['page_limit']
                 )
-                process_all_journalists_sync()
+                
                 self.stdout.write(
                     self.style.SUCCESS(
                         f"Completed iteration, waiting {options['interval']} seconds..."
