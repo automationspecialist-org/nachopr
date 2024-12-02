@@ -1289,7 +1289,7 @@ def continuous_crawl_task(self):
         
         message = f"Crawl completed. {newspage_count_after - newspage_count_before} pages, {journalist_count_after - journalist_count_before} journalists added."
         logger.info(message)
-        
+         
     except Exception as e:
         logger.error(f"Error in continuous crawl: {str(e)}", exc_info=True)
         
