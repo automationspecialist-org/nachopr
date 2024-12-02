@@ -94,7 +94,7 @@ COPY . /usr/src/app/
 COPY startup.sh /usr/src/app/
 RUN chmod +x /usr/src/app/startup.sh && rm -rf /var/lib/apt/lists/* /tmp/*
 
-EXPOSE 80
+EXPOSE 80 5555
 
 ENTRYPOINT ["/usr/src/app/startup.sh"]
 
