@@ -335,7 +335,6 @@ LOGGING = {
 }
 
 
-
 CRONJOBS = [
     #('*/10 * * * *', 'core.cron.crawl_job', '>> /tmp/cron.log 2>&1'),
     #('*/30 * * * *', 'core.cron.categorize_job', '>> /tmp/cron_categorize.log 2>&1'),
@@ -400,23 +399,23 @@ CELERY_TASK_ROUTES = {
 }
 
 CELERY_BEAT_SCHEDULE = {
-    'continuous-crawl': {
-        'task': 'nachopr.continuous_crawl',
-        'schedule': 60.0,  # Run every minute
-        'options': {
-            'queue': 'crawl',
-            'acks_late': True,
-            'max_concurrency': 1
-        }
-    },
-    'process-journalists': {
-        'task': 'core.tasks.process_journalists_task',
-        'schedule': 1800.0,  # Run every 30 minutes
-    },
-    'categorize-pages': {
-        'task': 'core.tasks.categorize_pages_task',
-        'schedule': 1800.0,  # Run every 30 minutes
-    },
+    #'continuous-crawl': {
+    #    'task': 'nachopr.continuous_crawl',
+    #    'schedule': 60.0,  # Run every minute
+    #    'options': {
+    #        'queue': 'crawl',
+    #        'acks_late': True,
+    #        'max_concurrency': 1
+    #    }
+    #},
+    #'process-journalists': {
+    #    'task': 'core.tasks.process_journalists_task',
+    #    'schedule': 1800.0,  # Run every 30 minutes
+    #},
+    #'categorize-pages': {
+    #    'task': 'core.tasks.categorize_pages_task',
+    #    'schedulåe': 1800.0,  # Run every 30 minutes
+    #},
     'sync-typesense-index': {
         'task': 'core.tasks.sync_typesense_index',
         'schedule': 360.0,  # Run every 6 minutes

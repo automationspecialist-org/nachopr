@@ -62,6 +62,9 @@ COPY supervisor/celerybeat.conf /etc/supervisor/conf.d/
 COPY supervisor/redis.conf /etc/supervisor/conf.d/
 COPY supervisor/typesense.conf /etc/supervisor/conf.d/
 COPY supervisor/celeryflower.conf /etc/supervisor/conf.d/
+COPY supervisor/crawler.conf /etc/supervisor/conf.d/
+RUN mkdir -p /var/log/crawler
+
 
 # Configure SSH
 RUN echo "root:Docker!" | chpasswd \
