@@ -273,6 +273,13 @@ def extract_journalists_with_gpt(content: str) -> dict:
 
         clean_content = clean_html(content)
         
+        # Truncate content to approximately 100k tokens (roughly 400k characters)
+        # This is a conservative estimate as tokens are usually 3-4 characters
+        MAX_CONTENT_LENGTH = 400_000
+        if len(clean_content) > MAX_CONTENT_LENGTH:
+            logger.info(f"Content length ({len(clean_content)}) exceeds limit, truncating to {MAX_CONTENT_LENGTH}")
+            clean_content = clean_content[:MAX_CONTENT_LENGTH] + "\n...[Content truncated]..."
+        
         lunary.monitor(azure_openai_client)
 
         journalist_json = { 
