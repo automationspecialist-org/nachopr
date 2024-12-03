@@ -13,12 +13,18 @@
                 </ul>
             </div>
 
+            <!-- Column 2: Product -->
             <div>
                 <h3 class="text-lg font-semibold text-gray-700 mb-4 font-space">Product</h3>
                 <ul>
                     <li>
                         <a href="{% url 'pricing' %}" class="text-gray-600 hover:text-green-600 transition-colors">
                            Pricing 
+                        </a>
+                    </li>
+                    <li>
+                        <a href="https://nachopr.featurebase.app/" target="_blank" class="text-gray-600 hover:text-green-600 transition-colors">
+                           Give Feedback
                         </a>
                     </li>
                 </ul>
@@ -43,11 +49,11 @@
         </div>
         {% endcomment %}
     </div>
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 flex flex-col md:flex-row justify-between items-center">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
         <div class="text-center text-gray-600">
             &copy; {{ current_year }} DF Digital Services Ltd
         </div>
-        <div class="flex justify-center items-center space-x-4"> 
+        <div class="flex flex-col md:flex-row justify-center items-center space-x-0 md:space-x-4 space-y-4 md:space-y-0"> 
             <a href="mailto:support@nachopr.com" class="text-gray-600 hover:text-green-600 transition-colors flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M2.94 4.94A1.5 1.5 0 014.5 4h11a1.5 1.5 0 011.56.94L10 9.586 2.94 4.94zM2 6.5v7A1.5 1.5 0 003.5 15h13a1.5 1.5 0 001.5-1.5v-7l-7 4.5-7-4.5z" />
