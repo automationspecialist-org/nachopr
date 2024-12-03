@@ -49,8 +49,10 @@ def home(request):
     
     # Get example journalists for the homepage
     example_journalists = Journalist.objects.filter(
-       image_url__isnull=False
-    ).order_by('?')[:3]
+        image_url__isnull=False,
+        x_profile_url__isnull=False,  # Must have X profile
+        sources__isnull=False,  # Must have at least one source
+    ).distinct().order_by('?')[:6]
     
     # Get the last 30 days of stats for the growth graph
     end_date = timezone.now().date()

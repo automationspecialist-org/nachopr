@@ -105,6 +105,7 @@
                 <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {% for journalist in example_journalists %}
                         <div class="bg-gradient-to-br from-gray-50 to-white p-6 rounded-lg border border-gray-200">
+                            <!-- Profile Header -->
                             <div class="flex items-center space-x-4 mb-4">
                                 {% if journalist.image_url %}
                                     <img src="{{ journalist.image_url }}" alt="{{ journalist.name }}" 
@@ -123,22 +124,48 @@
                                     {% endif %}
                                 </div>
                             </div>
+
+                            <!-- News Sources -->
                             <div class="mb-4">
+                                <h4 class="text-sm font-semibold text-gray-600 mb-2">Writes for:</h4>
                                 {% for source in journalist.sources.all|slice:":3" %}
-                                    <span class="inline-block text-xs text-gray-500 mr-2">{{ source.name }}</span>
+                                    <span class="inline-block bg-gray-100 text-gray-700 rounded-full px-3 py-1 text-xs font-medium mr-2 mb-2">
+                                        {{ source.name }}
+                                    </span>
                                 {% endfor %}
                             </div>
-                            {% if journalist.description %}
-                                <p class="text-gray-700 text-sm mb-4">{{ journalist.description }}</p>
+
+                            <!-- Categories -->
+                            {% with categories=journalist.categories.all|slice:":6" %}
+                            {% if categories %}
+                                <div class="mb-4">
+                                    <h4 class="text-sm font-semibold text-gray-600 mb-2">Topics:</h4>
+                                    <div class="flex flex-wrap gap-2">
+                                        {% for category in categories %}
+                                            <span class="inline-block bg-green-50 text-green-700 rounded-full px-3 py-1 text-xs font-medium">
+                                                {{ category.name }}
+                                            </span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
                             {% endif %}
-                            <div class="flex space-x-3">
-                                {% if journalist.x_profile_url %}
-                                    <a href="{{ journalist.x_profile_url }}" target="_blank" 
-                                       class="text-gray-600 hover:text-gray-700 text-sm">
-                                        Twitter/X →
-                                    </a>
-                                {% endif %}
-                            </div>
+                            {% endwith %}
+
+                            <!-- Description -->
+                            {% if journalist.description %}
+                                <p class="text-gray-700 text-sm mb-4">{{ journalist.description|truncatewords:30 }}</p>
+                            {% endif %}
+
+                            <!-- Social Links -->
+                            {% if journalist.x_profile_url %}
+                                <a href="{{ journalist.x_profile_url }}" target="_blank" rel="noopener noreferrer"
+                                   class="inline-flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors">
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                                    </svg>
+                                    <span class="text-sm font-medium">Follow on X</span>
+                                </a>
+                            {% endif %}
                         </div>
                     {% endfor %}
                 </div>
