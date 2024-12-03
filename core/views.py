@@ -44,14 +44,12 @@ load_dotenv()
 
 def home(request):
     journalist_count = Journalist.objects.count()
-    news_sources_count = NewsSource.objects.count()
-    news_pages_count = NewsPage.objects.count()
+    news_sources_count = NewsSource.objects.filter(journalists__isnull=False).count()
+    news_pages_count = NewsPage.objects.filter(is_news_article=True).count()
     
     # Get example journalists for the homepage
     example_journalists = Journalist.objects.filter(
-        email_address__isnull=False
-    ).exclude(
-        email_address=''
+       image_url__isnull=False
     ).order_by('?')[:3]
     
     # Get the last 30 days of stats for the growth graph
