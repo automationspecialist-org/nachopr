@@ -65,6 +65,38 @@
         </div>
     </section>
 
+    <!-- Growth Graph Section -->
+    <section class="py-24 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid md:grid-cols-2 gap-12 items-center">
+                <div>
+                    <h2 class="text-4xl font-bold text-gray-800 mb-6 font-space">Growing Faster Every Day</h2>
+                    <p class="text-xl text-gray-600 mb-8">
+                        Our database is constantly expanding with new journalists being added daily. Stay ahead of the curve with access to the latest media contacts and opportunities.
+                    </p>
+                    <div class="flex">
+                        <a href="{% url 'pricing' %}" class="inline-flex items-center font-space bg-green-600 text-white px-6 py-3 rounded-lg text-lg font-medium hover:bg-green-700 transition-colors">
+                            Start Finding Journalists
+                            <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-lg p-6" x-data="{ chartLoaded: false }">
+                    <div class="relative h-[300px]">
+                        <!-- Loading spinner -->
+                        <div x-show="!chartLoaded" class="absolute inset-0 flex items-center justify-center">
+                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+                        </div>
+                        <!-- Chart canvas -->
+                        <canvas id="growthChart" x-ref="chart" class="w-full" style="height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     {% if example_journalists %}
         <!-- Example Journalists -->
         <section class="py-24 bg-white">
@@ -128,4 +160,56 @@
             </a>
         </div>
     </section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('growthChart').getContext('2d');
+    const chartData = {
+        labels: {{ stats_data.labels|safe }},
+        datasets: [{
+            label: 'Journalists Added',
+            data: {{ stats_data.values|safe }},
+            borderColor: 'rgb(22, 163, 74)',
+            backgroundColor: 'rgba(22, 163, 74, 0.1)',
+            tension: 0.4,
+            fill: true
+        }]
+    };
+    
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        animation: {
+            onComplete: function() {
+                const chartElement = document.querySelector('[x-data]');
+                if (chartElement && chartElement.__x) {
+                    chartElement.__x.$data.chartLoaded = true;
+                }
+            }
+        }
+    };
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: chartData,
+        options: chartOptions
+    });
+});
+</script>
 {% endblock %}

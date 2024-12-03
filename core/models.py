@@ -274,6 +274,7 @@ class NewsPage(models.Model):
     is_news_article = models.BooleanField(default=False)
     search_vector = SearchVectorField(null=True, blank=True)
     published_date = models.DateField(null=True, blank=True)
+    crawled_at = models.DateTimeField(null=True, blank=True, auto_now_add=True)
 
     def __str__(self):
         return self.title
@@ -399,6 +400,8 @@ class DigitalPRExample(models.Model):
 class DbStat(models.Model):
     num_journalists = models.IntegerField(default=0)
     num_journalists_added_today = models.IntegerField(default=0)
+    num_news_articles = models.IntegerField(default=0)
+    num_news_articles_added_today = models.IntegerField(default=0)
     date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

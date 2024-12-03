@@ -1,11 +1,11 @@
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from datetime import timedelta
-from core.models import Journalist, DbStat
+from core.models import Journalist, NewsPage, DbStat
 from django.db import transaction
 
 class Command(BaseCommand):
-    help = 'Backfills journalist statistics for the past 30 days'
+    help = 'Backfills journalist and news article statistics for the past 30 days'
 
     def handle(self, *args, **kwargs):
         with transaction.atomic():
@@ -34,15 +34,29 @@ class Command(BaseCommand):
                     created_at__date__lte=current_date
                 ).count()
                 
+                # Count news articles added on this day
+                articles_added = NewsPage.objects.filter(
+                    crawled_at__date=current_date,
+                    is_news_article=True
+                ).count()
+                
+                # Get total news articles up to this point
+                total_articles = NewsPage.objects.filter(
+                    crawled_at__date__lte=current_date,
+                    is_news_article=True
+                ).count()
+                
                 # Create new stat
                 DbStat.objects.create(
                     date=current_datetime,
                     num_journalists=total_journalists,
-                    num_journalists_added_today=journalists_added
+                    num_journalists_added_today=journalists_added,
+                    num_news_articles=total_articles,
+                    num_news_articles_added_today=articles_added
                 )
                 
                 self.stdout.write(
                     self.style.SUCCESS(
-                        f'Created stats for {current_date}: {journalists_added} journalists added'
+                        f'Created stats for {current_date}: {journalists_added} journalists, {articles_added} articles added'
                     )
                 ) 

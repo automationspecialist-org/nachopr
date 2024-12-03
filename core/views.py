@@ -33,6 +33,8 @@ import hmac
 import time
 from django.conf import settings
 from datetime import timedelta
+from django.db.models import Sum
+from django.db.models.functions import TruncDate
 
 # Get logger instance at the top of the file
 logger = logging.getLogger(__name__)
@@ -41,19 +43,55 @@ load_dotenv()
 
 
 def home(request):
-    news_sources_count = NewsSource.objects.filter(pages__isnull=False).distinct().count()
-    news_pages_count = NewsPage.objects.filter(is_news_article=True)
     journalist_count = Journalist.objects.count()
-    example_journalists = (Journalist.objects
-                         .filter(image_url__isnull=False, description__isnull=False)
-                         .prefetch_related('sources')[:9])
+    news_sources_count = NewsSource.objects.count()
+    news_pages_count = NewsPage.objects.count()
+    
+    # Get example journalists for the homepage
+    example_journalists = Journalist.objects.filter(
+        email_address__isnull=False
+    ).exclude(
+        email_address=''
+    ).order_by('?')[:3]
+    
+    # Get the last 30 days of stats for the growth graph
+    end_date = timezone.now().date()
+    start_date = end_date - timedelta(days=30)
+    
+    daily_stats = DbStat.objects.filter(
+        date__date__gte=start_date,
+        date__date__lte=end_date
+    ).annotate(
+        day=TruncDate('date')
+    ).values('day').annotate(
+        total_added=Sum('num_journalists_added_today')
+    ).order_by('day')
+    
+    # Ensure we have data for all days
+    all_dates = []
+    current_date = start_date
+    while current_date <= end_date:
+        all_dates.append(current_date)
+        current_date += timedelta(days=1)
+    
+    # Create a dict of existing data
+    existing_data = {stat['day']: stat['total_added'] for stat in daily_stats}
+    
+    # Fill in missing dates with zeros
+    stats_data = {
+        'labels': [date.strftime('%Y-%m-%d') for date in all_dates],
+        'values': [existing_data.get(date, 0) for date in all_dates]
+    }
+    
     context = {
+        'journalist_count': journalist_count,
         'news_sources_count': news_sources_count,
         'news_pages_count': news_pages_count,
-        'journalist_count': journalist_count,
-        'example_journalists': example_journalists
+        'example_journalists': example_journalists,
+        'stats_data': stats_data,
     }
-    return render(request, 'core/home.html', context=context)
+    
+    return render(request, 'core/home.html', context)
 
 
 def send_mail(subject, message, from_email, recipient_list, fail_silently=False):
@@ -772,11 +810,15 @@ def health(request):
     daily_stats = DbStat.objects.filter(
         date__date__gte=start_date,
         date__date__lte=end_date
-    ).order_by('date')
+    ).annotate(
+        day=TruncDate('date')
+    ).values('day').annotate(
+        total_added=Sum('num_journalists_added_today')
+    ).order_by('day')
     
     stats_data = {
-        'labels': [stat.date.strftime('%Y-%m-%d') for stat in daily_stats],
-        'values': [stat.num_journalists_added_today for stat in daily_stats]
+        'labels': [stat['day'].strftime('%Y-%m-%d') for stat in daily_stats],
+        'values': [stat['total_added'] for stat in daily_stats]
     }
     
     context = {

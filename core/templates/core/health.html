@@ -10,9 +10,16 @@
         <p class="mb-2">Newspages: {{ all_newspage_count }}</p>
     </div>
 
-    <div class="bg-white rounded-lg shadow p-6">
+    <div class="bg-white rounded-lg shadow p-6" x-data="{ chartLoaded: false }">
         <h2 class="text-2xl font-bold mb-4">Journalists Added Per Day</h2>
-        <canvas id="journalistsChart" width="400" height="200"></canvas>
+        <div class="relative h-[300px]">
+            <!-- Loading spinner -->
+            <div x-show="!chartLoaded" class="absolute inset-0 flex items-center justify-center">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            </div>
+            <!-- Chart canvas -->
+            <canvas id="journalistsChart" x-ref="chart" class="w-full" style="height: 300px;"></canvas>
+        </div>
     </div>
 </div>
 
@@ -33,12 +40,18 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             scales: {
                 y: {
                     beginAtZero: true,
                     ticks: {
                         stepSize: 1
                     }
+                }
+            },
+            animation: {
+                onComplete: function() {
+                    Alpine.store('chartLoaded', true);
                 }
             }
         }
