@@ -296,7 +296,7 @@
                   <p class="text-sm font-medium text-gray-700 mb-2">Matching content:</p>
                   {% for highlight in journalist.highlights %}
                     {% if highlight.field == 'article_titles' or highlight.field == 'article_content' %}
-                      <div class="text-sm bg-gray-50 rounded-lg border border-gray-200 overflow-hidden group">
+                      <div class="text-sm bg-gray-50 rounded-lg border border-gray-200 overflow-hidden group max-h-[200px]">
                         {% if highlight.url %}
                           <a href="{{ highlight.url }}" 
                              target="_blank" 
@@ -428,47 +428,51 @@
 
             <div class="w-[250px] flex-none flex flex-col border-l pl-4 text-left">
               {% if journalist.prefetched_articles %}
-                <div class="flex-1">
+                <div class="flex-1" x-data="{ expanded: false }">
                   <span class="font-medium text-sm">Articles</span>
                   <div class="space-y-2 mt-1">
-                    {% for article in journalist.prefetched_articles|slice:":3" %}
-                      <div class="border-l-2 border-gray-200 pl-3">
-                        <div class="text-sm">
-                          {% if user.is_staff %}
-                            <a href="{% url 'admin:core_newspage_change' article.id %}" 
-                               target="_blank" 
-                               class="text-blue-600 hover:text-blue-800 font-medium">
-                              {{ article.title }}
-                            </a>
-                          {% else %}
-                            <a href="{{ article.url }}" 
-                               target="_blank" 
-                               class="text-blue-600 hover:text-blue-800 font-medium">
-                              {{ article.title }}
-                            </a>
-                          {% endif %}
-                          {% if article.published_date %}
-                            <span class="text-gray-500 text-xs ml-2">
-                              {{ article.published_date|date:"M d, Y" }}
-                            </span>
-                          {% endif %}
-                          {% if user.is_staff and article.article_similarity %}
-                            <span class="text-xs text-gray-500 ml-2">
-                              (Similarity: {{ article.article_similarity|floatformat:3 }})
-                            </span>
+                    <div :class="{'max-h-[200px] overflow-hidden': !expanded}">
+                      {% for article in journalist.prefetched_articles|slice:":3" %}
+                        <div class="border-l-2 border-gray-200 pl-3">
+                          <div class="text-sm">
+                            {% if user.is_staff %}
+                              <a href="{% url 'admin:core_newspage_change' article.id %}" 
+                                 target="_blank" 
+                                 class="text-blue-600 hover:text-blue-800 font-medium line-clamp-2">
+                                {{ article.title }}
+                              </a>
+                            {% else %}
+                              <a href="{{ article.url }}" 
+                                 target="_blank" 
+                                 class="text-blue-600 hover:text-blue-800 font-medium line-clamp-2">
+                                {{ article.title }}
+                              </a>
+                            {% endif %}
+                            {% if article.published_date %}
+                              <span class="text-gray-500 text-xs ml-2">
+                                {{ article.published_date|date:"M d, Y" }}
+                              </span>
+                            {% endif %}
+                            {% if user.is_staff and article.article_similarity %}
+                              <span class="text-xs text-gray-500 ml-2">
+                                (Similarity: {{ article.article_similarity|floatformat:3 }})
+                              </span>
+                            {% endif %}
+                          </div>
+                          {% if article.source %}
+                            <div class="text-xs text-gray-500 mt-0.5">
+                              {{ article.source.name }}
+                            </div>
                           {% endif %}
                         </div>
-                        {% if article.source %}
-                          <div class="text-xs text-gray-500 mt-0.5">
-                            {{ article.source.name }}
-                          </div>
-                        {% endif %}
-                      </div>
-                    {% endfor %}
+                      {% endfor %}
+                    </div>
+                    
                     {% if journalist.prefetched_articles|length > 3 %}
-                      <div class="text-xs text-gray-500 pl-3">
-                        + {{ journalist.prefetched_articles|length|add:"-3" }} more articles
-                      </div>
+                      <button @click="expanded = !expanded"
+                              class="text-sm text-blue-600 hover:text-blue-800 mt-2">
+                        <span x-text="expanded ? 'Show less' : '+ {{ journalist.prefetched_articles|length|add:"-3" }} more articles'"></span>
+                      </button>
                     {% endif %}
                   </div>
                 </div>
