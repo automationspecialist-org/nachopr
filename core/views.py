@@ -967,3 +967,67 @@ def get_typesense_client():
         os.getenv('TYPESENSE_URL'),
         os.getenv('TYPESENSE_API_KEY')
     )
+
+@login_required
+def create_list(request):
+    logger.info(f"Create list endpoint called with method: {request.method}")
+    logger.info(f"Request POST data: {request.POST}")
+    logger.info(f"Request headers: {request.headers}")
+    
+    if request.method == "POST":
+        list_name = request.POST.get('list_name')
+        logger.info(f"Attempting to create list with name: {list_name}")
+        
+        if not list_name:
+            logger.warning("No list name provided")
+            return HttpResponse(
+                '<div class="text-red-600 text-sm">List name is required</div>',
+                status=400
+            )
+        
+        try:
+            new_list = SavedList.objects.create(
+                name=list_name,
+                user=request.user
+            )
+            
+            logger.info(f"Successfully created list with ID: {new_list.id}")
+            
+            # After creating the list, trigger a refresh of the lists
+            lists = SavedList.objects.filter(user=request.user).values(
+                'id', 
+                'name'
+            ).annotate(
+                journalists__count=Count('journalists')
+            ).order_by('-updated_at')
+            
+            # Return the entire lists container HTML
+            response_html = ""
+            for list_item in lists:
+                response_html += f"""
+                    <div class="flex items-center space-x-2">
+                        <input type="radio" 
+                               id="list-{list_item['id']}" 
+                               name="list" 
+                               value="{list_item['id']}"
+                               class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500">
+                        <label for="list-{list_item['id']}" 
+                               class="text-sm text-gray-700 cursor-pointer">
+                            {list_item['name']} ({list_item['journalists__count']} journalists)
+                        </label>
+                    </div>
+                """
+            
+            logger.info("Returning success response")
+            return HttpResponse(response_html)
+            
+        except Exception as e:
+            logger.error(f"Failed to create list: {str(e)}")
+            logger.error(traceback.format_exc())
+            return HttpResponse(
+                '<div class="text-red-600 text-sm">Failed to create list</div>',
+                status=400
+            )
+    
+    logger.warning(f"Invalid method: {request.method}")
+    return HttpResponse(status=405)

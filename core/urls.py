@@ -26,5 +26,6 @@ urlpatterns = [
     path('app/email-discoveries/', views.email_discoveries, name='email_discoveries'),
     path('api/lists/', views.get_user_lists, name='get_user_lists'),
     path('save-to-list/', views.save_to_list, name='save_to_list'),
+    path('create-list/', views.create_list, name='create_list'),
 ]
 
