@@ -441,7 +441,7 @@ TYPESENSE_PROTOCOL = 'http'
 
 # Media files configuration
 if PROD:
-    MEDIA_ROOT = '/persistent/media'
+    MEDIA_ROOT = '/home/persistent/media'
     MEDIA_URL = '/media/'
 else:
     MEDIA_ROOT = BASE_DIR / 'media'
