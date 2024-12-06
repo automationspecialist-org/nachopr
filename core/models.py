@@ -489,3 +489,25 @@ def track_journalist_creation(sender, instance, created, **kwargs):
                 )
         except Exception as e:
             logger.error(f"Error tracking journalist creation: {str(e)}")
+
+
+class BlogPost(models.Model):
+    title = models.CharField(max_length=255)
+    slug = models.SlugField(unique=True, max_length=255)
+    html_content = models.TextField()
+    featured_image = models.ImageField(upload_to='blog_images/', blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.title
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.title)
+        super().save(*args, **kwargs)
+
+    class Meta:
+        ordering = ['-created_at']
+
+

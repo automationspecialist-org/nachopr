@@ -1,0 +1,32 @@
+{% extends "marketing_base.html" %}
+{% load static %}
+
+{% block main %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <h1 class="text-4xl font-bold text-gray-900 mb-8">Blog Posts</h1>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {% for post in posts %}
+        <article class="bg-white rounded-lg shadow-lg overflow-hidden">
+            {% if post.featured_image %}
+            <img src="{{ post.featured_image.url }}" alt="{{ post.title }}" class="w-full h-48 object-cover">
+            {% endif %}
+            <div class="p-6">
+                <h2 class="text-xl font-semibold text-gray-900 mb-2">
+                    <a href="{% url 'blog_detail' post.slug %}" class="hover:text-blue-600">
+                        {{ post.title }}
+                    </a>
+                </h2>
+                <div class="text-sm text-gray-500 mb-4">
+                    {{ post.created_at|date:"F j, Y" }}
+                </div>
+            </div>
+        </article>
+        {% empty %}
+        <div class="col-span-full text-center text-gray-500 py-12">
+            No blog posts yet.
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %} 

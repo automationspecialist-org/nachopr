@@ -171,7 +171,7 @@ def crawl_news_sources_sync(domain_limit: int = None, page_limit: int = None, ma
     slack_webhook_url = os.getenv("SLACK_WEBHOOK_URL")
     message = f"[{timezone.now()}] NachoPR crawl starting..."
     logger.info(message)
-    requests.post(slack_webhook_url, json={"text": message})
+    #requests.post(slack_webhook_url, json={"text": message})
     loop = asyncio.get_event_loop()
     loop.run_until_complete(crawl_news_sources( 
         domain_limit=domain_limit, 
@@ -1165,9 +1165,9 @@ def crawl_single_source_task(self, source_id, page_limit=None):
         news_source = NewsSource.objects.get(id=source_id)
         start_message = f"🚀 Starting crawl for {news_source.url}"
         logger.info(start_message)
-        slack_webhook_url = os.getenv("SLACK_WEBHOOK_URL")
-        if slack_webhook_url:
-            requests.post(slack_webhook_url, json={"text": start_message})
+        #slack_webhook_url = os.getenv("SLACK_WEBHOOK_URL")
+        #if slack_webhook_url:
+        #    requests.post(slack_webhook_url, json={"text": start_message})
         
         # Get initial page count
         pages_before = NewsPage.objects.filter(source=news_source).count()
@@ -1217,14 +1217,14 @@ def crawl_single_source_task(self, source_id, page_limit=None):
         
         end_message = f"✅ Finished crawl for {news_source.url}\n• Found {new_pages:,} new pages\n• Total pages: {pages_after:,}"
         logger.info(end_message)
-        if slack_webhook_url:
-            requests.post(slack_webhook_url, json={"text": end_message})
+        #if slack_webhook_url:
+        #    requests.post(slack_webhook_url, json={"text": end_message})
             
     except Exception as e:
         error_message = f"❌ Error crawling {news_source.url if 'news_source' in locals() else 'source'}: {str(e)}"
         logger.error(error_message)
-        if slack_webhook_url:
-            requests.post(slack_webhook_url, json={"text": error_message})
+        #if slack_webhook_url:
+        #    requests.post(slack_webhook_url, json={"text": error_message})
         raise
 
 @app.task(
@@ -1249,9 +1249,9 @@ def crawl_news_sources_task(domain_limit=None, page_limit=None):
         # Log start of crawl
         message = f"[{timezone.now()}] Starting crawl of {len(news_sources)} sources..."
         logger.info(message)
-        slack_webhook_url = os.getenv("SLACK_WEBHOOK_URL")
-        if slack_webhook_url:
-            requests.post(slack_webhook_url, json={"text": message})
+        #slack_webhook_url = os.getenv("SLACK_WEBHOOK_URL")
+        #if slack_webhook_url:
+        #    requests.post(slack_webhook_url, json={"text": message})
         
         # Create tasks for each source
         for source in news_sources:
@@ -1259,8 +1259,8 @@ def crawl_news_sources_task(domain_limit=None, page_limit=None):
 
         message = f"[{timezone.now()}] Finished crawl of {len(news_sources)} sources. Found {NewsPage.objects.count() - pages_before} new pages"
         logger.info(message)
-        if slack_webhook_url:
-            requests.post(slack_webhook_url, json={"text": message})
+        #if slack_webhook_url:
+        #    requests.post(slack_webhook_url, json={"text": message})
             
     except Exception as e:
         logger.error(f"Error starting crawl: {str(e)}")
@@ -1435,7 +1435,7 @@ def migrate_to_typesense_task(self):
             return
             
         logger.info(f"Starting Typesense migration in background for {total_journalists} journalists")
-        send_slack_notification(f"🔄 Starting Typesense migration for {total_journalists} journalists...")
+        #send_slack_notification(f"🔄 Starting Typesense migration for {total_journalists} journalists...")
         
         # Run migration in batches
         batch_size = 100
@@ -1484,7 +1484,8 @@ def migrate_to_typesense_task(self):
                 }
             ]
             
-            send_slack_notification("Typesense migration completed", blocks)
+            #
+            # send_slack_notification("Typesense migration completed", blocks)
             logger.info(f"Typesense collection stats after migration: {collection_stats}")
             
         except Exception as e:
@@ -1534,7 +1535,7 @@ def sync_typesense_index():
                     ]
                 }
             ]
-            send_slack_notification("Typesense sync completed", blocks)
+            #send_slack_notification("Typesense sync completed", blocks)
         
         logger.info(f"Typesense collection stats after sync: {collection_stats}")
         logger.info(f"Synced {count} journalists")

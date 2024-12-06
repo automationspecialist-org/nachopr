@@ -1172,6 +1172,7 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "readabilipy" },
     { name = "redis" },
+    { name = "replicate" },
     { name = "requests" },
     { name = "requests-cache" },
     { name = "resend" },
@@ -1222,6 +1223,7 @@ requires-dist = [
     { name = "python-dotenv" },
     { name = "readabilipy", specifier = ">=0.2.0" },
     { name = "redis", specifier = ">=5.2.0" },
+    { name = "replicate", specifier = ">=1.0.4" },
     { name = "requests" },
     { name = "requests-cache" },
     { name = "resend", specifier = ">=2.4.0" },
@@ -1779,6 +1781,21 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/ed/e3/c446a64984ea9f69982ba1a69d4658d5014bc7a0ea468a07e1a1265db6e2/regex-2024.11.6-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:4f51f88c126370dcec4908576c5a627220da6c09d0bff31cfa89f2523843316d", size = 787733 },
     { url = "https://files.pythonhosted.org/packages/2b/f1/e40c8373e3480e4f29f2692bd21b3e05f296d3afebc7e5dcf21b9756ca1c/regex-2024.11.6-cp313-cp313-win32.whl", hash = "sha256:63b13cfd72e9601125027202cad74995ab26921d8cd935c25f09c630436348ff", size = 262122 },
     { url = "https://files.pythonhosted.org/packages/45/94/bc295babb3062a731f52621cdc992d123111282e291abaf23faa413443ea/regex-2024.11.6-cp313-cp313-win_amd64.whl", hash = "sha256:2b3361af3198667e99927da8b84c1b010752fa4b1115ee30beaa332cabc3ef1a", size = 273545 },
+]
+
+[[package]]
+name = "replicate"
+version = "1.0.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "packaging" },
+    { name = "pydantic" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/77/f4/f2ef5916d1a9a1c8401210992b5e9f6f6bee50f372106ad2e25c1e4f3536/replicate-1.0.4.tar.gz", hash = "sha256:f718601863ef1f419aa7dcdab1ea8770ba5489b571b86edf840cd506d68758ef", size = 60660 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c4/79/9596172f868a94858ffbd5b366386bf2c367ff10525ad7a67d679011ae3c/replicate-1.0.4-py3-none-any.whl", hash = "sha256:f568f6271ff715067901b6094c23c37373bbcfd7de0ff9b85e9c9ead567e09e7", size = 48041 },
 ]
 
 [[package]]

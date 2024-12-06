@@ -49,4 +49,5 @@ dependencies = [
     "pydantic>=2.9.2",
     "typesense>=0.21.0",
     "flower>=2.0.1",
+    "replicate>=1.0.4",
 ]

@@ -3,7 +3,7 @@ from core.tasks import find_single_email_with_hunter_io
 from dotenv import load_dotenv
 from django.shortcuts import get_object_or_404, render
 import requests
-from core.models import CustomUser, NewsSource, NewsPage, Journalist, NewsPageCategory, PricingPlan, SavedSearch, SavedList, EmailDiscovery, DbStat
+from core.models import CustomUser, NewsSource, NewsPage, Journalist, NewsPageCategory, PricingPlan, SavedSearch, SavedList, EmailDiscovery, DbStat, BlogPost
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect
 from django.views.decorators.csrf import csrf_exempt
@@ -1031,3 +1031,11 @@ def create_list(request):
     
     logger.warning(f"Invalid method: {request.method}")
     return HttpResponse(status=405)
+
+def blog_list(request):
+    posts = BlogPost.objects.all()
+    return render(request, 'core/blog/list.html', {'posts': posts})
+
+def blog_detail(request, slug):
+    post = get_object_or_404(BlogPost, slug=slug)
+    return render(request, 'core/blog/detail.html', {'post': post})

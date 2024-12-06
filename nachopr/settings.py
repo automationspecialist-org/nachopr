@@ -438,3 +438,11 @@ TYPESENSE_API_KEY = 'xyz'  # Fixed API key for Docker environment
 TYPESENSE_HOST = '127.0.0.1'  # Using host networking
 TYPESENSE_PORT = '8108'
 TYPESENSE_PROTOCOL = 'http'
+
+# Media files configuration
+if PROD:
+    MEDIA_ROOT = '/persistent/media'
+    MEDIA_URL = '/media/'
+else:
+    MEDIA_ROOT = BASE_DIR / 'media'
+    MEDIA_URL = '/media/'
