@@ -5,11 +5,72 @@ import requests
 from core.models import BlogPost
 import logging
 from django.conf import settings
+import openai
+import replicate
+from django.core.files.base import ContentFile
+import time
 
 logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
     help = 'Syncs blog posts from SEObot'
+
+    def _get_shortened_title(self, title):
+        """Use OpenAI to generate a 2-4 word shortened title"""
+        try:
+            client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant that shortens titles to 2-4 impactful words."},
+                    {"role": "user", "content": f"Shorten this title to 2-4 words, keeping the main topic: {title}"}
+                ],
+                max_tokens=20,
+                temperature=0.7
+            )
+            shortened_title = response.choices[0].message.content.strip().strip('"')
+            self.stdout.write(f'Shortened title: {shortened_title}')
+            return shortened_title
+        except Exception as e:
+            self.stderr.write(f'Error shortening title: {str(e)}')
+            return title[:30]  # Fallback to truncated original title
+
+    def _generate_image(self, title):
+        """Generate an image using Replicate"""
+        try:
+            prompt = f"a beautiful typographic poster with a bright green cat, and the text \"{title}\""
+            self.stdout.write(f'Starting image generation with prompt: {prompt}')
+            
+            # Start the generation
+            output = replicate.run(
+                "ideogram-ai/ideogram-v2",
+                input={
+                    "prompt": prompt,
+                    "resolution": "None",
+                    "style_type": "Anime",
+                    "aspect_ratio": "16:9",
+                    "magic_prompt_option": "Auto"
+                }
+            )
+            
+        
+            image_url = output
+            if image_url:
+                self.stdout.write(f'Generated image URL: {image_url}')
+                
+                # Download the image
+                response = requests.get(image_url)
+                if response.status_code == 200:
+                    self.stdout.write('Successfully downloaded image')
+                    return ContentFile(response.content, name=f"{slugify(title)[:50]}.png")
+                else:
+                    self.stderr.write(f'Failed to download image: {response.status_code}')
+
+            
+            return None
+        except Exception as e:
+            self.stderr.write(f'Error generating image: {str(e)}')
+            return None
 
     def _fetch_index(self, api_key):
         """Fetch and decompress the blog index"""
@@ -120,13 +181,27 @@ class Command(BaseCommand):
                         slug=article['slug'],
                         defaults={
                             'title': article['headline'],
-                            'html_content': full_article.get('html', ''),  # Try html key first
+                            'html_content': full_article.get('html', ''),
                         }
                     )
 
                     if not created:
                         post.title = article['headline']
-                        post.html_content = full_article.get('html', '')  # Try html key first
+                        post.html_content = full_article.get('html', '')
+                    
+                    # Generate image if one doesn't exist
+                    if not post.featured_image:
+                        self.stdout.write('No featured image found, generating one...')
+                        shortened_title = self._get_shortened_title(post.title)
+                        image_file = self._generate_image(shortened_title)
+                        if image_file:
+                            post.featured_image = image_file
+                            self.stdout.write('Successfully generated and saved image')
+                            post.save()
+                        else:
+                            self.stderr.write('Failed to generate image')
+                    else:
+                        self.stdout.write('Post already has a featured image')
                     
                     post.save()
                     

@@ -68,6 +68,10 @@ uv run manage.py collectstatic --no-input
 uv run manage.py generate_social_img
 uv run manage.py collectstatic --no-input
 
+# Generate images for seobot posts
+echo "Getting blogs and generating images for seobot posts..."
+uv run manage.py sync_seobot_posts
+
 # Trigger Typesense migration in background
 echo "Triggering Typesense migration in background..."
 uv run manage.py shell -c "from core.tasks import migrate_to_typesense_task; migrate_to_typesense_task.delay()"

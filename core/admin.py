@@ -1,5 +1,6 @@
 from django.contrib import admin
 from .models import NewsPageCategory, NewsSource, NewsPage, Journalist, CustomUser, SavedList, DigitalPRExample
+from .models import BlogPost
 from .tasks import crawl_news_sources_sync
 from django.contrib import messages
 
@@ -8,6 +9,7 @@ admin.site.register(NewsPageCategory)
 admin.site.register(CustomUser)
 admin.site.register(SavedList)
 admin.site.register(DigitalPRExample)
+admin.site.register(BlogPost)
 
 @admin.register(NewsSource)
 class NewsSourceAdmin(admin.ModelAdmin):
