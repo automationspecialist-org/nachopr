@@ -184,7 +184,18 @@ else:
     }
 
 
-STATIC_ROOT = BASE_DIR / 'static'
+# Add these settings for whitenoise
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Media files configuration
+if PROD:
+    MEDIA_ROOT = '/home/persistent/media'
+    MEDIA_URL = '/media/'
+else:
+    MEDIA_ROOT = BASE_DIR / 'media'
+    MEDIA_URL = '/media/'
+
+# Static files configuration
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     BASE_DIR / "static",
@@ -239,9 +250,6 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-# Add these settings for whitenoise
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 TAILWIND_APP_NAME = 'theme'
 
@@ -446,18 +454,6 @@ TYPESENSE_API_KEY = 'xyz'  # Fixed API key for Docker environment
 TYPESENSE_HOST = '127.0.0.1'  # Using host networking
 TYPESENSE_PORT = '8108'
 TYPESENSE_PROTOCOL = 'http'
-
-# Media files configuration
-if PROD:
-    MEDIA_ROOT = '/home/persistent/media'
-    MEDIA_URL = '/media/'
-    # Add media files to whitenoise's static files
-    STATICFILES_DIRS = [
-        ('media', MEDIA_ROOT),
-    ]
-else:
-    MEDIA_ROOT = BASE_DIR / 'media'
-    MEDIA_URL = '/media/'
 
 # WhiteNoise configuration
 WHITENOISE_AUTOREFRESH = True
