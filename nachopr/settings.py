@@ -432,6 +432,14 @@ CELERY_BEAT_SCHEDULE = {
             'acks_late': True,
         }
     },
+    'sync-blog-posts': {
+        'task': 'core.tasks.sync_blog_posts',
+        'schedule': 86400.0,  # Run every 24 hours
+        'options': {
+            'queue': 'default',
+            'acks_late': True,
+        }
+    },
 }
 
 TYPESENSE_API_KEY = 'xyz'  # Fixed API key for Docker environment
@@ -443,6 +451,16 @@ TYPESENSE_PROTOCOL = 'http'
 if PROD:
     MEDIA_ROOT = '/home/persistent/media'
     MEDIA_URL = '/media/'
+    # Add media files to whitenoise's static files
+    STATICFILES_DIRS = [
+        ('media', MEDIA_ROOT),
+    ]
 else:
     MEDIA_ROOT = BASE_DIR / 'media'
     MEDIA_URL = '/media/'
+
+# WhiteNoise configuration
+WHITENOISE_AUTOREFRESH = True
+WHITENOISE_USE_FINDERS = True
+WHITENOISE_ROOT = None
+WHITENOISE_MANIFEST_STRICT = False

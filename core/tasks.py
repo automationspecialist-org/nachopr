@@ -1544,3 +1544,23 @@ def sync_typesense_index():
         send_slack_notification(error_msg)
         logger.error(error_msg, exc_info=True)
         raise
+
+@shared_task(
+    bind=True,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_kwargs={'max_retries': 3},
+    name='core.tasks.sync_blog_posts'
+)
+def sync_blog_posts(self):
+    """Celery task to sync blog posts from SEObot"""
+    from django.core.management import call_command
+    
+    try:
+        logger.info("Starting blog post sync")
+        call_command('sync_seobot_posts')
+        logger.info("Blog post sync completed successfully")
+        return True
+    except Exception as e:
+        logger.error(f"Error syncing blog posts: {str(e)}")
+        raise
